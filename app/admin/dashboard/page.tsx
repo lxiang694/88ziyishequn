@@ -8,6 +8,8 @@ export default function DashboardPage() {
   const [monthStats, setMonthStats] = useState<any>(null)
   const [recentOrders, setRecentOrders] = useState<any[]>([])
   const [hasReportAccess, setHasReportAccess] = useState(true)
+  const [memberSummary, setMemberSummary] = useState<any>(null)
+  const [trafficSummary, setTrafficSummary] = useState<any>(null)
 
   useEffect(() => {
     // Fetch today/month stats (may be 403 for some roles)
@@ -23,6 +25,17 @@ export default function DashboardPage() {
     fetch('/api/admin/orders?limit=5&page=1')
       .then(r => r.json())
       .then(d => { if (d.success) setRecentOrders(d.data) })
+
+    // Member & traffic overview (super_admin only — silently ignored for others)
+    fetch('/api/admin/members')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.success) setMemberSummary(d.data.summary) })
+      .catch(() => {})
+
+    fetch('/api/admin/traffic?dateRange=today')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.success) setTrafficSummary(d.data.summary) })
+      .catch(() => {})
   }, [])
 
   const pendingCount = todayStats?.status_stats?.find((s: any) => s.order_status === '待確認')?.count || 0
@@ -52,6 +65,24 @@ export default function DashboardPage() {
             { label: '今日銷售額', value: todayStats ? formatPrice(todayStats.summary.total_revenue) : '—', icon: '💰', bg: 'bg-green-50 text-green-700 border-green-100', link: '/admin/reports' },
             { label: '本月訂單', value: monthStats?.summary.total_orders ?? '—', icon: '📊', bg: 'bg-purple-50 text-purple-700 border-purple-100', link: '/admin/orders?dateRange=month' },
             { label: '本月銷售額', value: monthStats ? formatPrice(monthStats.summary.total_revenue) : '—', icon: '📈', bg: 'bg-orange-50 text-orange-700 border-orange-100', link: '/admin/reports' },
+          ].map(c => (
+            <Link key={c.label} href={c.link} className={`card p-5 border hover:shadow-md transition-shadow ${c.bg}`}>
+              <div className="text-3xl mb-2">{c.icon}</div>
+              <div className="text-xl font-bold">{c.value}</div>
+              <div className="text-sm mt-1 opacity-80">{c.label}</div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* Member & traffic overview (super_admin only) */}
+      {(memberSummary || trafficSummary) && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: '會員總數', value: memberSummary?.total ?? '—', icon: '👤', bg: 'bg-teal-50 text-teal-700 border-teal-100', link: '/admin/members' },
+            { label: '今日新增會員', value: memberSummary?.new_today ?? '—', icon: '🆕', bg: 'bg-cyan-50 text-cyan-700 border-cyan-100', link: '/admin/members' },
+            { label: '今日瀏覽量', value: trafficSummary?.pv ?? '—', icon: '👁️', bg: 'bg-indigo-50 text-indigo-700 border-indigo-100', link: '/admin/traffic' },
+            { label: '今日訪客數', value: trafficSummary?.uv ?? '—', icon: '🧑‍🤝‍🧑', bg: 'bg-pink-50 text-pink-700 border-pink-100', link: '/admin/traffic' },
           ].map(c => (
             <Link key={c.label} href={c.link} className={`card p-5 border hover:shadow-md transition-shadow ${c.bg}`}>
               <div className="text-3xl mb-2">{c.icon}</div>
@@ -104,6 +135,8 @@ export default function DashboardPage() {
               { href: '/admin/products/new', icon: '➕', label: '新增商品', desc: '新增保健品到商店' },
               { href: '/admin/products', icon: '🛍️', label: '商品庫存管理', desc: '查看庫存、編輯規格' },
               { href: '/admin/reports', icon: '📈', label: '查看銷售報表', desc: '訂單統計與分析' },
+              { href: '/admin/members', icon: '👤', label: '會員管理', desc: '查看註冊會員與人數' },
+              { href: '/admin/traffic', icon: '📡', label: '流量監控', desc: '瀏覽量、訪客與熱門頁面' },
             ].map(item => (
               <Link key={item.href} href={item.href}
                 className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
