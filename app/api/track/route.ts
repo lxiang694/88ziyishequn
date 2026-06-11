@@ -33,10 +33,7 @@ export async function POST(req: NextRequest) {
 
     const userAgent = req.headers.get('user-agent')?.slice(0, 300) || null
 
-    const debug = new URL(req.url).searchParams.get('debug') === '1'
-
     // 寫入（容錯：表不存在或失敗都不影響前台）
-    let insertError: string | null = null
     if (supabaseAdmin) {
       const { error } = await supabaseAdmin.from('page_views').insert({
         path,
@@ -45,18 +42,10 @@ export async function POST(req: NextRequest) {
         user_id: authedUser?.id || null,
         user_agent: userAgent,
       })
-      if (error) {
-        insertError = `${error.code || ''} ${error.message}`.trim()
-        console.error('[track] insert failed:', insertError)
-      }
-    } else {
-      insertError = 'supabaseAdmin is null (SUPABASE_SERVICE_ROLE_KEY missing)'
-      console.error('[track]', insertError)
+      if (error) console.error('[track] insert failed:', error.code, error.message)
     }
 
-    const res = NextResponse.json(
-      debug ? { success: !insertError, error: insertError, hasAdmin: !!supabaseAdmin } : { success: true }
-    )
+    const res = NextResponse.json({ success: true })
     if (isNewVisitor) {
       res.cookies.set(VISITOR_COOKIE, visitorId, {
         maxAge: COOKIE_MAX_AGE,
