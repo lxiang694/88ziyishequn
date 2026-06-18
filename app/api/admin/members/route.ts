@@ -17,14 +17,20 @@ export async function GET(req: NextRequest) {
   if (auth instanceof NextResponse) return auth
 
   // 1. 逐頁抓取所有註冊會員
-  const authUsers: any[] = []
+  // listUsers 每頁回傳數量有服務端上限，必須一直翻頁直到「回傳空頁」才停止；
+  // 以 id 去重，避免服務端忽略 page 參數時重複累加。
+  const userById = new Map<string, any>()
   for (let page = 1; page <= MAX_PAGES; page++) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: PER_PAGE })
     if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     const users = data?.users || []
-    authUsers.push(...users)
-    if (users.length < PER_PAGE) break
+    if (users.length === 0) break
+    const before = userById.size
+    for (const u of users) userById.set(u.id, u)
+    // 沒有任何新使用者被加入 → 已到底或服務端重複回傳同一頁，停止
+    if (userById.size === before) break
   }
+  const authUsers = Array.from(userById.values())
 
   // 2. 取 user_profiles（姓名 / 手機等）
   const profileMap = new Map<string, any>()
