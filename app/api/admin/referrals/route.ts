@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   // 1. 取所有邀請紀錄
   const { data: referrals, error } = await supabaseAdmin
-    .from('referrals')
+    .from('line_referrals')
     .select('referrer_user_id, points_awarded, created_at')
 
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })

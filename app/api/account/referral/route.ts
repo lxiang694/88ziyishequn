@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 
   // 3. 邀請紀錄（最近 50 筆）
   const { data: referrals } = await supabaseAdmin
-    .from('referrals')
+    .from('line_referrals')
     .select('id, code, status, points_awarded, created_at')
     .eq('referrer_user_id', user.id)
     .order('created_at', { ascending: false })
