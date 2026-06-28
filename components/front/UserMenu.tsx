@@ -112,6 +112,7 @@ export default function UserMenu() {
             {[
               { href: '/account', label: '會員中心', icon: '🏠' },
               { href: '/account/orders', label: '我的訂單', icon: '📦' },
+              { href: '/account/referral', label: '邀請好友賺積分', icon: '🎁' },
               { href: '/account/profile', label: '個人資料', icon: '✍️' },
             ].map(item => (
               <Link key={item.href} href={item.href} onClick={() => setOpen(false)}

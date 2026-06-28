@@ -88,6 +88,18 @@ export default function AccountDashboard() {
           </Link>
         </div>
 
+        {/* Referral CTA */}
+        <Link href="/account/referral" className="block bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-100 p-5 mb-5 hover:border-green-300 transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="text-4xl">🎁</div>
+            <div className="flex-1">
+              <p className="font-bold text-gray-800">邀請好友賺積分</p>
+              <p className="text-xs text-gray-500 mt-0.5">分享專屬連結，朋友加入 LINE 你就有積分回饋</p>
+            </div>
+            <span className="text-green-700 font-bold">→</span>
+          </div>
+        </Link>
+
         {/* Link old orders prompt */}
         {profile?.phone && orders.length === 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
