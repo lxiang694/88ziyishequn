@@ -227,12 +227,13 @@ function OrdersContent() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams({ page: String(page), limit: '20' })
+    const params = new URLSearchParams({ page: String(page), limit: String(pageSize) })
     if (search) params.set('search', search)
     if (status) params.set('status', status)
     if (dateRange) params.set('dateRange', dateRange)
@@ -241,7 +242,7 @@ function OrdersContent() {
     const data = await res.json()
     if (data.success) { setOrders(data.data); setTotal(data.total) }
     setLoading(false)
-  }, [search, status, dateRange, startDate, endDate, page])
+  }, [search, status, dateRange, startDate, endDate, page, pageSize])
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
   useEffect(() => { setSelectedIds([]) }, [orders])
@@ -320,6 +321,9 @@ function OrdersContent() {
             <option value="">全部狀態</option>
             {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
+          <select className="form-input sm:w-32" style={{ height: '44px' }} value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}>
+            {[20, 50, 100, 200].map(n => <option key={n} value={n}>每頁 {n} 筆</option>)}
+          </select>
         </div>
         <div className="flex flex-wrap gap-2">
           {DATE_RANGES.map(d => (
@@ -367,12 +371,12 @@ function OrdersContent() {
             </table>
           </div>
         )}
-        {total > 20 && (
+        {total > pageSize && (
           <div className="p-4 border-t border-gray-100 flex justify-between items-center">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
               className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold disabled:opacity-40 hover:bg-gray-50">← 上一頁</button>
-            <span className="text-sm text-gray-500">第 {page} / {Math.ceil(total / 20)} 頁</span>
-            <button onClick={() => setPage(p => p + 1)} disabled={page * 20 >= total}
+            <span className="text-sm text-gray-500">第 {page} / {Math.ceil(total / pageSize)} 頁</span>
+            <button onClick={() => setPage(p => p + 1)} disabled={page * pageSize >= total}
               className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold disabled:opacity-40 hover:bg-gray-50">下一頁 →</button>
           </div>
         )}
