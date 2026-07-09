@@ -23,29 +23,23 @@ export async function POST(req: NextRequest) {
   if (ids.length === 0) {
     return NextResponse.json({ success: false, error: '未選擇任何訂單' }, { status: 400 })
   }
+  if (ids.length > 500) {
+    return NextResponse.json({ success: false, error: '單次最多刪除 500 筆訂單' }, { status: 400 })
+  }
 
-  const deleted: number[] = []
-  const failed: { id: number; error: string }[] = []
-
-  for (const orderId of ids) {
+  async function deleteOne(orderId: number): Promise<{ id: number; error?: string }> {
     try {
       const { data: currentOrder } = await supabaseAdmin
         .from('orders').select('order_status, order_no').eq('id', orderId).single()
 
-      if (!currentOrder) {
-        failed.push({ id: orderId, error: '訂單不存在' })
-        continue
-      }
+      if (!currentOrder) return { id: orderId, error: '訂單不存在' }
 
       if (currentOrder.order_status !== '已取消') {
         const { error: cancelError } = await supabaseAdmin.rpc('cancel_order_restore_stock', {
           p_order_id: orderId,
           p_admin_id: admin.id,
         })
-        if (cancelError) {
-          failed.push({ id: orderId, error: '無法回補庫存：' + cancelError.message })
-          continue
-        }
+        if (cancelError) return { id: orderId, error: '無法回補庫存：' + cancelError.message }
       }
 
       await supabaseAdmin
@@ -57,14 +51,24 @@ export async function POST(req: NextRequest) {
 
       const { error: deleteError } = await supabaseAdmin
         .from('orders').delete().eq('id', orderId)
-      if (deleteError) {
-        failed.push({ id: orderId, error: deleteError.message })
-        continue
-      }
+      if (deleteError) return { id: orderId, error: deleteError.message }
 
-      deleted.push(orderId)
+      return { id: orderId }
     } catch (err: any) {
-      failed.push({ id: orderId, error: err?.message || '刪除失敗' })
+      return { id: orderId, error: err?.message || '刪除失敗' }
+    }
+  }
+
+  const deleted: number[] = []
+  const failed: { id: number; error: string }[] = []
+
+  const BATCH_SIZE = 10
+  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+    const batch = ids.slice(i, i + BATCH_SIZE)
+    const results = await Promise.all(batch.map(deleteOne))
+    for (const r of results) {
+      if (r.error) failed.push({ id: r.id, error: r.error })
+      else deleted.push(r.id)
     }
   }
 
