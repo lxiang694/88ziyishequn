@@ -15,7 +15,7 @@ const DATE_RANGES = [
   { value: 'custom', label: '自訂' },
 ]
 
-function OrderRow({ order, onStatusChange, onDelete }: { order: any; onStatusChange: (id:number, s:string) => void; onDelete: (id: number) => void }) {
+function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }: { order: any; onStatusChange: (id:number, s:string) => void; onDelete: (id: number) => void; selected: boolean; onToggleSelect: (id: number) => void }) {
   const [expanded, setExpanded] = useState(false)
   const [detail, setDetail] = useState<any>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
@@ -88,7 +88,10 @@ function OrderRow({ order, onStatusChange, onDelete }: { order: any; onStatusCha
   return (
     <>
       <tr className={'border-b border-gray-100 transition-colors cursor-pointer ' + (expanded ? 'bg-green-50' : 'hover:bg-gray-50')} onClick={handleExpand}>
-        <td className="pl-4 pr-2 py-4 w-8">
+        <td className="pl-4 pr-2 py-4 w-8" onClick={e => e.stopPropagation()}>
+          <input type="checkbox" className="w-4 h-4 rounded accent-green-700 cursor-pointer" checked={selected} onChange={() => onToggleSelect(order.id)} />
+        </td>
+        <td className="pl-2 pr-2 py-4 w-8">
           <div className={'w-6 h-6 flex items-center justify-center text-gray-400 transition-transform duration-200 ' + (expanded ? 'rotate-90 text-green-600' : '')}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
           </div>
@@ -110,7 +113,7 @@ function OrderRow({ order, onStatusChange, onDelete }: { order: any; onStatusCha
       </tr>
       {expanded && (
         <tr className="bg-green-50/40">
-          <td colSpan={9} className="px-4 pb-5 pt-1">
+          <td colSpan={10} className="px-4 pb-5 pt-1">
             {loadingDetail ? (
               <div className="py-8 text-center text-gray-400">載入詳情中...</div>
             ) : detail ? (
@@ -224,6 +227,8 @@ function OrdersContent() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(1)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -239,6 +244,7 @@ function OrdersContent() {
   }, [search, status, dateRange, startDate, endDate, page])
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
+  useEffect(() => { setSelectedIds([]) }, [orders])
 
   const handleStatusChange = (id: number, newStatus: string) => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, order_status: newStatus } : o))
@@ -247,6 +253,45 @@ function OrdersContent() {
   const handleDelete = (id: number) => {
     setOrders(prev => prev.filter(o => o.id !== id))
     setTotal(t => Math.max(0, t - 1))
+    setSelectedIds(prev => prev.filter(i => i !== id))
+  }
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+  }
+
+  const allSelected = orders.length > 0 && selectedIds.length === orders.length
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? [] : orders.map(o => o.id))
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return
+    if (!confirm(`確定要永久刪除選中的 ${selectedIds.length} 筆訂單？\n\n⚠️ 尚未取消的訂單將自動回補庫存。\n此操作無法還原！`)) return
+    if (!confirm(`再次確認：將永久刪除 ${selectedIds.length} 筆訂單及其商品明細，無法復原。`)) return
+
+    setBulkDeleting(true)
+    try {
+      const res = await fetch('/api/admin/orders/bulk-delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds }),
+      })
+      const d = await res.json()
+      if (d.deleted?.length) {
+        setOrders(prev => prev.filter(o => !d.deleted.includes(o.id)))
+        setTotal(t => Math.max(0, t - d.deleted.length))
+        setSelectedIds([])
+      }
+      if (d.success) {
+        toast.success(d.message || '訂單已刪除')
+      } else {
+        toast.error(d.error || d.message || '部分訂單刪除失敗')
+      }
+    } catch {
+      toast.error('刪除失敗')
+    } finally {
+      setBulkDeleting(false)
+    }
   }
 
   return (
@@ -256,6 +301,15 @@ function OrdersContent() {
           <h1 className="text-2xl font-bold text-gray-800">訂單管理</h1>
           <p className="text-gray-400 text-sm mt-0.5">共 {total} 筆訂單・點擊列可展開查看詳情</p>
         </div>
+        {selectedIds.length > 0 && (
+          <button onClick={handleBulkDelete} disabled={bulkDeleting}
+            className="flex items-center gap-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl px-4 py-2.5 transition-colors disabled:opacity-40">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            {bulkDeleting ? '刪除中...' : `刪除選中 (${selectedIds.length})`}
+          </button>
+        )}
       </div>
 
       <div className="card p-4 mb-5 space-y-3">
@@ -295,7 +349,10 @@ function OrdersContent() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="w-8 px-4 py-3"></th>
+                  <th className="w-8 pl-4 pr-2 py-3">
+                    <input type="checkbox" className="w-4 h-4 rounded accent-green-700 cursor-pointer" checked={allSelected} onChange={toggleSelectAll} />
+                  </th>
+                  <th className="w-8 pl-2 pr-2 py-3"></th>
                   {['訂單編號','下單時間','姓名','手機','門市','金額','狀態','操作'].map(h => (
                     <th key={h} className="text-left px-3 py-3 font-bold text-gray-600 whitespace-nowrap">{h}</th>
                   ))}
@@ -303,7 +360,8 @@ function OrdersContent() {
               </thead>
               <tbody>
                 {orders.map(order => (
-                  <OrderRow key={order.id} order={order} onStatusChange={handleStatusChange} onDelete={handleDelete} />
+                  <OrderRow key={order.id} order={order} onStatusChange={handleStatusChange} onDelete={handleDelete}
+                    selected={selectedIds.includes(order.id)} onToggleSelect={toggleSelect} />
                 ))}
               </tbody>
             </table>
