@@ -221,7 +221,7 @@ function OrdersContent() {
   const [orders, setOrders] = useState<any[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(searchParams.get('search') || '')
   const [status, setStatus] = useState(searchParams.get('status') || '')
   const [dateRange, setDateRange] = useState(searchParams.get('dateRange') || '')
   const [startDate, setStartDate] = useState('')
