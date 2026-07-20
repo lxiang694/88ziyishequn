@@ -62,6 +62,17 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
     if (next) loadDetail()
   }
 
+  const handleCopyInfo = async () => {
+    if (!detail) return
+    const text = `${detail.customer_name} ${detail.phone} ${detail.store_name}`
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('已複製姓名、手機、門市')
+    } catch {
+      toast.error('複製失敗，請手動選取')
+    }
+  }
+
   const handleStatusUpdate = async () => {
     if (newStatus === order.order_status) return
     if (newStatus === '已取消' && !confirm('確定要取消訂單 ' + order.order_no + '？\n取消後將自動回補庫存。')) {
@@ -120,9 +131,18 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2">
                 {/* Customer */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-                  <h4 className="font-bold text-gray-600 mb-3 text-xs uppercase tracking-wider flex items-center gap-2">
-                    <span className="w-5 h-5 bg-blue-50 rounded flex items-center justify-center">👤</span>客戶資料
-                  </h4>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-bold text-gray-600 text-xs uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-5 h-5 bg-blue-50 rounded flex items-center justify-center">👤</span>客戶資料
+                    </h4>
+                    <button onClick={e => { e.stopPropagation(); handleCopyInfo() }}
+                      className="flex items-center gap-1 text-xs font-bold text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 rounded-lg px-2 py-1 transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      複製
+                    </button>
+                  </div>
                   <div className="space-y-2.5">
                     {[
                       { l: '姓名', v: detail.customer_name },
