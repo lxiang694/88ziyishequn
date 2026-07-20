@@ -1,14 +1,13 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/components/front/CartContext'
 import { useUserAuth } from '@/components/front/UserAuthContext'
 import { formatPrice, validateTWPhone } from '@/lib/utils'
+import StorePickerModal, { Store } from '@/components/front/StorePickerModal'
 import toast from 'react-hot-toast'
-
-interface Store { id: number; store_name: string; county: string; district: string; address: string }
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -18,23 +17,16 @@ export default function CheckoutPage() {
   const [form, setForm] = useState({ customer_name: '', phone: '', line_id: '', note: '' })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [profileLoaded, setProfileLoaded] = useState(false)
-
-  // Store picker
-  const [counties, setCounties] = useState<string[]>([])
-  const [districts, setDistricts] = useState<string[]>([])
-  const [stores, setStores] = useState<Store[]>([])
-  const [selectedCounty, setSelectedCounty] = useState('')
-  const [selectedDistrict, setSelectedDistrict] = useState('')
-  const [storeSearch, setStoreSearch] = useState('')
   const [selectedStore, setSelectedStore] = useState<Store | null>(null)
   const [showStorePicker, setShowStorePicker] = useState(false)
-  const [loadingStores, setLoadingStores] = useState(false)
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load counties once
-  useEffect(() => {
-    fetch('/api/stores/counties').then(r => r.json()).then(d => { if (d.success) setCounties(d.data) })
-  }, [])
+  // "上次選擇的門市" suggestion — looked up by phone, works for guests & members alike
+  const [lastStore, setLastStore] = useState<Store | null>(null)
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false)
+
+  // Logged-in member's saved recipient info (address book)
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([])
+  const [saveAsAddress, setSaveAsAddress] = useState(true)
 
   // Auto-fill from member profile
   useEffect(() => {
@@ -63,36 +55,37 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
-  // Load districts when county changes
+  // Load member's saved addresses (for logged-in quick-pick)
   useEffect(() => {
-    if (!selectedCounty) { setDistricts([]); setSelectedDistrict(''); return }
-    fetch(`/api/stores/districts?county=${encodeURIComponent(selectedCounty)}`)
-      .then(r => r.json()).then(d => { if (d.success) setDistricts(d.data) })
-    setSelectedDistrict('')
-  }, [selectedCounty])
+    if (!user) return
+    authedFetch('/api/account/addresses').then(r => r.json()).then(d => {
+      if (d.success) setSavedAddresses(d.data)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
-  // Fetch stores (debounced for search, immediate for filters)
-  const doFetchStores = async (county: string, district: string, search: string) => {
-    setLoadingStores(true)
-    const params = new URLSearchParams({ limit: '60' })
-    if (county) params.set('county', county)
-    if (district) params.set('district', district)
-    if (search.trim()) params.set('search', search.trim())
-    const res = await fetch('/api/stores?' + params)
-    const data = await res.json()
-    if (data.success) setStores(data.data)
-    setLoadingStores(false)
+  // Detect "last used store" by phone — helps guests too, once they finish typing a valid number
+  useEffect(() => {
+    if (selectedStore || suggestionDismissed || !validateTWPhone(form.phone)) { setLastStore(null); return }
+    const t = setTimeout(() => {
+      fetch('/api/orders?phone=' + encodeURIComponent(form.phone.trim()))
+        .then(r => r.json())
+        .then(d => {
+          const last = d.success ? d.data?.[0] : null
+          if (last?.store_id && last?.store_name) {
+            setLastStore({ id: last.store_id, store_name: last.store_name, address: last.store_address, county: last.county, district: last.district })
+          }
+        })
+        .catch(() => {})
+    }, 500)
+    return () => clearTimeout(t)
+  }, [form.phone, selectedStore, suggestionDismissed])
+
+  const applyAddress = (addr: any) => {
+    setForm(f => ({ ...f, customer_name: addr.recipient_name, phone: addr.phone, line_id: addr.line_id || '' }))
+    setSelectedStore({ id: addr.store_id, store_name: addr.store_name, address: addr.store_address, county: addr.store_county, district: addr.store_district })
+    setErrors({})
   }
-
-  // Fetch when picker opens or filters change
-  useEffect(() => {
-    if (!showStorePicker) return
-    if (searchTimer.current) clearTimeout(searchTimer.current)
-    searchTimer.current = setTimeout(() => {
-      doFetchStores(selectedCounty, selectedDistrict, storeSearch)
-    }, storeSearch ? 350 : 0)
-    return () => { if (searchTimer.current) clearTimeout(searchTimer.current) }
-  }, [showStorePicker, selectedCounty, selectedDistrict, storeSearch])
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -132,6 +125,22 @@ export default function CheckoutPage() {
       })
       const data = await res.json()
       if (data.success) {
+        if (user && saveAsAddress) {
+          authedFetch('/api/account/addresses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipient_name: form.customer_name.trim(),
+              phone: form.phone.trim(),
+              line_id: form.line_id.trim() || null,
+              store_id: selectedStore!.id,
+              store_name: selectedStore!.store_name,
+              store_address: selectedStore!.address,
+              store_county: selectedStore!.county,
+              store_district: selectedStore!.district,
+            }),
+          }).catch(() => {})
+        }
         clearCart()
         router.push(`/order-success?order_no=${data.data.order_no}`)
       } else {
@@ -196,6 +205,31 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Saved addresses quick-pick (logged-in members) */}
+          {user && savedAddresses.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <span className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-base">⭐</span>
+                常用收件資訊
+              </h2>
+              <div className="space-y-2">
+                {savedAddresses.map(addr => (
+                  <button key={addr.id} onClick={() => applyAddress(addr)}
+                    className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-green-300 hover:bg-green-50 transition-colors flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm truncate">
+                        {addr.label ? `${addr.label}・` : ''}{addr.recipient_name} {addr.phone}
+                        {addr.is_default && <span className="ml-1.5 text-xs text-green-600 font-bold">預設</span>}
+                      </p>
+                      <p className="text-gray-500 text-xs mt-0.5 truncate">{addr.store_name}（{addr.store_county}{addr.store_district}）</p>
+                    </div>
+                    <span className="flex-shrink-0 text-green-700 text-sm font-bold">使用</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Recipient form */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -233,6 +267,13 @@ export default function CheckoutPage() {
                 <input className="form-input" placeholder="your_line_id"
                   value={form.line_id} onChange={e => setForm(f => ({ ...f, line_id: e.target.value }))} />
               </div>
+              {user && (
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input type="checkbox" className="w-4 h-4 rounded accent-green-700"
+                    checked={saveAsAddress} onChange={e => setSaveAsAddress(e.target.checked)} />
+                  儲存這筆收件資訊，下次結帳快速選擇
+                </label>
+              )}
             </div>
           </div>
 
@@ -254,6 +295,23 @@ export default function CheckoutPage() {
                   <button onClick={() => setShowStorePicker(true)}
                     className="flex-shrink-0 text-green-700 font-bold text-sm border-2 border-green-300 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors whitespace-nowrap">
                     更換
+                  </button>
+                </div>
+              </div>
+            ) : lastStore ? (
+              <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                <p className="text-amber-800 text-sm font-semibold mb-2">💡 偵測到您上次選擇的門市：</p>
+                <p className="font-bold text-gray-800">{lastStore.store_name}</p>
+                <p className="text-green-600 text-sm font-semibold mt-0.5">{lastStore.county}{lastStore.district}</p>
+                <p className="text-gray-500 text-sm mt-0.5">{lastStore.address}</p>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => { setSelectedStore(lastStore); setErrors(e => ({ ...e, store: '' })) }}
+                    className="flex-1 bg-green-700 hover:bg-green-800 text-white font-bold text-sm py-2 rounded-lg transition-colors">
+                    直接使用此門市
+                  </button>
+                  <button onClick={() => { setSuggestionDismissed(true); setShowStorePicker(true) }}
+                    className="flex-1 border-2 border-gray-200 hover:bg-gray-50 text-gray-600 font-bold text-sm py-2 rounded-lg transition-colors">
+                    重新選擇
                   </button>
                 </div>
               </div>
@@ -417,58 +475,11 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* Store picker modal */}
       {showStorePicker && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center">
-          <div className="bg-white w-full md:max-w-xl md:rounded-2xl rounded-t-2xl flex flex-col"
-            style={{ maxHeight: '90vh' }}>
-            {/* Handle */}
-            <div className="flex justify-center pt-2 pb-1 md:hidden">
-              <div className="w-10 h-1 bg-gray-300 rounded-full" />
-            </div>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-              <h3 className="text-xl font-bold text-gray-800">選擇 7-11 取貨門市</h3>
-              <button onClick={() => setShowStorePicker(false)}
-                className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl transition-colors">✕</button>
-            </div>
-            <div className="px-4 py-3 space-y-3 border-b border-gray-100 flex-shrink-0">
-              <input className="form-input" placeholder="🔍 搜尋門市名稱或地址..."
-                value={storeSearch} onChange={e => setStoreSearch(e.target.value)} />
-              <div className="grid grid-cols-2 gap-3">
-                <select className="form-input" value={selectedCounty} onChange={e => setSelectedCounty(e.target.value)}>
-                  <option value="">全部縣市</option>
-                  {counties.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select className="form-input" value={selectedDistrict} onChange={e => setSelectedDistrict(e.target.value)} disabled={!selectedCounty}>
-                  <option value="">全部區域</option>
-                  {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="overflow-y-auto flex-1 p-2">
-              {loadingStores ? (
-                <div className="py-12 text-center text-gray-400 text-base">搜尋中...</div>
-              ) : stores.length === 0 ? (
-                <div className="py-12 text-center">
-                  <div className="text-3xl mb-2">🔍</div>
-                  <p className="text-gray-400">找不到門市，請嘗試其他關鍵字或縣市</p>
-                </div>
-              ) : (
-                <div className="space-y-0.5">
-                  {stores.map(store => (
-                    <button key={store.id}
-                      onClick={() => { setSelectedStore(store); setShowStorePicker(false); setErrors(e => ({ ...e, store: '' })) }}
-                      className="w-full text-left p-4 rounded-xl hover:bg-green-50 transition-colors active:bg-green-100">
-                      <p className="font-bold text-gray-800 text-base">{store.store_name}</p>
-                      <p className="text-green-600 text-sm font-semibold mt-0.5">{store.county}{store.district}</p>
-                      <p className="text-gray-500 text-sm mt-0.5">{store.address}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <StorePickerModal
+          onClose={() => setShowStorePicker(false)}
+          onSelect={store => { setSelectedStore(store); setShowStorePicker(false); setErrors(e => ({ ...e, store: '' })) }}
+        />
       )}
     </div>
   )

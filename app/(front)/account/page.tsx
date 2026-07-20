@@ -86,6 +86,11 @@ export default function AccountDashboard() {
             <p className="font-bold text-gray-800">個人資料</p>
             <p className="text-xs text-gray-400 mt-0.5">姓名、手機、預設取貨門市</p>
           </Link>
+          <Link href="/account/addresses" className="bg-white rounded-2xl border border-gray-100 p-4 hover:border-green-300 transition-colors col-span-2">
+            <div className="text-3xl mb-1">⭐</div>
+            <p className="font-bold text-gray-800">常用收件資訊</p>
+            <p className="text-xs text-gray-400 mt-0.5">管理下單時可快速選擇的收件人與門市</p>
+          </Link>
         </div>
 
         {/* Link old orders prompt */}
