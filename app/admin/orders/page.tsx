@@ -5,6 +5,26 @@ import Image from 'next/image'
 import { formatDateTime, formatPrice, getStatusColor } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
+function CopyIconButton({ value, label }: { value: string; label: string }) {
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(value)
+      toast.success(`已複製${label}`)
+    } catch {
+      toast.error('複製失敗，請手動選取')
+    }
+  }
+  return (
+    <button onClick={handleCopy} title={`複製${label}`}
+      className="text-gray-300 hover:text-blue-600 transition-colors flex-shrink-0">
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+    </button>
+  )
+}
+
 const ORDER_STATUSES = ['待確認','已確認','備貨中','已出貨','已到店','已取消']
 const DATE_RANGES = [
   { value: '', label: '全部' },
@@ -145,14 +165,15 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                   </div>
                   <div className="space-y-2.5">
                     {[
-                      { l: '姓名', v: detail.customer_name },
-                      { l: '手機', v: detail.phone },
-                      { l: 'LINE ID', v: detail.line_id || <span className="text-gray-400">未提供</span> },
-                      { l: '備註', v: detail.note || <span className="text-gray-400">無</span> },
+                      { l: '姓名', v: detail.customer_name, copy: detail.customer_name },
+                      { l: '手機', v: detail.phone, copy: detail.phone },
+                      { l: 'LINE ID', v: detail.line_id || <span className="text-gray-400">未提供</span>, copy: '' },
+                      { l: '備註', v: detail.note || <span className="text-gray-400">無</span>, copy: '' },
                     ].map((f, i) => (
                       <div key={i} className="flex items-start gap-3">
                         <span className="text-gray-400 text-xs w-14 flex-shrink-0 pt-0.5">{f.l}</span>
-                        <span className="text-sm font-semibold text-gray-800 break-all">{f.v}</span>
+                        <span className="text-sm font-semibold text-gray-800 break-all flex-1">{f.v}</span>
+                        {f.copy && <CopyIconButton value={f.copy} label={f.l} />}
                       </div>
                     ))}
                   </div>
@@ -162,7 +183,10 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                   <h4 className="font-bold text-gray-600 mb-3 text-xs uppercase tracking-wider flex items-center gap-2">
                     <span className="w-5 h-5 bg-green-50 rounded flex items-center justify-center">🏪</span>取貨門市
                   </h4>
-                  <p className="font-bold text-gray-800 text-base">{detail.store_name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-gray-800 text-base">{detail.store_name}</p>
+                    <CopyIconButton value={detail.store_name} label="門市名稱" />
+                  </div>
                   <p className="text-green-700 text-sm font-semibold mt-0.5">{detail.county}{detail.district}</p>
                   <p className="text-gray-500 text-sm mt-1 leading-relaxed">{detail.store_address}</p>
                   <div className="mt-4 pt-4 border-t border-gray-100">
