@@ -1,12 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useUserAuth, useRequireUser } from '@/components/front/UserAuthContext'
 import { validateTWPhone } from '@/lib/utils'
+import StorePickerModal, { Store } from '@/components/front/StorePickerModal'
 import toast from 'react-hot-toast'
-
-interface Store { id: number; store_name: string; county: string; district: string; address: string }
 
 export default function ProfilePage() {
   const { user, loading } = useRequireUser()
@@ -14,16 +12,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null)
   const [loadingData, setLoadingData] = useState(true)
   const [saving, setSaving] = useState(false)
-
-  // Store picker state
   const [showPicker, setShowPicker] = useState(false)
-  const [counties, setCounties] = useState<string[]>([])
-  const [districts, setDistricts] = useState<string[]>([])
-  const [stores, setStores] = useState<Store[]>([])
-  const [selCounty, setSelCounty] = useState('')
-  const [selDistrict, setSelDistrict] = useState('')
-  const [search, setSearch] = useState('')
-  const [loadingStores, setLoadingStores] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -31,31 +20,8 @@ export default function ProfilePage() {
       if (d.success) setProfile(d.data)
       setLoadingData(false)
     })
-    fetch('/api/stores/counties').then(r => r.json()).then(d => { if (d.success) setCounties(d.data) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
-
-  useEffect(() => {
-    if (!selCounty) { setDistricts([]); return }
-    fetch(`/api/stores/districts?county=${encodeURIComponent(selCounty)}`)
-      .then(r => r.json()).then(d => { if (d.success) setDistricts(d.data) })
-  }, [selCounty])
-
-  useEffect(() => {
-    if (!showPicker) return
-    const t = setTimeout(() => {
-      setLoadingStores(true)
-      const params = new URLSearchParams({ limit: '60' })
-      if (selCounty) params.set('county', selCounty)
-      if (selDistrict) params.set('district', selDistrict)
-      if (search.trim()) params.set('search', search.trim())
-      fetch('/api/stores?' + params).then(r => r.json()).then(d => {
-        if (d.success) setStores(d.data)
-        setLoadingStores(false)
-      })
-    }, search ? 350 : 0)
-    return () => clearTimeout(t)
-  }, [showPicker, selCounty, selDistrict, search])
 
   const update = (k: string, v: string) => setProfile((p: any) => ({ ...p, [k]: v }))
 
@@ -174,52 +140,8 @@ export default function ProfilePage() {
           {saving ? '儲存中...' : '儲存變更'}
         </button>
 
-        {/* Store picker modal */}
         {showPicker && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-end md:items-center justify-center">
-            <div className="bg-white w-full md:max-w-xl md:rounded-2xl rounded-t-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
-              <div className="flex justify-center pt-2 pb-1 md:hidden">
-                <div className="w-10 h-1 bg-gray-300 rounded-full" />
-              </div>
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-                <h3 className="text-xl font-bold text-gray-800">選擇預設 7-11 門市</h3>
-                <button onClick={() => setShowPicker(false)}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl">✕</button>
-              </div>
-              <div className="px-4 py-3 space-y-3 border-b border-gray-100 flex-shrink-0">
-                <input className="form-input" placeholder="🔍 搜尋門市名稱或地址..."
-                  value={search} onChange={e => setSearch(e.target.value)} />
-                <div className="grid grid-cols-2 gap-3">
-                  <select className="form-input" value={selCounty} onChange={e => setSelCounty(e.target.value)}>
-                    <option value="">全部縣市</option>
-                    {counties.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                  <select className="form-input" value={selDistrict} onChange={e => setSelDistrict(e.target.value)} disabled={!selCounty}>
-                    <option value="">全部區域</option>
-                    {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="overflow-y-auto flex-1 p-2">
-                {loadingStores ? (
-                  <div className="py-12 text-center text-gray-400">搜尋中...</div>
-                ) : stores.length === 0 ? (
-                  <div className="py-12 text-center text-gray-400">找不到門市</div>
-                ) : (
-                  <div className="space-y-0.5">
-                    {stores.map(s => (
-                      <button key={s.id} onClick={() => pickStore(s)}
-                        className="w-full text-left p-4 rounded-xl hover:bg-green-50 transition-colors">
-                        <p className="font-bold text-gray-800">{s.store_name}</p>
-                        <p className="text-green-600 text-sm font-semibold mt-0.5">{s.county}{s.district}</p>
-                        <p className="text-gray-500 text-sm mt-0.5">{s.address}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <StorePickerModal title="選擇預設 7-11 門市" onClose={() => setShowPicker(false)} onSelect={pickStore} />
         )}
       </div>
     </div>
