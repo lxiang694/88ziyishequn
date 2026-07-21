@@ -36,6 +36,10 @@ export default function AdminEventDetailPage() {
     a.download = `${event?.title || '活動'}_報名名單.csv`
     a.click()
     URL.revokeObjectURL(url)
+    fetch('/api/admin/audit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'export_event_registrations', detail: `下載「${event?.title || ''}」報名名單 ${registrations.length} 筆` }),
+    }).catch(() => {})
   }
 
   if (loading) return <div className="py-16 text-center text-gray-400">載入中...</div>

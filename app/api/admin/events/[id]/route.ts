@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { requireAdmin } from '@/lib/adminMiddleware'
+import { requireAdmin, requirePermission } from '@/lib/adminMiddleware'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = requireAdmin(req)
+  const auth = requirePermission(req, 'events.view')
   if (auth instanceof NextResponse) return auth
 
   const { data: event, error } = await supabaseAdmin
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = requireAdmin(req)
+  const auth = requirePermission(req, 'events.view')
   if (auth instanceof NextResponse) return auth
 
   try {

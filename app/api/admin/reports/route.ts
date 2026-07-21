@@ -54,9 +54,9 @@ export async function GET(req: NextRequest) {
   if (auth instanceof NextResponse) return auth
   const { admin } = auth
 
-  // Only super_admin and customer_service can see full reports
-  // shipper and product_manager cannot access reports
+  // 超級管理員、客服、或具 orders.view 權限者可查看報表
   const canViewReports = admin.permissions.includes('all') ||
+    admin.permissions.includes('orders.view') ||
     admin.role_key === 'customer_service'
 
   if (!canViewReports) {

@@ -35,8 +35,10 @@ export async function GET(req: NextRequest) {
   if (auth instanceof NextResponse) return auth
   const { admin } = auth
 
-  // Same access level as sales reports — customer spend/contact data is sensitive
-  const canView = admin.permissions.includes('all') || admin.role_key === 'customer_service'
+  // customer spend/contact data is sensitive — 需 orders.view 權限或超級管理員
+  const canView = admin.permissions.includes('all') ||
+    admin.permissions.includes('orders.view') ||
+    admin.role_key === 'customer_service'
   if (!canView) {
     return NextResponse.json({ success: false, error: '無權限查看客戶分析' }, { status: 403 })
   }

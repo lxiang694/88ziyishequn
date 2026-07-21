@@ -1,11 +1,13 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Toaster } from 'react-hot-toast'
 import toast from 'react-hot-toast'
 
 interface AdminInfo { id: number; name: string; role_key: string; role_name: string; permissions: string[] }
+
+const SEEN_KEY = 'audit_downloads_seen_at'
 
 const NAV = [
   { href: '/admin/dashboard', label: '📊 儀表板', perms: [] },
@@ -16,9 +18,10 @@ const NAV = [
   // reports: super_admin + customer_service
   { href: '/admin/reports', label: '📈 銷售報表', perms: ['all', 'orders.view'] },
   { href: '/admin/customers', label: '🔁 復購分析', perms: ['all', 'orders.view'] },
-  { href: '/admin/events', label: '📅 社群活動', perms: ['all'] },
+  { href: '/admin/events', label: '📅 社群活動', perms: ['all', 'events.view'] },
   { href: '/admin/members', label: '👤 會員管理', perms: ['all'] },
   { href: '/admin/traffic', label: '📡 流量監控', perms: ['all'] },
+  { href: '/admin/audit', label: '🛡️ 稽核日誌', perms: ['all'] },
   { href: '/admin/users', label: '👥 帳號管理', perms: ['all'] },
 ]
 
@@ -33,6 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [admin, setAdmin] = useState<AdminInfo | null>(null)
   const [checked, setChecked] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [downloadAlerts, setDownloadAlerts] = useState(0)
   const isLoginPage = pathname === '/admin/login'
 
   useEffect(() => {
@@ -46,6 +50,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       })
       .catch(() => { router.replace('/admin/login'); setChecked(true) })
   }, [pathname, isLoginPage, router])
+
+  // 記錄每次頁面瀏覽（登入頁除外），供超級管理員稽核；用 ref 去重避免同頁重複記錄
+  const loggedPathRef = useRef<string>('')
+  useEffect(() => {
+    if (isLoginPage || !admin) return
+    if (loggedPathRef.current === pathname) return
+    loggedPathRef.current = pathname
+    fetch('/api/admin/audit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'page_view', detail: pathname }),
+    }).catch(() => {})
+  }, [pathname, isLoginPage, admin])
+
+  // 超級管理員：查詢自上次檢視後的資料下載筆數，顯示提示徽章
+  const refreshAlerts = useCallback(() => {
+    if (!admin?.permissions?.includes('all')) { setDownloadAlerts(0); return }
+    const since = localStorage.getItem(SEEN_KEY) || ''
+    const params = new URLSearchParams({ type: 'downloads_count' })
+    if (since) params.set('since', since)
+    fetch('/api/admin/audit?' + params).then(r => r.json()).then(d => {
+      if (d.success) setDownloadAlerts(d.count || 0)
+    }).catch(() => {})
+  }, [admin])
+
+  useEffect(() => { refreshAlerts() }, [refreshAlerts, pathname])
+  useEffect(() => {
+    const h = () => setDownloadAlerts(0)
+    window.addEventListener('audit-seen', h)
+    return () => window.removeEventListener('audit-seen', h)
+  }, [])
 
   if (isLoginPage) return <>{children}<Toaster position="top-center" /></>
   if (!checked) return (
@@ -68,6 +102,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     customer_service: '客服人員',
     shipper: '出貨人員',
     product_manager: '商品管理',
+    event_staff: '社群活動人員',
   }
 
   return (
@@ -85,7 +120,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {visibleNav.map(item => (
             <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
               className={`flex items-center px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${pathname.startsWith(item.href) ? 'bg-green-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.href === '/admin/audit' && downloadAlerts > 0 && (
+                <span className="ml-2 min-w-5 h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">
+                  {downloadAlerts > 99 ? '99+' : downloadAlerts}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
