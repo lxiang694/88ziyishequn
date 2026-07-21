@@ -132,7 +132,13 @@ export default function EventRegistrationPage() {
         </div>
       )}
 
-      {submitted ? (
+      {event.registration_closed ? (
+        <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-sm p-10 text-center mb-6">
+          <div className="text-5xl mb-4">⏰</div>
+          <p className="text-xl font-bold text-gray-700 mb-2">活動報名已結束</p>
+          <p className="text-gray-500 leading-relaxed">本場次報名已於活動開始前截止<br />感謝您的關注，歡迎報名其他場次</p>
+        </div>
+      ) : submitted ? (
         <div className="bg-white rounded-2xl border-2 border-green-200 shadow-sm p-10 text-center mb-6">
           <div className="text-5xl mb-4">🎉</div>
           <p className="text-xl font-bold text-gray-800 mb-2">報名成功！</p>

@@ -4,7 +4,18 @@ import Link from 'next/link'
 import { formatDateTime } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
-const emptyForm = { title: '', slug: '', address: '', event_time: '', description: '', is_active: true }
+const emptyForm = { title: '', slug: '', address: '', event_time: '', description: '', is_active: true, starts_at_local: '' }
+
+// datetime-local 值（台灣時間，無時區）↔ ISO 時間戳互轉
+function isoToLocalInput(iso: string | null): string {
+  if (!iso) return ''
+  const tw = new Date(new Date(iso).getTime() + 8 * 60 * 60 * 1000)
+  return tw.toISOString().slice(0, 16)
+}
+function localInputToIso(local: string): string | null {
+  if (!local) return null
+  return new Date(local + ':00+08:00').toISOString()
+}
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([])
@@ -26,20 +37,22 @@ export default function AdminEventsPage() {
   const openAdd = () => { setEditingId(null); setForm(emptyForm); setShowForm(true) }
   const openEdit = (ev: any) => {
     setEditingId(ev.id)
-    setForm({ title: ev.title, slug: ev.slug, address: ev.address || '', event_time: ev.event_time || '', description: ev.description || '', is_active: ev.is_active })
+    setForm({ title: ev.title, slug: ev.slug, address: ev.address || '', event_time: ev.event_time || '', description: ev.description || '', is_active: ev.is_active, starts_at_local: isoToLocalInput(ev.starts_at) })
     setShowForm(true)
   }
 
   const handleSave = async () => {
     if (!form.title.trim()) { toast.error('請填寫活動名稱'); return }
     setSaving(true)
+    const starts_at = localInputToIso(form.starts_at_local)
     const res = editingId
       ? await fetch(`/api/admin/events/${editingId}`, {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: form.title, address: form.address, event_time: form.event_time, description: form.description, is_active: form.is_active }),
+          body: JSON.stringify({ title: form.title, address: form.address, event_time: form.event_time, description: form.description, is_active: form.is_active, starts_at }),
         })
       : await fetch('/api/admin/events', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...form, starts_at }),
         })
     const d = await res.json()
     if (d.success) { toast.success(editingId ? '已更新' : '已建立'); setShowForm(false); load() }
@@ -124,8 +137,13 @@ export default function AdminEventsPage() {
               </div>
             )}
             <div>
-              <label className="form-label">活動時間</label>
-              <input className="form-input" placeholder="例如 2026/07/18（六）14:00" value={form.event_time} onChange={e => setForm(f => ({ ...f, event_time: e.target.value }))} />
+              <label className="form-label">活動時間 <span className="text-gray-400 font-normal text-sm">（顯示用文字）</span></label>
+              <input className="form-input" placeholder="例如 7月26號下午13：30~17：00" value={form.event_time} onChange={e => setForm(f => ({ ...f, event_time: e.target.value }))} />
+            </div>
+            <div>
+              <label className="form-label">活動開始時間 <span className="text-gray-400 font-normal text-sm">（用於自動截止報名）</span></label>
+              <input type="datetime-local" className="form-input" value={form.starts_at_local} onChange={e => setForm(f => ({ ...f, starts_at_local: e.target.value }))} />
+              <p className="text-xs text-gray-400 mt-1">設定後，系統會在活動開始前 2 小時自動關閉報名。留空則不自動關閉。</p>
             </div>
             <div>
               <label className="form-label">活動地址</label>

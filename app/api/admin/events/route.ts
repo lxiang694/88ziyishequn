@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { title, address, event_time, description, is_active } = body
+    const { title, address, event_time, description, is_active, starts_at } = body
     let { slug } = body
 
     if (!title?.trim()) return NextResponse.json({ success: false, error: '請填寫活動名稱' }, { status: 400 })
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
         event_time: event_time?.trim() || '',
         description: description?.trim() || '',
         is_active: is_active !== false,
+        starts_at: starts_at || null,
       })
       .select()
       .single()

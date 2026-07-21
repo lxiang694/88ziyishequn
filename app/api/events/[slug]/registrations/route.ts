@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { validateTWPhone } from '@/lib/utils'
+import { validateTWPhone, isEventRegistrationClosed } from '@/lib/utils'
 
 function maskName(name: string): string {
   const s = name.trim()
@@ -41,8 +41,11 @@ export async function GET(_req: NextRequest, { params }: { params: { slug: strin
 // POST /api/events/[slug]/registrations — public sign-up
 export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
   const { data: event } = await supabaseAdmin
-    .from('community_events').select('id').eq('slug', params.slug).eq('is_active', true).single()
+    .from('community_events').select('id, starts_at').eq('slug', params.slug).eq('is_active', true).single()
   if (!event) return NextResponse.json({ success: false, error: '找不到此活動' }, { status: 404 })
+  if (isEventRegistrationClosed(event.starts_at)) {
+    return NextResponse.json({ success: false, error: '本活動報名已結束' }, { status: 400 })
+  }
 
   try {
     const body = await req.json()
