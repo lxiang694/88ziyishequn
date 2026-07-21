@@ -52,3 +52,10 @@ export function generateSlug(name: string): string {
 }
 
 export const ORDER_STATUSES = ['待確認', '已確認', '備貨中', '已出貨', '已到店', '已取消']
+
+// 活動報名於「開始時間前 2 小時」自動關閉；未設定開始時間則不自動關閉
+export const EVENT_CLOSE_BEFORE_MS = 2 * 60 * 60 * 1000
+export function isEventRegistrationClosed(startsAt: string | null | undefined): boolean {
+  if (!startsAt) return false
+  return Date.now() >= new Date(startsAt).getTime() - EVENT_CLOSE_BEFORE_MS
+}

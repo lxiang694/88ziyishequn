@@ -262,7 +262,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
                     線下活動・開放報名
                   </div>
                   <p className="text-white font-bold text-base sm:text-xl leading-snug">
-                    🎉 88自醫社群・線下健康聚會
+                    🎉 88自醫社群・線下健康見面會
                   </p>
                   <p className="text-white/90 text-xs sm:text-sm mt-0.5 leading-relaxed">
                     多場次・不同地點陸續開放，查看場次報名 →

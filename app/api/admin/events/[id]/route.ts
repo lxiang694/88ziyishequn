@@ -30,6 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     for (const k of allowed) {
       if (body[k] !== undefined) updateData[k] = typeof body[k] === 'string' ? body[k].trim() : body[k]
     }
+    if (body.starts_at !== undefined) updateData.starts_at = body.starts_at || null
     if (updateData.title === '') return NextResponse.json({ success: false, error: '活動名稱不可為空' }, { status: 400 })
 
     const { error } = await supabaseAdmin
