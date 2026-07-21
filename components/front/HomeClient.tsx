@@ -246,6 +246,36 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
           </a>
         </section>
 
+        {/* ─── OFFLINE EVENT ENTRY ─── */}
+        <section className="py-2 mb-2">
+          <Link href="/events/banqiao-2026-07" className="block group">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-600 via-pink-600 to-orange-500 p-5 sm:p-6 shadow-md hover:shadow-xl transition-all">
+              <div className="absolute -right-6 -top-6 w-28 h-28 bg-white/10 rounded-full" />
+              <div className="absolute -right-10 bottom-0 w-20 h-20 bg-white/10 rounded-full" />
+              <div className="relative flex items-center gap-4">
+                <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-3xl sm:text-4xl">
+                  🎉
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="inline-flex items-center gap-1.5 bg-white/25 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-xs font-bold text-white mb-1.5">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    線下活動・開放報名
+                  </div>
+                  <p className="text-white font-bold text-base sm:text-xl leading-snug">
+                    88自醫社群・板橋線下健康聚會
+                  </p>
+                  <p className="text-white/90 text-xs sm:text-sm mt-0.5 leading-relaxed">
+                    面對面交流健康問題，名額有限，立即報名 →
+                  </p>
+                </div>
+                <div className="flex-shrink-0 hidden sm:flex bg-white text-rose-600 font-bold text-sm px-4 py-2.5 rounded-xl group-hover:scale-105 transition-transform">
+                  我要報名
+                </div>
+              </div>
+            </div>
+          </Link>
+        </section>
+
         {/* ─── HOW IT WORKS ─── */}
         <section className="py-6 mb-2">
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
