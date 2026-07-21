@@ -5,7 +5,7 @@ import { formatDateTime, validateTWPhone } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 const COMPANION_OPTIONS = [
-  { value: 0, label: '無' },
+  { value: 0, label: '請選擇' },
   { value: 1, label: '1人' },
   { value: 2, label: '2人' },
   { value: 3, label: '3人' },
@@ -86,80 +86,134 @@ export default function EventRegistrationPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">{event.title}</h1>
-        <div className="inline-flex flex-col gap-1.5 text-left bg-green-50 border border-green-100 rounded-2xl px-5 py-4">
-          {event.event_time && (
-            <p className="text-gray-700 text-sm flex items-start gap-2"><span>🕒</span><span className="font-semibold">{event.event_time}</span></p>
-          )}
-          {event.address && (
-            <p className="text-gray-700 text-sm flex items-start gap-2"><span>📍</span><span className="font-semibold">{event.address}</span></p>
-          )}
+    <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10">
+      {/* ─── HERO HEADER ─── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-700 via-emerald-600 to-teal-600 px-6 py-9 sm:px-10 sm:py-12 mb-6 text-white shadow-lg shadow-green-200/50">
+        <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full" />
+        <div className="absolute -left-10 -bottom-12 w-44 h-44 bg-white/5 rounded-full" />
+        <div className="relative text-center">
+          <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold mb-4 tracking-wide">
+            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+            線下活動報名
+          </div>
+          <h1 className="text-2xl sm:text-[2rem] font-extrabold leading-tight tracking-tight mb-1">
+            {event.title}
+          </h1>
         </div>
-        {event.description && (
-          <p className="text-gray-500 text-sm mt-4 leading-relaxed whitespace-pre-line">{event.description}</p>
-        )}
       </div>
 
-      {submitted ? (
-        <div className="bg-white rounded-2xl border border-green-200 shadow-sm p-8 text-center mb-8">
-          <div className="text-4xl mb-3">🎉</div>
-          <p className="text-lg font-bold text-gray-800 mb-1">報名成功！</p>
-          <p className="text-gray-500 text-sm">我們已收到您的報名資料，期待與您見面</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6 mb-8 space-y-4">
-          <div>
-            <label className="form-label">姓名 <span className="text-red-500">*</span></label>
-            <input className={`form-input ${errors.name ? 'border-red-400 bg-red-50' : ''}`}
-              placeholder="請輸入您的姓名" value={form.name}
-              onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setErrors(er => ({ ...er, name: '' })) }} />
-            {errors.name && <p className="text-red-500 text-sm mt-1.5">⚠️ {errors.name}</p>}
-          </div>
-          <div>
-            <label className="form-label">聯絡電話 <span className="text-red-500">*</span></label>
-            <input className={`form-input ${errors.phone ? 'border-red-400 bg-red-50' : ''}`}
-              type="tel" inputMode="numeric" placeholder="09xxxxxxxx" value={form.phone}
-              onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(er => ({ ...er, phone: '' })) }} />
-            {errors.phone && <p className="text-red-500 text-sm mt-1.5">⚠️ {errors.phone}</p>}
-          </div>
-          <div>
-            <label className="form-label">本次您最想得到什麼幫助？想討論的話題是什麼？ <span className="text-gray-400 font-normal text-sm">（選填）</span></label>
-            <textarea className="form-input" rows={3} placeholder="請自由填寫..."
-              value={form.topic} onChange={e => setForm(f => ({ ...f, topic: e.target.value }))} />
-          </div>
-          <div>
-            <label className="form-label">是否有朋友或家人一起參加？</label>
-            <select className="form-input" value={form.companions}
-              onChange={e => setForm(f => ({ ...f, companions: Number(e.target.value) }))}>
-              {COMPANION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-lg py-3.5 disabled:opacity-50">
-            {submitting ? '送出中...' : '送出報名'}
-          </button>
+      {/* ─── EVENT INFO ─── */}
+      {(event.event_time || event.address || event.description) && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50 mb-6 overflow-hidden">
+          {event.event_time && (
+            <div className="flex items-center gap-4 px-5 py-4">
+              <div className="flex-shrink-0 w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center text-xl">🕒</div>
+              <div>
+                <p className="text-xs text-gray-400 font-medium tracking-wide">活動時間</p>
+                <p className="text-gray-800 font-bold text-base leading-snug mt-0.5">{event.event_time}</p>
+              </div>
+            </div>
+          )}
+          {event.address && (
+            <div className="flex items-center gap-4 px-5 py-4">
+              <div className="flex-shrink-0 w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center text-xl">📍</div>
+              <div>
+                <p className="text-xs text-gray-400 font-medium tracking-wide">活動地點</p>
+                <p className="text-gray-800 font-bold text-base leading-snug mt-0.5">{event.address}</p>
+              </div>
+            </div>
+          )}
+          {event.description && (
+            <div className="px-5 py-4 bg-gray-50/50">
+              <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{event.description}</p>
+            </div>
+          )}
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h2 className="font-bold text-gray-800 mb-4">👥 目前已有 {total} 人報名</h2>
+      {submitted ? (
+        <div className="bg-white rounded-2xl border-2 border-green-200 shadow-sm p-10 text-center mb-6">
+          <div className="text-5xl mb-4">🎉</div>
+          <p className="text-xl font-bold text-gray-800 mb-2">報名成功！</p>
+          <p className="text-gray-500 leading-relaxed">我們已收到您的報名資料<br />期待在活動現場與您見面</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-7 mb-6">
+          <div className="flex items-center gap-2 mb-5">
+            <span className="w-1.5 h-6 bg-green-600 rounded-full" />
+            <h2 className="text-lg font-bold text-gray-800">填寫報名資料</h2>
+          </div>
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">姓名 <span className="text-red-500">*</span></label>
+              <input className={`form-input ${errors.name ? 'border-red-400 bg-red-50' : ''}`}
+                placeholder="請輸入您的姓名" value={form.name}
+                onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setErrors(er => ({ ...er, name: '' })) }} />
+              {errors.name && <p className="text-red-500 text-sm mt-1.5">⚠️ {errors.name}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">聯絡電話 <span className="text-red-500">*</span></label>
+              <input className={`form-input ${errors.phone ? 'border-red-400 bg-red-50' : ''}`}
+                type="tel" inputMode="numeric" placeholder="09xxxxxxxx" value={form.phone}
+                onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(er => ({ ...er, phone: '' })) }} />
+              {errors.phone && <p className="text-red-500 text-sm mt-1.5">⚠️ {errors.phone}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                本次您最想得到什麼幫助？想討論的話題是什麼？
+                <span className="text-gray-400 font-normal ml-1">（選填）</span>
+              </label>
+              <textarea className="form-input leading-relaxed" rows={4} placeholder="例如：想了解如何改善睡眠、調整飲食習慣、營養補充建議…"
+                value={form.topic} onChange={e => setForm(f => ({ ...f, topic: e.target.value }))} />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">是否有朋友或家人一起參加？</label>
+              <select className="form-input" value={form.companions}
+                onChange={e => setForm(f => ({ ...f, companions: Number(e.target.value) }))}>
+                {COMPANION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-lg py-4 mt-6 disabled:opacity-50">
+            {submitting ? '送出中...' : '送出報名 →'}
+          </button>
+          <p className="text-center text-xs text-gray-400 mt-3">送出後我們將透過電話或 LINE 與您聯繫活動細節</p>
+        </div>
+      )}
+
+      {/* ─── ATTENDEE LIST ─── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-6 bg-green-600 rounded-full" />
+            <h2 className="text-lg font-bold text-gray-800">誰在參加</h2>
+          </div>
+          <span className="text-sm font-bold text-green-700 bg-green-50 px-3 py-1 rounded-full">已有 {total} 人</span>
+        </div>
         {registrations.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-6">目前還沒有人報名，成為第一位吧！</p>
+          <p className="text-gray-400 text-sm text-center py-8">目前還沒有人報名，成為第一位吧！</p>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <div className="space-y-1 max-h-96 overflow-y-auto -mx-1 px-1">
             {registrations.map((r, i) => (
-              <div key={i} className="flex items-center justify-between text-sm border-b border-gray-50 last:border-0 pb-2 last:pb-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-gray-700">{r.name}</span>
-                  <span className="text-gray-400 font-mono">{r.phone}</span>
-                  {r.companions > 0 && <span className="text-xs bg-green-50 text-green-700 font-bold px-2 py-0.5 rounded-full">+{r.companions}人</span>}
+              <div key={i} className="flex items-center justify-between gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center text-green-700 font-bold text-sm">
+                    {r.name.slice(0, 1)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-800 text-sm">{r.name}</span>
+                      {r.companions > 0 && <span className="text-xs bg-green-50 text-green-700 font-bold px-2 py-0.5 rounded-full flex-shrink-0">攜伴 {r.companions} 人</span>}
+                    </div>
+                    <span className="text-gray-400 font-mono text-xs">{r.phone}</span>
+                  </div>
                 </div>
-                <span className="text-gray-300 text-xs whitespace-nowrap">{formatDateTime(r.created_at)}</span>
+                <span className="text-gray-300 text-xs whitespace-nowrap flex-shrink-0">{formatDateTime(r.created_at)}</span>
               </div>
             ))}
           </div>
         )}
+        <p className="text-center text-xs text-gray-300 mt-4">為保護隱私，報名者姓名與電話已部分隱藏</p>
       </div>
     </div>
   )
