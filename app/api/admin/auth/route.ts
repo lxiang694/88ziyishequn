@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: '帳號或密碼錯誤' }, { status: 401 })
     }
 
-    const permissions: string[] = user.admin_roles?.permissions_json || []
+    // 帳號自訂權限優先；未設定則沿用角色預設權限
+    const rolePerms: string[] = user.admin_roles?.permissions_json || []
+    const accountPerms = user.permissions_json
+    const permissions: string[] = Array.isArray(accountPerms) && accountPerms.length > 0 ? accountPerms : rolePerms
     const role_key = user.admin_roles?.role_key || ''
     const role_name = user.admin_roles?.role_name || ''
 

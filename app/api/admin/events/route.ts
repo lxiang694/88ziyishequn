@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { requireAdmin } from '@/lib/adminMiddleware'
+import { requirePermission } from '@/lib/adminMiddleware'
 
 function slugify(input: string): string {
   return input.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9一-鿿-]/g, '').slice(0, 60)
 }
 
 export async function GET(req: NextRequest) {
-  const auth = requireAdmin(req)
+  const auth = requirePermission(req, 'events.view')
   if (auth instanceof NextResponse) return auth
 
   const { data: events, error } = await supabaseAdmin
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = requireAdmin(req)
+  const auth = requirePermission(req, 'events.view')
   if (auth instanceof NextResponse) return auth
 
   try {

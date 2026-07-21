@@ -86,6 +86,11 @@ export default function CustomersPage() {
       a.download = `復購分析_${new Date().toISOString().slice(0, 10)}.csv`
       a.click()
       URL.revokeObjectURL(url)
+      // 稽核：記錄此次客戶資料下載
+      fetch('/api/admin/audit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'export_customers', detail: `下載復購/客戶名單 ${rows.length} 筆` }),
+      }).catch(() => {})
       toast.success(`已匯出 ${rows.length} 筆客戶資料`)
     } catch {
       toast.error('匯出失敗')
