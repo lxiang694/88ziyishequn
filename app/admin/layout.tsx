@@ -16,6 +16,7 @@ const NAV = [
   // reports: super_admin + customer_service
   { href: '/admin/reports', label: '📈 銷售報表', perms: ['all', 'orders.view'] },
   { href: '/admin/customers', label: '🔁 復購分析', perms: ['all', 'orders.view'] },
+  { href: '/admin/events', label: '📅 社群活動', perms: ['all'] },
   { href: '/admin/members', label: '👤 會員管理', perms: ['all'] },
   { href: '/admin/traffic', label: '📡 流量監控', perms: ['all'] },
   { href: '/admin/users', label: '👥 帳號管理', perms: ['all'] },
