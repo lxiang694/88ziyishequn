@@ -5,7 +5,7 @@ import { formatDateTime, validateTWPhone } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 const COMPANION_OPTIONS = [
-  { value: 0, label: '請選擇' },
+  { value: 0, label: '無' },
   { value: 1, label: '1人' },
   { value: 2, label: '2人' },
   { value: 3, label: '3人' },
@@ -25,7 +25,7 @@ export default function EventRegistrationPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
-  const [form, setForm] = useState({ name: '', phone: '', topic: '', companions: 0 })
+  const [form, setForm] = useState({ name: '', phone: '', topic: '', companions: -1 })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const loadRegistrations = useCallback(() => {
@@ -47,6 +47,7 @@ export default function EventRegistrationPage() {
     const e: Record<string, string> = {}
     if (!form.name.trim()) e.name = '請填寫姓名'
     if (!form.phone || !validateTWPhone(form.phone)) e.phone = '請填寫正確手機號碼（09xxxxxxxx）'
+    if (form.companions < 0) e.companions = '請選擇是否有親友一起參加'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -168,10 +169,12 @@ export default function EventRegistrationPage() {
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1.5">是否有朋友或家人一起參加？</label>
-              <select className="form-input" value={form.companions}
-                onChange={e => setForm(f => ({ ...f, companions: Number(e.target.value) }))}>
+              <select className={`form-input ${errors.companions ? 'border-red-400 bg-red-50' : ''}`} value={form.companions}
+                onChange={e => { setForm(f => ({ ...f, companions: Number(e.target.value) })); setErrors(er => ({ ...er, companions: '' })) }}>
+                <option value={-1} disabled>請選擇</option>
                 {COMPANION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
+              {errors.companions && <p className="text-red-500 text-sm mt-1.5">⚠️ {errors.companions}</p>}
             </div>
           </div>
           <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-lg py-4 mt-6 disabled:opacity-50">
