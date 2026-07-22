@@ -1,8 +1,8 @@
 'use client'
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from './CartContext'
 import VariantPicker from './VariantPicker'
 import { formatPrice } from '@/lib/utils'
@@ -36,6 +36,7 @@ const HOT_TAGS = ['維生素C', '魚油', '葉黃素', '益生菌', '鈣', '維�
 
 export default function HomeClient({ initialProducts, initialTotal, categories }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { addItem } = useCart()
   const [products, setProducts] = useState<Product[]>(initialProducts)
   const [total, setTotal] = useState(initialTotal)
@@ -84,6 +85,19 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
     const next = page + 1; setPage(next)
     fetchProducts(next, search, selectedCat, true)
   }
+
+  // 由底部導覽列「分類」深連結（/?cat=slug）進入時，自動篩選並捲到商品區
+  useEffect(() => {
+    const cat = searchParams.get('cat') || ''
+    if (cat && cat !== selectedCat) {
+      setSelectedCat(cat)
+      setSearch('')
+      setPage(1)
+      fetchProducts(1, '', cat)
+      setTimeout(scrollToProducts, 300)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   const handleAddToCart = (product: Product) => {
     const active = product.product_variants.filter(v => v.is_active && v.stock_qty > 0)
