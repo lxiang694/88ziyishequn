@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { supabaseAdmin } from '@/lib/supabase'
-import { DIRECTION_INFO } from '@/lib/quizData'
+import { analysisFromParams } from '@/lib/quizAnalysis'
 import QuizResultCart from '@/components/front/QuizResultCart'
 import SocialShareButtons from '@/components/front/SocialShareButtons'
 import LoginPrompt from '@/components/front/LoginPrompt'
@@ -59,18 +59,19 @@ async function getResultData(cats: string[]) {
 export default async function QuizResultPage({
   searchParams,
 }: {
-  searchParams: { cats?: string }
+  searchParams: { cats?: string; a?: string }
 }) {
-  const catsParam = searchParams.cats || 'immune'
-  const cats = catsParam.split(',').filter(c => DIRECTION_INFO[c])
+  const analysis = analysisFromParams({ a: searchParams.a, cats: searchParams.cats })
+  const cats = analysis.cats
   const recommendations = await getResultData(cats)
+  const dirBySlug = Object.fromEntries(analysis.directions.map(d => [d.slug, d]))
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
       <div className="max-w-2xl mx-auto px-4 py-8">
 
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4 text-3xl">
             🩺
           </div>
@@ -78,26 +79,34 @@ export default async function QuizResultPage({
           <p className="text-gray-500">根據您的健康狀況，為您篩選最適合的保健品</p>
         </div>
 
+        {/* 個人化分析摘要 */}
+        <div className="bg-gradient-to-br from-green-700 to-emerald-600 rounded-2xl p-5 text-white shadow-md mb-6">
+          <p className="text-xs font-bold text-green-100 mb-1.5 tracking-wide">📋 個人化分析</p>
+          <p className="text-sm leading-relaxed">{analysis.summary}</p>
+        </div>
+
         {/* Health direction summaries */}
         <div className="space-y-2 mb-8">
-          {cats.map(cat => {
-            const info = DIRECTION_INFO[cat]
-            if (!info) return null
-            return (
-              <div key={cat} className="bg-white rounded-2xl border border-green-100 p-4 flex gap-3 items-start shadow-sm">
-                <span className="text-2xl flex-shrink-0 mt-0.5">{info.icon}</span>
-                <div>
-                  <p className="font-bold text-gray-800 mb-0.5">{info.name}</p>
-                  <p className="text-sm text-gray-500 leading-relaxed">{info.advice}</p>
-                </div>
+          {analysis.directions.map(d => (
+            <div key={d.slug} className="bg-white rounded-2xl border border-green-100 p-4 flex gap-3 items-start shadow-sm">
+              <span className="text-2xl flex-shrink-0 mt-0.5">{d.icon}</span>
+              <div className="min-w-0">
+                <p className="font-bold text-gray-800 mb-0.5 flex items-center gap-2">
+                  {d.name}
+                  {d.primary
+                    ? <span className="text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">您關注的</span>
+                    : <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">建議留意</span>}
+                </p>
+                <p className="text-sm text-gray-500 leading-relaxed">{d.detailAdvice || d.advice}</p>
+                <p className="text-xs text-green-700 mt-1.5 font-semibold">建議成分：{d.ingredients}</p>
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
 
         {/* Product recommendations per category */}
         {recommendations.map(({ category, products }) => {
-          const info = DIRECTION_INFO[category]
+          const info = dirBySlug[category]
           return (
             <section key={category} className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">

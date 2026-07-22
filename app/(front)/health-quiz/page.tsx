@@ -2,7 +2,8 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { INTRO_QUESTIONS, FOLLOWUP_QUESTIONS } from '@/lib/quizData'
+import { INTRO_QUESTIONS, FOLLOWUP_QUESTIONS, FINAL_QUESTIONS } from '@/lib/quizData'
+import { encodeAnswers } from '@/lib/quizAnalysis'
 
 type Answers = Record<string, string | string[]>
 
@@ -29,7 +30,7 @@ export default function HealthQuizPage() {
     const followups = FOLLOWUP_QUESTIONS.filter(q =>
       q.showIf?.some(slug => concerns.includes(slug))
     )
-    return [...INTRO_QUESTIONS, ...followups]
+    return [...INTRO_QUESTIONS, ...followups, ...FINAL_QUESTIONS]
   }, [answers.concerns])
 
   const current = questions[stepIndex]
@@ -51,12 +52,16 @@ export default function HealthQuizPage() {
   const toggleMulti = (value: string) => {
     const prev: string[] = Array.isArray(answers[current.id]) ? answers[current.id] as string[] : []
     const already = prev.includes(value)
+    const maxSelect = current.maxSelect ?? 3
+    // 「以上皆無」與其他選項互斥
+    if (!already && value === 'none') { setAnswers(a => ({ ...a, [current.id]: ['none'] })); return }
     let next: string[]
     if (already) {
       next = prev.filter(v => v !== value)
     } else {
-      if (prev.length >= 3) return
-      next = [...prev, value]
+      const base = prev.filter(v => v !== 'none')
+      if (base.length >= maxSelect) return
+      next = [...base, value]
     }
     setAnswers(a => ({ ...a, [current.id]: next }))
   }
@@ -74,15 +79,10 @@ export default function HealthQuizPage() {
   }
 
   const submitQuiz = (finalAnswers: Answers) => {
-    const concerns: string[] = Array.isArray(finalAnswers.concerns)
-      ? finalAnswers.concerns
-      : []
-    if (concerns.length === 0) {
-      router.push('/health-quiz/result?cats=immune')
-      return
-    }
-    const cats = concerns.slice(0, 3).join(',')
-    router.push(`/health-quiz/result?cats=${encodeURIComponent(cats)}`)
+    const concerns: string[] = Array.isArray(finalAnswers.concerns) ? finalAnswers.concerns : []
+    const a = encodeAnswers(finalAnswers)
+    const cats = (concerns.length ? concerns.slice(0, 3) : ['immune']).join(',')
+    router.push(`/health-quiz/result?a=${encodeURIComponent(a)}&cats=${encodeURIComponent(cats)}`)
   }
 
   const multiAnswer = Array.isArray(answers[current?.id]) ? answers[current.id] as string[] : []
@@ -163,7 +163,7 @@ export default function HealthQuizPage() {
                 })}
               </div>
               <p className="text-xs text-gray-400 mt-3 text-right">
-                已選 {multiAnswer.length} / 最多 3 項
+                已選 {multiAnswer.length} / 最多 {current.maxSelect ?? 3} 項
               </p>
             </>
           )}
