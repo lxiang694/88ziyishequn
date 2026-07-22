@@ -105,10 +105,14 @@ export default function CustomersPage() {
   const [pageSize, setPageSize] = useState(50)
   const [exporting, setExporting] = useState(false)
   const [trends, setTrends] = useState<any>(null)
+  const [products, setProducts] = useState<any>(null)
 
   useEffect(() => {
     fetch('/api/admin/customers/trends').then(r => r.ok ? r.json() : null).then(d => {
       if (d?.success) setTrends(d.data)
+    }).catch(() => {})
+    fetch('/api/admin/customers/products').then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.success) setProducts(d.data)
     }).catch(() => {})
   }, [])
 
@@ -297,6 +301,62 @@ export default function CustomersPage() {
               <LineChart items={trends.weekly}
                 series={[{ key: 'dormant', color: '#ea580c', label: '沉睡客' }, { key: 'lost', color: '#9ca3af', label: '流失客' }]}
                 firstLabel={trends.weekly[0]?.date.slice(5)} lastLabel={trends.weekly[trends.weekly.length - 1]?.date.slice(5)} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 商品復購洞察 */}
+      {products && (products.repurchase_ranking.length > 0 || products.next_product_ranking.length > 0) && (
+        <>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-gray-300 rounded-full" />
+            <h2 className="text-sm font-bold text-gray-700">商品復購洞察</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            {/* 回購率最高商品 */}
+            <div className="card p-4">
+              <p className="font-bold text-gray-700 text-sm mb-1">🔁 回購率最高的商品 Top 5</p>
+              <p className="text-xs text-gray-400 mb-3">買過的客戶中，有多少比例會再次回購同一商品</p>
+              {products.repurchase_ranking.length === 0 ? (
+                <p className="text-gray-400 text-sm py-6 text-center">資料還不足以計算</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {products.repurchase_ranking.map((p: any, i: number) => (
+                    <div key={p.product_id} className="flex items-center gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-700 font-bold text-xs flex items-center justify-center">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                        <div className="h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${p.repurchase_rate}%` }} />
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-sm font-bold text-green-700">{p.repurchase_rate}%</p>
+                        <p className="text-xs text-gray-400">{p.repeat_buyers}/{p.buyers} 人</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* 首購後最常回購的第二件商品 */}
+            <div className="card p-4">
+              <p className="font-bold text-gray-700 text-sm mb-1">🛒 首購後最常回購的商品 Top 5</p>
+              <p className="text-xs text-gray-400 mb-3">老客回頭時最常「加購」的新品項（首單沒買過的）</p>
+              {products.next_product_ranking.length === 0 ? (
+                <p className="text-gray-400 text-sm py-6 text-center">資料還不足以計算</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {products.next_product_ranking.map((p: any, i: number) => (
+                    <div key={p.product_id} className="flex items-center gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center">{i + 1}</span>
+                      <p className="flex-1 min-w-0 text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                      <span className="flex-shrink-0 text-sm font-bold text-blue-700">{p.customers} 位回購</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </>
