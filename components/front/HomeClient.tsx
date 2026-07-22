@@ -160,9 +160,20 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-3">
               守護您與家人的<br className="sm:hidden" />健康日常
             </h1>
-            <p className="text-green-100 text-base sm:text-lg leading-relaxed mb-7">
+            <p className="text-green-100 text-base sm:text-lg leading-relaxed mb-5">
               精選保健品，依健康方向分類，選購更清楚、更安心
             </p>
+
+            {/* 健康自測 CTA — 給「不知道怎麼選」的訪客最直接的入口 */}
+            <a href="/health-quiz"
+              className="group inline-flex items-center gap-3 bg-white text-green-800 rounded-2xl pl-4 pr-5 py-3 mb-7 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all">
+              <span className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-2xl">🩺</span>
+              <span className="text-left leading-tight">
+                <span className="block font-bold text-base sm:text-lg">不知道怎麼選？做個健康自測</span>
+                <span className="block text-xs sm:text-sm text-green-600 font-semibold mt-0.5">2 分鐘・幫你推薦適合的保健品</span>
+              </span>
+              <span className="flex-shrink-0 text-green-700 font-bold text-lg group-hover:translate-x-0.5 transition-transform">→</span>
+            </a>
 
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-3 sm:flex sm:gap-6">
