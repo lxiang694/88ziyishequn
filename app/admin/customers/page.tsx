@@ -34,6 +34,64 @@ function formatMoney(n: number) {
   return `NT$${Number(n || 0).toLocaleString('zh-TW')}`
 }
 
+// 堆疊長條圖（近30天每日 / 近6月每月）
+function StackedBars({ items, aKey, bKey, aColor, bColor, aLabel, bLabel, firstLabel, lastLabel }: any) {
+  const max = Math.max(1, ...items.map((d: any) => (d[aKey] || 0) + (d[bKey] || 0)))
+  const n = items.length
+  const bw = 100 / n
+  return (
+    <div>
+      <div className="flex gap-4 text-xs text-gray-500 mb-2">
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: aColor }} />{aLabel}</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: bColor }} />{bLabel}</span>
+      </div>
+      <svg viewBox="0 0 100 60" preserveAspectRatio="none" className="w-full" style={{ height: 150 }}>
+        {items.map((d: any, i: number) => {
+          const a = d[aKey] || 0, b = d[bKey] || 0
+          const hA = (a / max) * 56, hB = (b / max) * 56
+          const x = i * bw + bw * 0.15, w = bw * 0.7
+          return (
+            <g key={i}>
+              <rect x={x} y={60 - hA} width={w} height={hA} fill={aColor} />
+              <rect x={x} y={60 - hA - hB} width={w} height={hB} fill={bColor} />
+            </g>
+          )
+        })}
+      </svg>
+      <div className="flex justify-between text-xs text-gray-400 mt-1"><span>{firstLabel}</span><span>{lastLabel}</span></div>
+    </div>
+  )
+}
+
+// 折線圖（近8週沉睡/流失）
+function LineChart({ items, series, firstLabel, lastLabel }: any) {
+  const vals = items.flatMap((d: any) => series.map((s: any) => d[s.key] || 0))
+  const max = Math.max(1, ...vals)
+  const n = items.length
+  const px = (i: number) => n <= 1 ? 50 : (i / (n - 1)) * 100
+  const py = (v: number) => 56 - (v / max) * 50
+  const last = items[items.length - 1] || {}
+  return (
+    <div>
+      <div className="flex gap-4 text-xs text-gray-500 mb-2">
+        {series.map((s: any) => (
+          <span key={s.key} className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: s.color }} />
+            {s.label} <span className="font-bold" style={{ color: s.color }}>{last[s.key] ?? 0}</span>
+          </span>
+        ))}
+      </div>
+      <svg viewBox="0 0 100 60" preserveAspectRatio="none" className="w-full" style={{ height: 150 }}>
+        {series.map((s: any) => (
+          <polyline key={s.key} fill="none" stroke={s.color} strokeWidth={1.5} vectorEffect="non-scaling-stroke"
+            points={items.map((d: any, i: number) => `${px(i)},${py(d[s.key] || 0)}`).join(' ')} />
+        ))}
+      </svg>
+      <div className="flex justify-between text-xs text-gray-400 mt-1"><span>{firstLabel}</span><span>{lastLabel}</span></div>
+    </div>
+  )
+}
+
 export default function CustomersPage() {
   const [summary, setSummary] = useState<any>(null)
   const [customers, setCustomers] = useState<any[]>([])
@@ -46,6 +104,13 @@ export default function CustomersPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [exporting, setExporting] = useState(false)
+  const [trends, setTrends] = useState<any>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/customers/trends').then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.success) setTrends(d.data)
+    }).catch(() => {})
+  }, [])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -206,6 +271,36 @@ export default function CustomersPage() {
           </div>
         ))}
       </div>
+
+      {/* 趨勢分析 */}
+      {trends && (
+        <>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-gray-300 rounded-full" />
+            <h2 className="text-sm font-bold text-gray-700">趨勢分析</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <div className="card p-4">
+              <p className="font-bold text-gray-700 text-sm mb-3">近 30 天每日下單客戶</p>
+              <StackedBars items={trends.daily} aKey="new_customers" bKey="returning_customers"
+                aColor="#93c5fd" bColor="#16a34a" aLabel="新客" bLabel="回頭客"
+                firstLabel={trends.daily[0]?.date.slice(5)} lastLabel={trends.daily[trends.daily.length - 1]?.date.slice(5)} />
+            </div>
+            <div className="card p-4">
+              <p className="font-bold text-gray-700 text-sm mb-3">近 6 個月營收：新客 vs 老客</p>
+              <StackedBars items={trends.monthly} aKey="new_rev" bKey="returning_rev"
+                aColor="#93c5fd" bColor="#16a34a" aLabel="新客營收" bLabel="老客營收"
+                firstLabel={trends.monthly[0]?.month} lastLabel={trends.monthly[trends.monthly.length - 1]?.month} />
+            </div>
+            <div className="card p-4">
+              <p className="font-bold text-gray-700 text-sm mb-3">近 8 週沉睡 / 流失客戶</p>
+              <LineChart items={trends.weekly}
+                series={[{ key: 'dormant', color: '#ea580c', label: '沉睡客' }, { key: 'lost', color: '#9ca3af', label: '流失客' }]}
+                firstLabel={trends.weekly[0]?.date.slice(5)} lastLabel={trends.weekly[trends.weekly.length - 1]?.date.slice(5)} />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 待喚醒名單 CTA */}
       {summary && summary.due_count > 0 && segment !== 'due' && (
