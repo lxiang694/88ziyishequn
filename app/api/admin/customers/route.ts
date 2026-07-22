@@ -30,6 +30,26 @@ function classify(orderCount: number, daysSinceLast: number): Segment {
   return 'new'
 }
 
+// 計算某個時間點（refTime）當下的沉睡客戶數：只看該時間點前的訂單
+function dormantCountAsOf(orders: any[], refTime: number): number {
+  const m = new Map<string, { count: number; last: number }>()
+  for (const o of orders) {
+    const t = new Date(o.created_at).getTime()
+    if (t > refTime) continue
+    const phone = (o.phone || '').trim()
+    if (!phone) continue
+    const a = m.get(phone)
+    if (!a) m.set(phone, { count: 1, last: t })
+    else { a.count++; if (t > a.last) a.last = t }
+  }
+  let dormant = 0
+  for (const a of m.values()) {
+    const days = Math.floor((refTime - a.last) / DAY_MS)
+    if (classify(a.count, days) === 'dormant') dormant++
+  }
+  return dormant
+}
+
 export async function GET(req: NextRequest) {
   const auth = requireAdmin(req)
   if (auth instanceof NextResponse) return auth
@@ -128,6 +148,38 @@ export async function GET(req: NextRequest) {
   const totalOrders = customers.reduce((s, c) => s + c.order_count, 0)
   const repurchaseCycles = customers.filter(c => c.avg_repurchase_days !== null).map(c => c.avg_repurchase_days as number)
 
+  // ── 今日營運指標（台灣時間）──
+  const nowTW = new Date(now + 8 * 60 * 60 * 1000)
+  const todayStartMs = new Date(nowTW.toISOString().slice(0, 10) + 'T00:00:00+08:00').getTime()
+
+  // 今日復購人數（今日有下單、且今日之前曾下過單）＋ 今日喚醒沉睡客
+  const lastBeforeToday = new Map<string, number>()
+  const orderedTodayPhones = new Set<string>()
+  for (const o of orders) {
+    const phone = (o.phone || '').trim()
+    if (!phone) continue
+    const t = new Date(o.created_at).getTime()
+    if (t < todayStartMs) lastBeforeToday.set(phone, Math.max(lastBeforeToday.get(phone) || 0, t))
+    else orderedTodayPhones.add(phone)
+  }
+  let repurchaseToday = 0
+  let reactivatedToday = 0
+  for (const phone of orderedTodayPhones) {
+    const prev = lastBeforeToday.get(phone)
+    if (prev != null) {
+      repurchaseToday++
+      if (Math.floor((todayStartMs - prev) / DAY_MS) > DORMANT_DAYS) reactivatedToday++
+    }
+  }
+
+  // 沉睡客戶數（現在）與今日變化
+  const dormantNow = customers.filter(c => c.segment === 'dormant').length
+  const dormantChangeToday = dormantNow - dormantCountAsOf(orders, todayStartMs)
+
+  // 老客戶（回購 ≥2 次）營收占比
+  const returningRevenue = customers.filter(c => c.order_count >= 2).reduce((s, c) => s + c.total_amount, 0)
+  const returningRevenueShare = totalRevenue > 0 ? Math.round((returningRevenue / totalRevenue) * 1000) / 10 : 0
+
   const summary = {
     total_customers: totalCustomers,
     repeat_customers: repeatCustomers,
@@ -138,6 +190,14 @@ export async function GET(req: NextRequest) {
       ? Math.round(repurchaseCycles.reduce((s, d) => s + d, 0) / repurchaseCycles.length)
       : null,
     total_revenue: Math.round(totalRevenue),
+    // 今日營運
+    repurchase_today: repurchaseToday,
+    reactivated_today: reactivatedToday,
+    returning_revenue_share: returningRevenueShare,
+    dormant_count: dormantNow,
+    dormant_change_today: dormantChangeToday,
+    vip_count: customers.filter(c => c.segment === 'vip').length,
+    lost_count: customers.filter(c => c.segment === 'lost').length,
   }
 
   // 4. Filter (search / segment)
