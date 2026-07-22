@@ -12,6 +12,7 @@ export interface QuizQuestion {
   type: 'single' | 'multi'
   options: QuizOption[]
   showIf?: string[]  // only show this question if any of these concern slugs were selected
+  maxSelect?: number // multi 題最多可選數（預設 3）
 }
 
 export const INTRO_QUESTIONS: QuizQuestion[] = [
@@ -27,11 +28,24 @@ export const INTRO_QUESTIONS: QuizQuestion[] = [
     ],
   },
   {
-    id: 'concerns',
+    id: 'gender',
     step: 2,
+    text: '請問您的生理性別？',
+    subtext: '用於提供更貼切的保健建議',
+    type: 'single',
+    options: [
+      { label: '女性', value: 'female' },
+      { label: '男性', value: 'male' },
+      { label: '不方便透露', value: 'na' },
+    ],
+  },
+  {
+    id: 'concerns',
+    step: 3,
     text: '您最近最困擾的健康問題是？',
     subtext: '可選擇 1–3 項',
     type: 'multi',
+    maxSelect: 3,
     options: [
       { label: '🦴 骨骼關節疼痛', value: 'bone-joint', directions: ['bone-joint'] },
       { label: '❤️ 心血管 / 血壓', value: 'cardiovascular', directions: ['cardiovascular'] },
@@ -42,6 +56,72 @@ export const INTRO_QUESTIONS: QuizQuestion[] = [
     ],
   },
 ]
+
+// 生活習慣（放在所有問題最後）— 用於補強推薦方向與建議
+export const FINAL_QUESTIONS: QuizQuestion[] = [
+  {
+    id: 'lifestyle',
+    step: 90,
+    text: '以下哪些符合您目前的生活狀況？',
+    subtext: '可複選，幫助我們更精準推薦（最多 4 項）',
+    type: 'multi',
+    maxSelect: 4,
+    options: [
+      { label: '🌙 常熬夜 / 睡不好', value: 'latenight' },
+      { label: '🍔 外食多 / 飲食不均衡', value: 'diet' },
+      { label: '💻 長時間看螢幕 / 3C 族', value: 'screen' },
+      { label: '🏃 很少運動', value: 'sedentary' },
+      { label: '🚬 有抽菸或飲酒習慣', value: 'smoke_drink' },
+      { label: '😣 經常感到壓力大', value: 'stress' },
+      { label: '✅ 以上皆無', value: 'none' },
+    ],
+  },
+]
+
+// 生活習慣 → 額外建議的保健方向
+export const LIFESTYLE_DIRECTIONS: Record<string, string[]> = {
+  latenight: ['sleep-relax', 'immune'],
+  diet: ['digestive', 'immune'],
+  screen: ['eye-care'],
+  sedentary: ['cardiovascular', 'bone-joint'],
+  smoke_drink: ['cardiovascular', 'immune'],
+  stress: ['sleep-relax', 'immune'],
+}
+
+// 年齡層 → 常見需加強的保健方向
+export const AGE_DIRECTIONS: Record<string, string[]> = {
+  '18-40': ['immune', 'digestive'],
+  '41-60': ['cardiovascular', 'bone-joint'],
+  '60+': ['bone-joint', 'cardiovascular', 'eye-care'],
+}
+
+export const AGE_LABEL: Record<string, string> = {
+  '18-40': '18–40 歲',
+  '41-60': '41–60 歲',
+  '60+': '60 歲以上',
+}
+
+// 各子症狀（followup 答案）對應的具體加強建議
+export const DETAIL_ADVICE: Record<string, string> = {
+  stiff: '關節偶爾僵硬，建議補充葡萄糖胺與軟骨素，搭配適度活動維持關節靈活。',
+  pain: '經常關節疼痛，建議加強葡萄糖胺、軟骨素與薑黃（抗發炎），並留意過度負重。',
+  bone_density: '骨質疏鬆保養，建議補足鈣質與維生素D，並適度負重運動與曬太陽。',
+  blood_pressure: '血壓偏高，建議補充 Omega-3 與鎂，並控制鈉攝取、規律量測血壓。',
+  cholesterol: '血脂/膽固醇偏高，建議補充紅麴、Omega-3，並減少精緻與油炸飲食。',
+  circulation: '心臟保健與血液循環，建議補充輔酶Q10、Omega-3 與納豆激酶。',
+  constipation: '便秘/排便不順，建議補充膳食纖維與益生菌，並多喝水、增加蔬果。',
+  bloating: '消化不良/脹氣，建議補充消化酵素與益生菌，並細嚼慢嚥、少產氣食物。',
+  microbiome: '腸道菌叢保養，建議補充益生菌+益生元（合生元），維持腸道好菌。',
+  insomnia: '難以入睡，建議補充 GABA、鎂、酸棗仁，並固定作息、睡前遠離 3C。',
+  unrefreshed: '睡醒仍疲倦，建議補充 B群與鎂，並留意睡眠深度與呼吸品質。',
+  daytime: '白天精神不濟，建議補充 B群與鐵（尤其女性），並注意水分與規律運動。',
+  dry: '眼睛乾澀，建議補充 Omega-3 與葉黃素，並注意用眼休息與環境濕度。',
+  blur: '視力模糊/退化，建議補充葉黃素、玉米黃素與花青素，定期檢查視力。',
+  screen: '長時間用眼，建議補充葉黃素+玉米黃素（黃金比例）與花青素，每 30 分鐘休息。',
+  cold: '容易感冒，建議補充維生素C、鋅與益生菌，並充足睡眠、勤洗手。',
+  allergy: '過敏困擾，建議補充益生菌與維生素D，並留意過敏原與環境清潔。',
+  resistance: '抵抗力下降，建議補充維生素C、鋅、β-葡聚糖，並規律運動、均衡飲食。',
+}
 
 export const FOLLOWUP_QUESTIONS: QuizQuestion[] = [
   {
