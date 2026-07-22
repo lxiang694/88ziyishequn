@@ -127,3 +127,7 @@
 ::-webkit-scrollbar-track { background: #f3f4f6; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* 隱藏水平捲軸（熱門標籤 / 熱銷橫向列） */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
