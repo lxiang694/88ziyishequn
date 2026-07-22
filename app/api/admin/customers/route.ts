@@ -198,7 +198,25 @@ export async function GET(req: NextRequest) {
     dormant_change_today: dormantChangeToday,
     vip_count: customers.filter(c => c.segment === 'vip').length,
     lost_count: customers.filter(c => c.segment === 'lost').length,
+    due_count: 0, // 稍後填入
   }
+
+  // 3b. 每位客戶「預估下次回購日」與逾期天數（個人回購週期優先，否則用全站平均）
+  const globalCycle = summary.avg_repurchase_days
+  for (const c of customers as any[]) {
+    const cycle = c.avg_repurchase_days ?? globalCycle
+    if (cycle && cycle > 0) {
+      const expectedMs = new Date(c.last_order_at).getTime() + cycle * DAY_MS
+      c.expected_next_at = new Date(expectedMs).toISOString()
+      c.overdue_days = Math.floor((now - expectedMs) / DAY_MS) // >0 已逾期、<0 未到期
+    } else {
+      c.expected_next_at = null
+      c.overdue_days = null
+    }
+  }
+  // 待喚醒：已過預估回購日、且尚未完全流失（仍值得聯繫）
+  const isDue = (c: any) => c.overdue_days != null && c.overdue_days > 0 && c.segment !== 'lost'
+  summary.due_count = (customers as any[]).filter(isDue).length
 
   // 4. Filter (search / segment)
   if (search) {
@@ -208,7 +226,9 @@ export async function GET(req: NextRequest) {
       c.line_id.toLowerCase().includes(search)
     )
   }
-  if (segment) {
+  if (segment === 'due') {
+    customers = (customers as any[]).filter(isDue)
+  } else if (segment) {
     customers = customers.filter(c => c.segment === segment)
   }
 
@@ -219,6 +239,7 @@ export async function GET(req: NextRequest) {
     orders_desc: (a, b) => b.order_count - a.order_count,
     recent_desc: (a, b) => new Date(b.last_order_at).getTime() - new Date(a.last_order_at).getTime(),
     inactive_desc: (a, b) => b.days_since_last_order - a.days_since_last_order,
+    due_desc: (a, b) => (b.overdue_days ?? -Infinity) - (a.overdue_days ?? -Infinity),
   }
   customers.sort(sorters[sort] || sorters.amount_desc)
 

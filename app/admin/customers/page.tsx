@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 
 const SEGMENTS = [
   { value: '', label: '全部' },
+  { value: 'due', label: '⏰ 待喚醒' },
   { value: 'vip', label: 'VIP' },
   { value: 'repeat', label: '回頭客' },
   { value: 'new', label: '新客' },
@@ -18,6 +19,7 @@ const SORTS = [
   { value: 'orders_desc', label: '消費筆數 多→少' },
   { value: 'recent_desc', label: '最近消費 新→舊' },
   { value: 'inactive_desc', label: '未回購天數 多→少' },
+  { value: 'due_desc', label: '最該回購優先' },
 ]
 
 const SEGMENT_COLOR: Record<string, string> = {
@@ -63,6 +65,15 @@ export default function CustomersPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  const showDueList = () => { setSegment('due'); setSort('due_desc'); setPage(1) }
+
+  const copyContact = (c: any) => {
+    const text = `${c.customer_name || ''} ${c.phone}${c.line_id ? ` LINE:${c.line_id}` : ''}`.trim()
+    navigator.clipboard.writeText(text)
+      .then(() => toast.success('已複製聯絡資訊'))
+      .catch(() => toast.error('複製失敗'))
+  }
+
   const handleExport = async () => {
     setExporting(true)
     try {
@@ -74,10 +85,11 @@ export default function CustomersPage() {
       if (!d.success) { toast.error(d.error || '匯出失敗'); return }
       const rows: any[] = d.data.customers
       if (rows.length === 0) { toast.error('沒有資料可匯出'); return }
-      const header = ['姓名', '手機', 'LINE ID', '分層', '訂單筆數', '累計金額', '客單價', '首次消費', '最後消費', '距今天數', '平均回購天數']
+      const header = ['姓名', '手機', 'LINE ID', '分層', '訂單筆數', '累計金額', '客單價', '首次消費', '最後消費', '距今天數', '平均回購天數', '預估回購日', '逾期天數']
       const lines = [header, ...rows.map(c => [
         c.customer_name, c.phone, c.line_id, c.segment_label, c.order_count, c.total_amount, c.avg_order_value,
         formatDate(c.first_order_at), formatDate(c.last_order_at), c.days_since_last_order, c.avg_repurchase_days ?? '',
+        c.expected_next_at ? formatDate(c.expected_next_at) : '', c.overdue_days != null && c.overdue_days > 0 ? c.overdue_days : '',
       ])].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n')
       const blob = new Blob(['﻿' + lines], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
@@ -195,6 +207,20 @@ export default function CustomersPage() {
         ))}
       </div>
 
+      {/* 待喚醒名單 CTA */}
+      {summary && summary.due_count > 0 && segment !== 'due' && (
+        <div className="mb-5 rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1">
+            <p className="font-bold text-amber-900">⏰ 有 {summary.due_count} 位客戶已過預估回購時間還沒回來</p>
+            <p className="text-amber-700 text-sm mt-0.5">這些是最該主動用 LINE 聯繫、提醒回購的名單</p>
+          </div>
+          <button onClick={showDueList}
+            className="flex-shrink-0 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl px-4 py-2.5 transition-colors">
+            查看待喚醒名單 →
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="card p-4 mb-5 space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -209,8 +235,8 @@ export default function CustomersPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {SEGMENTS.map(s => (
-            <button key={s.value} onClick={() => { setSegment(s.value); setPage(1) }}
-              className={'px-3 py-1.5 rounded-xl text-sm font-bold transition-colors ' + (segment === s.value ? 'bg-green-700 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>
+            <button key={s.value} onClick={() => { setSegment(s.value); if (s.value === 'due') setSort('due_desc'); setPage(1) }}
+              className={'px-3 py-1.5 rounded-xl text-sm font-bold transition-colors ' + (segment === s.value ? (s.value === 'due' ? 'bg-amber-600 text-white' : 'bg-green-700 text-white') : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>
               {s.label}
             </button>
           ))}
@@ -227,7 +253,7 @@ export default function CustomersPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {['客戶', '分層', '訂單筆數', '累計金額', '客單價', '首次消費', '最後消費', '距今天數', '操作'].map(h => (
+                  {['客戶', '分層', '訂單筆數', '累計金額', '客單價', '最後消費', '預估回購', '操作'].map(h => (
                     <th key={h} className="text-left px-3 py-3 font-bold text-gray-600 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -250,16 +276,32 @@ export default function CustomersPage() {
                     <td className="px-3 py-3 font-bold text-gray-800">{c.order_count}</td>
                     <td className="px-3 py-3 font-bold text-green-700 whitespace-nowrap">{formatMoney(c.total_amount)}</td>
                     <td className="px-3 py-3 text-gray-600 whitespace-nowrap">{formatMoney(c.avg_order_value)}</td>
-                    <td className="px-3 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(c.first_order_at)}</td>
                     <td className="px-3 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(c.last_order_at)}</td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      <span className={c.days_since_last_order > 60 ? 'text-red-500 font-bold' : 'text-gray-600'}>{c.days_since_last_order} 天</span>
+                    <td className="px-3 py-3 text-xs whitespace-nowrap">
+                      {c.expected_next_at ? (
+                        <>
+                          <div className="text-gray-600">{formatDate(c.expected_next_at)}</div>
+                          {c.overdue_days > 0 ? (
+                            <span className="text-red-500 font-bold">已逾 {c.overdue_days} 天</span>
+                          ) : c.overdue_days > -7 ? (
+                            <span className="text-amber-600 font-bold">即將到期</span>
+                          ) : (
+                            <span className="text-gray-400">還有 {-c.overdue_days} 天</span>
+                          )}
+                        </>
+                      ) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-3 py-3">
-                      <Link href={`/admin/orders?search=${encodeURIComponent(c.phone)}`}
-                        className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-green-50 text-gray-600 hover:text-green-700 transition-colors whitespace-nowrap">
-                        查看訂單
-                      </Link>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => copyContact(c)}
+                          className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white transition-colors whitespace-nowrap">
+                          複製聯絡
+                        </button>
+                        <Link href={`/admin/orders?search=${encodeURIComponent(c.phone)}`}
+                          className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-green-50 text-gray-600 hover:text-green-700 transition-colors whitespace-nowrap">
+                          訂單
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
