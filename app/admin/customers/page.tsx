@@ -121,7 +121,62 @@ export default function CustomersPage() {
         </button>
       </div>
 
-      {/* Summary cards */}
+      {/* 今日營運概況 */}
+      <div className="mb-2 flex items-center gap-2">
+        <span className="w-1.5 h-5 bg-green-600 rounded-full" />
+        <h2 className="text-sm font-bold text-gray-700">今日營運概況</h2>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        {/* 今日復購人數 */}
+        <div className="card p-4 border-2 border-green-100 bg-green-50/40">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 font-semibold">今日復購人數</span>
+            <span className="text-lg">🔁</span>
+          </div>
+          <div className="text-3xl font-extrabold text-green-700 mt-1">{summary?.repurchase_today ?? '—'}</div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {summary?.reactivated_today ? `含喚醒沉睡客 ${summary.reactivated_today} 位` : '今日回頭下單的老客戶'}
+          </div>
+        </div>
+        {/* 老客戶營收占比 */}
+        <div className="card p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 font-semibold">老客戶營收占比</span>
+            <span className="text-lg">💎</span>
+          </div>
+          <div className="text-3xl font-extrabold text-gray-800 mt-1">{summary ? `${summary.returning_revenue_share}%` : '—'}</div>
+          <div className="text-xs text-gray-400 mt-0.5">回購 ≥2 次客戶貢獻的營收比重</div>
+        </div>
+        {/* 沉睡客戶數 */}
+        <div className="card p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 font-semibold">沉睡客戶</span>
+            <span className="text-lg">😴</span>
+          </div>
+          <div className="text-3xl font-extrabold text-orange-600 mt-1">{summary?.dormant_count ?? '—'}<span className="text-base font-bold text-gray-400"> 位</span></div>
+          <div className="text-xs mt-0.5">
+            {summary == null ? <span className="text-gray-400">—</span>
+              : summary.dormant_change_today > 0 ? <span className="text-red-500 font-bold">今日 ▲ 新增 {summary.dormant_change_today} 位</span>
+              : summary.dormant_change_today < 0 ? <span className="text-green-600 font-bold">今日 ▼ 減少 {Math.abs(summary.dormant_change_today)} 位</span>
+              : <span className="text-gray-400">今日持平</span>}
+          </div>
+        </div>
+        {/* 流失客戶數 */}
+        <div className="card p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 font-semibold">流失客戶</span>
+            <span className="text-lg">💤</span>
+          </div>
+          <div className="text-3xl font-extrabold text-gray-500 mt-1">{summary?.lost_count ?? '—'}<span className="text-base font-bold text-gray-400"> 位</span></div>
+          <div className="text-xs text-gray-400 mt-0.5">超過 180 天未回購</div>
+        </div>
+      </div>
+
+      {/* 整體指標 */}
+      <div className="mb-2 flex items-center gap-2">
+        <span className="w-1.5 h-5 bg-gray-300 rounded-full" />
+        <h2 className="text-sm font-bold text-gray-700">整體指標</h2>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-5">
         {[
           { label: '客戶總數', value: summary?.total_customers ?? '—', icon: '👥' },
