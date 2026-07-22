@@ -46,6 +46,12 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
   const [page, setPage] = useState(1)
   const [pickerProduct, setPickerProduct] = useState<Product | null>(null)
   const productsRef = useRef<HTMLElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  // 初始只渲染一屏，往下捲再逐批顯示（先吃已載入資料，用盡再向後端要下一頁）
+  const INITIAL_VISIBLE = 12
+  const REVEAL_BATCH = 8
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
 
   const scrollToProducts = () => {
     productsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -85,6 +91,26 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
     const next = page + 1; setPage(next)
     fetchProducts(next, search, selectedCat, true)
   }
+
+  // 換搜尋 / 分類時，重置可見數量回一屏
+  useEffect(() => { setVisibleCount(INITIAL_VISIBLE) }, [search, selectedCat])
+
+  // 無限捲動：底部哨兵進入視窗時，先顯示更多已載入商品，用盡再抓下一頁
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const io = new IntersectionObserver(entries => {
+      if (!entries[0].isIntersecting) return
+      if (visibleCount < products.length) {
+        setVisibleCount(v => Math.min(v + REVEAL_BATCH, products.length))
+      } else if (products.length < total && !loading) {
+        loadMore()
+      }
+    }, { rootMargin: '600px' })
+    io.observe(el)
+    return () => io.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleCount, products.length, total, loading])
 
   // 由底部導覽列「分類」深連結（/?cat=slug）進入時，自動篩選並捲到商品區
   useEffect(() => {
@@ -420,7 +446,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {products.map(product => {
+                {products.slice(0, visibleCount).map(product => {
                   const minPrice = getMinPrice(product.product_variants)
                   const maxPrice = getMaxPrice(product.product_variants)
                   const inStock = hasStock(product.product_variants)
@@ -528,11 +554,14 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
                 ))}
               </div>
 
-              {products.length < total && (
-                <div className="text-center mt-8">
-                  <button onClick={loadMore} disabled={loading} className="btn-secondary px-10">
-                    {loading ? '載入中...' : '載入更多商品'}
-                  </button>
+              {/* 無限捲動哨兵 + 載入指示 */}
+              {(visibleCount < products.length || products.length < total) && (
+                <div ref={sentinelRef} className="flex justify-center items-center gap-2 py-8 text-gray-400 text-sm">
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  載入更多商品...
                 </div>
               )}
             </>
