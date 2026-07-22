@@ -1,53 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
+import { DAY_MS, DORMANT_DAYS, SEGMENT_LABEL, classify, segmentCountsAsOf } from '@/lib/rfm'
 
 export const runtime = 'nodejs'
 
 const FETCH_BATCH = 1000
 const MAX_BATCHES = 100 // 安全上限（最多 10 萬筆非取消訂單）
 
-const DAY_MS = 24 * 60 * 60 * 1000
-const DORMANT_DAYS = 60
-const LOST_DAYS = 180
-const VIP_MIN_ORDERS = 3
-
-type Segment = 'vip' | 'lost' | 'dormant' | 'repeat' | 'new'
-
-const SEGMENT_LABEL: Record<Segment, string> = {
-  vip: 'VIP',
-  lost: '流失客',
-  dormant: '沉睡客',
-  repeat: '回頭客',
-  new: '新客',
-}
-
-function classify(orderCount: number, daysSinceLast: number): Segment {
-  if (orderCount >= VIP_MIN_ORDERS && daysSinceLast <= DORMANT_DAYS) return 'vip'
-  if (daysSinceLast > LOST_DAYS) return 'lost'
-  if (daysSinceLast > DORMANT_DAYS) return 'dormant'
-  if (orderCount >= 2) return 'repeat'
-  return 'new'
-}
-
-// 計算某個時間點（refTime）當下的沉睡客戶數：只看該時間點前的訂單
+// 某時間點當下的沉睡客戶數
 function dormantCountAsOf(orders: any[], refTime: number): number {
-  const m = new Map<string, { count: number; last: number }>()
-  for (const o of orders) {
-    const t = new Date(o.created_at).getTime()
-    if (t > refTime) continue
-    const phone = (o.phone || '').trim()
-    if (!phone) continue
-    const a = m.get(phone)
-    if (!a) m.set(phone, { count: 1, last: t })
-    else { a.count++; if (t > a.last) a.last = t }
-  }
-  let dormant = 0
-  for (const a of m.values()) {
-    const days = Math.floor((refTime - a.last) / DAY_MS)
-    if (classify(a.count, days) === 'dormant') dormant++
-  }
-  return dormant
+  return segmentCountsAsOf(orders, refTime).dormant
 }
 
 export async function GET(req: NextRequest) {
