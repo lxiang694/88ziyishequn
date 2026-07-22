@@ -4,7 +4,9 @@
 
 @layer base {
   html, body {
-    overflow-x: hidden;
+    /* clip（非 hidden）可防止橫向捲動，又不會建立捲動容器而破壞 position: sticky */
+    overflow-x: hidden; /* 舊瀏覽器 fallback */
+    overflow-x: clip;
     max-width: 100vw;
   }
   html {
