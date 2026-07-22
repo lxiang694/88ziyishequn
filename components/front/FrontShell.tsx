@@ -6,6 +6,7 @@ import ClientErrorBoundary from './ClientErrorBoundary'
 import SiteHeader from './SiteHeader'
 import LineFloatButton from './LineFloatButton'
 import CartFloatButton from './CartFloatButton'
+import MobileBottomNav from './MobileBottomNav'
 import BackHomeNav from './BackHomeNav'
 import { Toaster } from 'react-hot-toast'
 
@@ -37,8 +38,11 @@ export default function FrontShell({ children }: { children: ReactNode }) {
           <p className="mt-4 text-xs text-gray-400">© {new Date().getFullYear()} 健康優選. All rights reserved.</p>
         </div>
       </footer>
+      {/* 底部導覽列高度的墊片，避免內容被固定列遮住（手機） */}
+      <div className="h-[60px] md:hidden" aria-hidden />
       <CartFloatButton />
       <LineFloatButton />
+      <MobileBottomNav />
       <Toaster
         position="top-center"
         toastOptions={{
