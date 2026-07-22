@@ -32,6 +32,8 @@ const CATEGORY_ICONS: Record<string, string> = {
   'mens-health': '💪', 'children-growth': '🌱', 'senior-health': '🏆',
 }
 
+const HOT_TAGS = ['維生素C', '魚油', '葉黃素', '益生菌', '鈣', '維他命B群']
+
 export default function HomeClient({ initialProducts, initialTotal, categories }: Props) {
   const router = useRouter()
   const { addItem } = useCart()
@@ -127,6 +129,8 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
   const hasStock = (variants: Variant[]) => variants.some(v => v.is_active && v.stock_qty > 0)
   const multiVariant = (variants: Variant[]) => variants.filter(v => v.is_active && v.stock_qty > 0).length > 1
 
+  const hotProducts = products.slice(0, 8)
+
   return (
     <div className="min-h-screen bg-gray-50">
 
@@ -166,8 +170,37 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
 
       <div className="max-w-5xl mx-auto px-4">
 
+        {/* ─── STICKY SEARCH ─── */}
+        <div className="sticky top-16 sm:top-20 z-30 -mx-4 px-4 pt-3 pb-3 bg-gray-50/95 backdrop-blur border-b border-gray-100">
+          <div className="relative">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-green-600 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="search"
+              value={search}
+              onChange={e => handleSearch(e.target.value)}
+              placeholder="搜尋商品：維生素C、魚油、葉黃素..."
+              className="w-full pl-12 pr-11 py-3.5 text-base sm:text-lg border-2 border-green-200 focus:border-green-500 focus:outline-none rounded-2xl transition-colors bg-white shadow-sm"
+            />
+            {search && (
+              <button onClick={() => handleSearch('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar">
+            <span className="text-xs text-gray-400 flex-shrink-0">熱門</span>
+            {HOT_TAGS.map(t => (
+              <button key={t} onClick={() => handleSearch(t)}
+                className={`flex-shrink-0 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${search === t ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-700'}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* ─── CATEGORY GRID ─── */}
-        {categories.length > 0 && (
+        {!search && categories.length > 0 && (
           <section className="py-8">
             <h2 className="text-xl font-bold text-gray-800 mb-4">依健康方向選購</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
@@ -187,6 +220,50 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
                   </span>
                 </button>
               ))}
+            </div>
+          </section>
+        )}
+
+        {!search && !selectedCat && (
+        <>
+        {/* ─── 本週熱銷 RAIL ─── */}
+        {hotProducts.length > 0 && (
+          <section className="pt-6 pb-2">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-bold text-gray-800">🔥 本週熱銷</h2>
+              <button onClick={scrollToProducts} className="text-green-700 text-sm font-bold hover:underline">看全部 →</button>
+            </div>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
+              {hotProducts.map((product, idx) => {
+                const minPrice = getMinPrice(product.product_variants)
+                const inStock = hasStock(product.product_variants)
+                const isMulti = multiVariant(product.product_variants)
+                return (
+                  <div key={product.id} className="flex-shrink-0 w-36 sm:w-40 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                    <Link href={`/products/${product.slug}`} className="block relative">
+                      <div className="aspect-square bg-gray-50 relative overflow-hidden">
+                        {product.cover_image_url
+                          ? <Image src={product.cover_image_url} alt={product.product_name} fill className="object-cover" sizes="160px" />
+                          : <div className="w-full h-full flex items-center justify-center text-4xl text-gray-200">💊</div>}
+                        {idx < 3 && <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-md">熱銷 {idx + 1}</span>}
+                        {!inStock && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="bg-gray-900/80 text-white text-xs font-bold px-3 py-1 rounded-full">已售完</span></div>}
+                      </div>
+                    </Link>
+                    <div className="p-2.5 flex flex-col flex-1">
+                      <Link href={`/products/${product.slug}`}>
+                        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 hover:text-green-700">{product.product_name}</h3>
+                      </Link>
+                      <div className="mt-auto pt-2">
+                        {minPrice !== null && <div className="text-green-700 font-extrabold text-base leading-tight mb-1.5">{formatPrice(minPrice)}{multiVariant(product.product_variants) ? ' 起' : ''}</div>}
+                        <button onClick={() => handleAddToCart(product)} disabled={!inStock}
+                          className={`w-full font-bold py-2 rounded-xl text-xs transition-colors ${inStock ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+                          {!inStock ? '已售完' : isMulti ? '選規格' : '加入購物車'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </section>
         )}
@@ -295,39 +372,14 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             </div>
           </div>
         </section>
-
-        {/* ─── SEARCH ─── */}
-        <section className="py-5">
-          <div className="bg-white rounded-2xl border-2 border-green-200 shadow-md p-4">
-            <p className="text-base font-bold text-gray-700 mb-3 flex items-center gap-2">
-              🔍 <span>找不到想要的商品？輸入名稱快速搜尋</span>
-            </p>
-            <div className="relative">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="search"
-                value={search}
-                onChange={e => handleSearch(e.target.value)}
-                placeholder="例如：維生素C、魚油、葉黃素..."
-                className="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 focus:border-green-500 focus:outline-none rounded-xl transition-colors bg-gray-50 focus:bg-white"
-              />
-              {search && (
-                <button
-                  onClick={() => handleSearch('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl leading-none"
-                >×</button>
-              )}
-            </div>
-          </div>
-        </section>
+        </>
+        )}
 
         {/* ─── PRODUCTS ─── */}
-        <section ref={productsRef} className="pb-12 scroll-mt-20">
+        <section ref={productsRef} className="pt-6 pb-12 scroll-mt-32">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
-              {selectedCat ? categories.find(c => c.slug === selectedCat)?.name : '所有商品'}
+              {search ? '搜尋結果' : selectedCat ? categories.find(c => c.slug === selectedCat)?.name : '所有商品'}
             </h2>
             <span className="text-gray-500 text-sm sm:text-base font-medium bg-gray-100 px-3 py-1 rounded-full">
               {loading ? '搜尋中...' : `共 ${total} 件`}
