@@ -92,6 +92,12 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
     fetchProducts(next, search, selectedCat, true)
   }
 
+  // 依商品名稱是否含「小莊代購」分區（僅預設瀏覽狀態；搜尋/分類時維持單一結果列表）
+  const isXiaozhuang = (p: Product) => (p.product_name || '').includes('小莊代購')
+  const isDefaultView = !search && !selectedCat
+  const xiaozhuangProducts = isDefaultView ? products.filter(isXiaozhuang) : []
+  const mainProducts = isDefaultView ? products.filter(p => !isXiaozhuang(p)) : products
+
   // 換搜尋 / 分類時，重置可見數量回一屏
   useEffect(() => { setVisibleCount(INITIAL_VISIBLE) }, [search, selectedCat])
 
@@ -101,8 +107,8 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
     if (!el) return
     const io = new IntersectionObserver(entries => {
       if (!entries[0].isIntersecting) return
-      if (visibleCount < products.length) {
-        setVisibleCount(v => Math.min(v + REVEAL_BATCH, products.length))
+      if (visibleCount < mainProducts.length) {
+        setVisibleCount(v => Math.min(v + REVEAL_BATCH, mainProducts.length))
       } else if (products.length < total && !loading) {
         loadMore()
       }
@@ -110,7 +116,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
     io.observe(el)
     return () => io.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleCount, products.length, total, loading])
+  }, [visibleCount, mainProducts.length, products.length, total, loading])
 
   // 由底部導覽列「分類」深連結（/?cat=slug）進入時，自動篩選並捲到商品區
   useEffect(() => {
@@ -170,6 +176,78 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
   const multiVariant = (variants: Variant[]) => variants.filter(v => v.is_active && v.stock_qty > 0).length > 1
 
   const hotProducts = products.slice(0, 8)
+
+  // 商品卡（供「小莊優選」「88自醫社群團購商品」共用）
+  const renderProductCard = (product: Product) => {
+    const minPrice = getMinPrice(product.product_variants)
+    const maxPrice = getMaxPrice(product.product_variants)
+    const inStock = hasStock(product.product_variants)
+    const isMulti = multiVariant(product.product_variants)
+    const cats = product.product_category_relations?.map(r => r.health_categories).filter(Boolean) || []
+    return (
+      <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-200 flex flex-col">
+        <Link href={`/products/${product.slug}`} className="block relative">
+          <div className="aspect-square bg-gray-50 relative overflow-hidden">
+            {product.cover_image_url ? (
+              <Image src={product.cover_image_url} alt={product.product_name} fill
+                className="object-cover hover:scale-105 transition-transform duration-300"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-5xl text-gray-200">💊</div>
+            )}
+            {!inStock && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <span className="bg-gray-900/80 text-white text-sm font-bold px-4 py-1.5 rounded-full">已售完</span>
+              </div>
+            )}
+          </div>
+        </Link>
+        <div className="p-3 sm:p-4 flex flex-col flex-1">
+          {cats.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {cats.slice(0, 1).map((cat: any) => (
+                <span key={cat.id} className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-semibold border border-green-100">
+                  {CATEGORY_ICONS[cat.slug] || ''} {cat.name}
+                </span>
+              ))}
+            </div>
+          )}
+          <Link href={`/products/${product.slug}`}>
+            <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug mb-1 hover:text-green-700 line-clamp-2">{product.product_name}</h3>
+          </Link>
+          {product.short_intro && (
+            <p className="text-gray-500 text-xs sm:text-sm leading-relaxed mb-2 line-clamp-2 hidden sm:block">{product.short_intro}</p>
+          )}
+          <div className="mt-auto space-y-2 pt-2">
+            {(product.sales_count || 0) >= 5 && (
+              <p className="text-xs font-bold text-orange-600 leading-none">
+                🔥 {(product.sales_count || 0) >= 100 ? `熱銷 ${product.sales_count} 件` : `已售 ${product.sales_count} 件`}
+              </p>
+            )}
+            {minPrice !== null ? (
+              <div>
+                <div className="text-green-700 font-extrabold text-base sm:text-lg leading-tight">
+                  {minPrice === maxPrice ? formatPrice(minPrice) : `${formatPrice(minPrice)} 起`}
+                </div>
+                {maxPrice !== null && minPrice !== maxPrice && (
+                  <div className="text-gray-400 text-xs">最高 {formatPrice(maxPrice)}</div>
+                )}
+              </div>
+            ) : null}
+            <button onClick={() => handleAddToCart(product)} disabled={!inStock}
+              className={`w-full font-bold py-3 rounded-xl text-sm sm:text-base transition-colors
+                ${inStock ? 'bg-green-700 hover:bg-green-800 active:bg-green-900 text-white shadow-sm' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+              {!inStock ? '已售完' : isMulti ? '選擇規格' : '加入購物車'}
+            </button>
+            <Link href={`/products/${product.slug}`}
+              className="block w-full text-center border-2 border-gray-200 hover:border-green-400 text-gray-600 hover:text-green-700 font-semibold py-2 rounded-xl text-xs sm:text-sm transition-colors">
+              查看詳情 →
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -426,27 +504,40 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
         </>
         )}
 
-        {/* ─── PRODUCTS ─── */}
+        {/* ─── 小莊優選 ─── */}
+        {isDefaultView && xiaozhuangProducts.length > 0 && (
+          <section className="pt-6 pb-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">⭐ 小莊優選</h2>
+              <span className="text-gray-500 text-sm sm:text-base font-medium bg-gray-100 px-3 py-1 rounded-full">共 {xiaozhuangProducts.length} 件</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {xiaozhuangProducts.map(renderProductCard)}
+            </div>
+          </section>
+        )}
+
+        {/* ─── PRODUCTS（88自醫社群團購商品 / 搜尋 / 分類）─── */}
         <section ref={productsRef} className="pt-6 pb-12 scroll-mt-32">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
-              {search ? '搜尋結果' : selectedCat ? categories.find(c => c.slug === selectedCat)?.name : '所有商品'}
+              {search ? '搜尋結果' : selectedCat ? categories.find(c => c.slug === selectedCat)?.name : '88自醫社群團購商品'}
             </h2>
             <span className="text-gray-500 text-sm sm:text-base font-medium bg-gray-100 px-3 py-1 rounded-full">
-              {loading ? '搜尋中...' : `共 ${total} 件`}
+              {loading ? '搜尋中...' : `共 ${isDefaultView ? mainProducts.length : total} 件`}
             </span>
           </div>
 
-          {!loading && products.length === 0 ? (
+          {!loading && mainProducts.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">🔍</div>
-              <p className="text-lg text-gray-500 mb-4">找不到相關商品</p>
-              <button onClick={() => { setSearch(''); setSelectedCat(''); fetchProducts(1, '', '') }} className="btn-secondary py-2 px-6 text-base">清除篩選</button>
+              <p className="text-lg text-gray-500 mb-4">{isDefaultView ? '目前沒有商品' : '找不到相關商品'}</p>
+              {!isDefaultView && <button onClick={() => { setSearch(''); setSelectedCat(''); fetchProducts(1, '', '') }} className="btn-secondary py-2 px-6 text-base">清除篩選</button>}
             </div>
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {products.slice(0, visibleCount).map(product => {
+                {mainProducts.slice(0, visibleCount).map(product => {
                   const minPrice = getMinPrice(product.product_variants)
                   const maxPrice = getMaxPrice(product.product_variants)
                   const inStock = hasStock(product.product_variants)
@@ -555,7 +646,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
               </div>
 
               {/* 無限捲動哨兵 + 載入指示 */}
-              {(visibleCount < products.length || products.length < total) && (
+              {(visibleCount < mainProducts.length || products.length < total) && (
                 <div ref={sentinelRef} className="flex justify-center items-center gap-2 py-8 text-gray-400 text-sm">
                   <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
