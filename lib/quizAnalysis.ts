@@ -1,5 +1,6 @@
 import {
   DIRECTION_INFO, DETAIL_ADVICE, LIFESTYLE_DIRECTIONS, AGE_DIRECTIONS, AGE_LABEL,
+  DIRECTION_PLAN, DirectionPlan,
 } from './quizData'
 
 export type QuizAnswers = Record<string, string | string[]>
@@ -12,6 +13,7 @@ export interface QuizDirection {
   detailAdvice?: string // 依子症狀細化的建議
   ingredients: string
   primary: boolean       // 是否為使用者主動勾選的困擾（true）或系統延伸建議（false）
+  plan?: DirectionPlan   // 個人化方案：飲食/生活/營養素/時間/來源
 }
 
 export interface QuizAnalysis {
@@ -71,6 +73,7 @@ export function buildAnalysis(answers: QuizAnswers): QuizAnalysis {
       detailAdvice: detailVal ? DETAIL_ADVICE[detailVal] : undefined,
       ingredients: info.ingredients,
       primary: primaryCats.includes(slug),
+      plan: DIRECTION_PLAN[slug],
     }
   })
 
