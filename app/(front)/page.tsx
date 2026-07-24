@@ -10,7 +10,7 @@ async function getInitialData() {
   const [productsRes, categoriesRes, salesMap] = await Promise.all([
     supabaseAdmin
       .from('products')
-      .select(`id, product_name, slug, short_intro, cover_image_url,
+      .select(`*,
         product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, is_active),
         product_category_relations(health_categories(id, name, slug))`, { count: 'exact' })
       .eq('is_published', true)

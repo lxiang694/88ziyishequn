@@ -15,6 +15,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
   const [form, setForm] = useState({
     product_name: '', short_intro: '', suitable_people: '', usage_method: '',
     ingredients: '', precautions: '', storage_method: '', is_published: false, cover_image_url: '',
+    home_section: 'community',
   })
   const [selectedCats, setSelectedCats] = useState<number[]>([])
   const [variants, setVariants] = useState<Variant[]>([emptyVariant()])
@@ -39,6 +40,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
         storage_method: initialData.storage_method || '',
         is_published: initialData.is_published || false,
         cover_image_url: initialData.cover_image_url || '',
+        home_section: initialData.home_section === 'xiaozhuang' ? 'xiaozhuang' : 'community',
       })
       setSelectedCats(initialData.product_category_relations?.map((r: any) => r.health_categories?.id).filter(Boolean) || [])
       if (initialData.product_variants?.length > 0) {
@@ -258,6 +260,24 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
                 </div>
               </div>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 首頁分區 */}
+      <div className="card p-5">
+        <label className="form-label">首頁分區</label>
+        <p className="text-gray-400 text-sm mb-3">決定此商品在首頁顯示於哪一區</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            { value: 'community', label: '88自醫社群團購商品', desc: '一般團購商品' },
+            { value: 'xiaozhuang', label: '小莊優選', desc: '小莊代購 / 優選商品' },
+          ].map(o => (
+            <button key={o.value} type="button" onClick={() => setForm(f => ({ ...f, home_section: o.value }))}
+              className={`text-left px-4 py-3 rounded-xl border-2 transition-colors ${form.home_section === o.value ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-green-300'}`}>
+              <span className="font-bold text-gray-800">{o.label}</span>
+              <span className="block text-xs text-gray-500 mt-0.5">{o.desc}</span>
+            </button>
           ))}
         </div>
       </div>

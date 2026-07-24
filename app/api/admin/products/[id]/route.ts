@@ -29,13 +29,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     const body = await req.json()
     const { product_name, short_intro, suitable_people, usage_method, ingredients,
-            precautions, storage_method, is_published, cover_image_url,
+            precautions, storage_method, is_published, cover_image_url, home_section,
             category_ids, variants, gallery_images } = body
     const productId = parseInt(params.id)
 
     // Build update object - only include defined fields
     const updateData: any = {}
     if (product_name !== undefined) updateData.product_name = product_name
+    if (home_section !== undefined) updateData.home_section = home_section === 'xiaozhuang' ? 'xiaozhuang' : 'community'
     if (short_intro !== undefined) updateData.short_intro = short_intro || null
     if (suitable_people !== undefined) updateData.suitable_people = suitable_people || null
     if (usage_method !== undefined) updateData.usage_method = usage_method || null

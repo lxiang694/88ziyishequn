@@ -16,7 +16,7 @@ interface Product {
   id: number; product_name: string; slug: string; short_intro: string | null
   cover_image_url: string | null; product_variants: Variant[]
   product_category_relations: { health_categories: HealthCategory }[]
-  sales_count?: number
+  sales_count?: number; home_section?: string | null
 }
 
 interface Props {
@@ -92,8 +92,9 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
     fetchProducts(next, search, selectedCat, true)
   }
 
-  // 依商品名稱是否含「小莊代購」分區（僅預設瀏覽狀態；搜尋/分類時維持單一結果列表）
-  const isXiaozhuang = (p: Product) => (p.product_name || '').includes('小莊代購')
+  // 依「首頁分區」欄位分區（未設定時退回以名稱是否含「小莊代購」判斷）；僅預設瀏覽狀態分區
+  const isXiaozhuang = (p: Product) =>
+    p.home_section ? p.home_section === 'xiaozhuang' : (p.product_name || '').includes('小莊代購')
   const isDefaultView = !search && !selectedCat
   const xiaozhuangProducts = isDefaultView ? products.filter(isXiaozhuang) : []
   const mainProducts = isDefaultView ? products.filter(p => !isXiaozhuang(p)) : products
@@ -504,19 +505,6 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
         </>
         )}
 
-        {/* ─── 小莊優選 ─── */}
-        {isDefaultView && xiaozhuangProducts.length > 0 && (
-          <section className="pt-6 pb-2">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">⭐ 小莊優選</h2>
-              <span className="text-gray-500 text-sm sm:text-base font-medium bg-gray-100 px-3 py-1 rounded-full">共 {xiaozhuangProducts.length} 件</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {xiaozhuangProducts.map(renderProductCard)}
-            </div>
-          </section>
-        )}
-
         {/* ─── PRODUCTS（88自醫社群團購商品 / 搜尋 / 分類）─── */}
         <section ref={productsRef} className="pt-6 pb-12 scroll-mt-32">
           <div className="flex items-center justify-between mb-4">
@@ -658,6 +646,19 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             </>
           )}
         </section>
+
+        {/* ─── 小莊優選（放最後）─── */}
+        {isDefaultView && xiaozhuangProducts.length > 0 && (
+          <section className="pt-2 pb-12">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">⭐ 小莊優選</h2>
+              <span className="text-gray-500 text-sm sm:text-base font-medium bg-gray-100 px-3 py-1 rounded-full">共 {xiaozhuangProducts.length} 件</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {xiaozhuangProducts.map(renderProductCard)}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Variant Picker Modal/Drawer */}
