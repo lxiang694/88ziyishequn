@@ -32,6 +32,47 @@ const CATEGORY_OPTIONS = [
   { value: 'senior-health', label: '🏆 銀髮保健' },
 ]
 
+// 問題導向文章骨架：先分型 → 飲食 → 生活 → 營養素搭配 → 就醫提醒 → 自測 CTA
+const PROBLEM_TEMPLATE = `## （用一個共同困擾開場，說明它其實分成好幾種）
+
+## 第一步：先判斷你是哪一種
+
+### A 型：（症狀描述）
+- 特徵一
+- 特徵二
+
+### B 型：（症狀描述）
+- 特徵一
+- 特徵二
+
+### C 型：（症狀描述）
+- 特徵一
+- 特徵二
+
+## 第二步：飲食怎麼調
+- 多吃什麼
+- 少吃什麼
+
+## 第三步：生活方式
+- 作息 / 運動 / 習慣建議
+
+## 第四步：營養素怎麼搭（依你的類型）
+
+### A 型
+- **主力成分**（作用）
+- 搭配成分
+- **時間**：（隨餐 / 空腹 / 睡前）
+- **來源**：（劑型 / 挑選重點）
+
+### B 型
+- ...
+
+## 這些情況，請先看醫生
+- 危險徵兆一
+- 危險徵兆二
+
+> 不確定自己屬於哪一型？可以做一份 2 分鐘「健康自測」，系統會依你的狀況給出飲食、作息與營養素的搭配建議。`
+
 export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
   const router = useRouter()
   const isEdit = Boolean(initial?.id)
@@ -266,6 +307,16 @@ export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
             <code className="bg-white px-1 rounded">**粗體**</code>、
             <code className="bg-white px-1 rounded">{'> 警告區塊'}</code>、
             <code className="bg-white px-1 rounded">![圖說](網址)</code>。段落間用空行分隔。
+          </div>
+          <div className="mb-2 flex items-center justify-between gap-2 bg-green-50 border border-green-100 rounded-lg p-3">
+            <p className="text-xs text-green-800 leading-relaxed">
+              <strong>💡 問題導向寫法（建議）：</strong>先分型 → 飲食 → 生活 → 營養素搭配（主力/時間/來源）→ 就醫提醒 → 導到自測，讀者更容易對號入座並行動。
+            </p>
+            <button type="button"
+              onClick={() => { if (!data.content.trim() || confirm('將以問題導向模板覆蓋目前內容？')) update('content', PROBLEM_TEMPLATE) }}
+              className="flex-shrink-0 text-xs font-bold text-green-700 border-2 border-green-200 hover:bg-green-100 rounded-lg px-3 py-1.5 whitespace-nowrap">
+              套用模板
+            </button>
           </div>
           <textarea
             ref={contentRef}
