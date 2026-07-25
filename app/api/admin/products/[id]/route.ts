@@ -30,6 +30,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const body = await req.json()
     const { product_name, short_intro, suitable_people, usage_method, ingredients,
             precautions, storage_method, is_published, cover_image_url, home_section,
+            intake_timing, pairing_tips, source_notes,
             category_ids, variants, gallery_images } = body
     const productId = parseInt(params.id)
 
@@ -37,6 +38,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const updateData: any = {}
     if (product_name !== undefined) updateData.product_name = product_name
     if (home_section !== undefined) updateData.home_section = home_section === 'xiaozhuang' ? 'xiaozhuang' : 'community'
+    if (intake_timing !== undefined) updateData.intake_timing = intake_timing || null
+    if (pairing_tips !== undefined) updateData.pairing_tips = pairing_tips || null
+    if (source_notes !== undefined) updateData.source_notes = source_notes || null
     if (short_intro !== undefined) updateData.short_intro = short_intro || null
     if (suitable_people !== undefined) updateData.suitable_people = suitable_people || null
     if (usage_method !== undefined) updateData.usage_method = usage_method || null

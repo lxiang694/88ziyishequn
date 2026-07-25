@@ -57,12 +57,12 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = await req.json()
-    const { product_name, short_intro, suitable_people, usage_method, ingredients, precautions, storage_method, is_published, cover_image_url, home_section, category_ids, variants, gallery_images } = body
+    const { product_name, short_intro, suitable_people, usage_method, ingredients, precautions, storage_method, is_published, cover_image_url, home_section, intake_timing, pairing_tips, source_notes, category_ids, variants, gallery_images } = body
     if (!product_name) return NextResponse.json({ success: false, error: '商品名稱為必填' }, { status: 400 })
     const slug = generateSlug(product_name)
     const { data: product, error: pe } = await supabaseAdmin
       .from('products')
-      .insert({ product_name, slug, short_intro: short_intro || null, suitable_people: suitable_people || null, usage_method: usage_method || null, ingredients: ingredients || null, precautions: precautions || null, storage_method: storage_method || null, is_published: !!is_published, cover_image_url: cover_image_url || null, home_section: home_section === 'xiaozhuang' ? 'xiaozhuang' : 'community' })
+      .insert({ product_name, slug, short_intro: short_intro || null, suitable_people: suitable_people || null, usage_method: usage_method || null, ingredients: ingredients || null, precautions: precautions || null, storage_method: storage_method || null, is_published: !!is_published, cover_image_url: cover_image_url || null, home_section: home_section === 'xiaozhuang' ? 'xiaozhuang' : 'community', intake_timing: intake_timing || null, pairing_tips: pairing_tips || null, source_notes: source_notes || null })
       .select().single()
     if (pe) return NextResponse.json({ success: false, error: pe.message }, { status: 500 })
     if (category_ids?.length > 0) {
