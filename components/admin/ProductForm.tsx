@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
+import { TIMING_OPTIONS } from '@/lib/productMeta'
 
 interface Props { initialData?: any; productId?: number; onSuccess: () => void }
 
@@ -15,7 +16,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
   const [form, setForm] = useState({
     product_name: '', short_intro: '', suitable_people: '', usage_method: '',
     ingredients: '', precautions: '', storage_method: '', is_published: false, cover_image_url: '',
-    home_section: 'community',
+    home_section: 'community', intake_timing: '', pairing_tips: '', source_notes: '',
   })
   const [selectedCats, setSelectedCats] = useState<number[]>([])
   const [variants, setVariants] = useState<Variant[]>([emptyVariant()])
@@ -41,6 +42,9 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
         is_published: initialData.is_published || false,
         cover_image_url: initialData.cover_image_url || '',
         home_section: initialData.home_section === 'xiaozhuang' ? 'xiaozhuang' : 'community',
+        intake_timing: initialData.intake_timing || '',
+        pairing_tips: initialData.pairing_tips || '',
+        source_notes: initialData.source_notes || '',
       })
       setSelectedCats(initialData.product_category_relations?.map((r: any) => r.health_categories?.id).filter(Boolean) || [])
       if (initialData.product_variants?.length > 0) {
@@ -177,6 +181,41 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
           <div>
             <label className="form-label">保存方式</label>
             <input className="form-input" value={form.storage_method} onChange={e => setForm(f => ({ ...f, storage_method: e.target.value }))} />
+          </div>
+        </div>
+      </div>
+
+      {/* 情境化資訊（誰／何時／怎麼搭／來源） */}
+      <div className="card p-5">
+        <h2 className="font-bold text-gray-800 text-lg mb-1">情境化保健資訊</h2>
+        <p className="text-gray-400 text-sm mb-4">誰適合（上面「適合人群」）、何時吃、怎麼搭、什麼來源——留空的欄位前台不顯示。</p>
+        <div className="space-y-4">
+          <div>
+            <label className="form-label">⏰ 建議服用時間（可複選）</label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {TIMING_OPTIONS.map(o => {
+                const selected = form.intake_timing.split(',').map(s => s.trim()).filter(Boolean)
+                const on = selected.includes(o.value)
+                return (
+                  <button key={o.value} type="button"
+                    onClick={() => {
+                      const next = on ? selected.filter(v => v !== o.value) : [...selected, o.value]
+                      setForm(f => ({ ...f, intake_timing: next.join(',') }))
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-sm font-bold border-2 transition-colors ${on ? 'border-green-600 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600 hover:border-green-300'}`}>
+                    {o.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
+            <label className="form-label">🔗 搭配建議</label>
+            <textarea className="form-input" rows={2} placeholder="例：協同——搭配維生素D3、隨油脂吸收更好；避免同時——與鈣、鐵錯開" value={form.pairing_tips} onChange={e => setForm(f => ({ ...f, pairing_tips: e.target.value }))} />
+          </div>
+          <div>
+            <label className="form-label">🌿 成分來源 / 劑型 / 挑選重點</label>
+            <textarea className="form-input" rows={2} placeholder="例：游離型葉黃素、深海魚萃取、USP 認證、素食膠囊" value={form.source_notes} onChange={e => setForm(f => ({ ...f, source_notes: e.target.value }))} />
           </div>
         </div>
       </div>

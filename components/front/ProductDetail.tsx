@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCart } from './CartContext'
 import { formatPrice } from '@/lib/utils'
+import { timingLabels } from '@/lib/productMeta'
 import toast from 'react-hot-toast'
 import SocialShareButtons from './SocialShareButtons'
 
@@ -37,6 +38,9 @@ interface Product {
   ingredients: string | null
   precautions: string | null
   storage_method: string | null
+  intake_timing: string | null
+  pairing_tips: string | null
+  source_notes: string | null
   cover_image_url: string | null
   product_variants: Variant[]
   product_images: ProductImage[]
@@ -218,13 +222,45 @@ export default function ProductDetail({ product }: { product: Product }) {
 
       {/* Detail sections */}
       <div className="space-y-4">
-        {product.suitable_people && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <span className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-lg">👥</span>
-              適合人群
+        {(product.suitable_people || timingLabels(product.intake_timing).length > 0 || product.pairing_tips || product.source_notes) && (
+          <div className="bg-white rounded-2xl border-2 border-green-100 p-5 shadow-sm">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <span className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-lg">🎯</span>
+              情境化保健資訊
             </h3>
-            <div className="text-gray-600 leading-relaxed whitespace-pre-line">{product.suitable_people}</div>
+            <div className="space-y-3.5">
+              {product.suitable_people && (
+                <div className="flex gap-3">
+                  <span className="text-xl flex-shrink-0">👥</span>
+                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">適合誰</p><p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{product.suitable_people}</p></div>
+                </div>
+              )}
+              {timingLabels(product.intake_timing).length > 0 && (
+                <div className="flex gap-3">
+                  <span className="text-xl flex-shrink-0">⏰</span>
+                  <div>
+                    <p className="font-bold text-gray-700 text-sm mb-1">建議服用時間</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {timingLabels(product.intake_timing).map((l, i) => (
+                        <span key={i} className="text-xs font-bold bg-green-50 text-green-700 px-2.5 py-1 rounded-full">{l}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {product.pairing_tips && (
+                <div className="flex gap-3">
+                  <span className="text-xl flex-shrink-0">🔗</span>
+                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">怎麼搭</p><p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{product.pairing_tips}</p></div>
+                </div>
+              )}
+              {product.source_notes && (
+                <div className="flex gap-3">
+                  <span className="text-xl flex-shrink-0">🌿</span>
+                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">來源 / 挑選</p><p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{product.source_notes}</p></div>
+                </div>
+              )}
+            </div>
           </div>
         )}
         {product.usage_method && (
