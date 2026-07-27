@@ -17,12 +17,28 @@ export default function MobileBottomNav() {
   const { totalItems } = useCart()
   const [showCats, setShowCats] = useState(false)
   const [cats, setCats] = useState<any[]>([])
+  const [inputFocused, setInputFocused] = useState(false)
 
   useEffect(() => {
     if (showCats && cats.length === 0) {
       fetch('/api/categories').then(r => r.json()).then(d => { if (d.success) setCats(d.data) }).catch(() => {})
     }
   }, [showCats, cats.length])
+
+  // 鍵盤彈出時（輸入框聚焦）隱藏底部導覽列，避免浮起蓋住輸入欄位
+  useEffect(() => {
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) setInputFocused(true)
+    }
+    const onFocusOut = () => setInputFocused(false)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
+    return () => {
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
+    }
+  }, [])
 
   // 後台不顯示
   if (pathname.startsWith('/admin')) return null
@@ -69,7 +85,7 @@ export default function MobileBottomNav() {
       )}
 
       {/* 底部固定導覽列（手機／平板） */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-gray-100 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]"
+      <nav className={`fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-gray-100 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] ${inputFocused ? 'hidden' : ''}`}
         style={{ height: 60, paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="flex items-stretch h-full max-w-5xl mx-auto">
           <Link href="/" className={itemCls(isHome)}>

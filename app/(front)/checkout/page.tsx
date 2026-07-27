@@ -20,6 +20,22 @@ export default function CheckoutPage() {
   const [selectedStore, setSelectedStore] = useState<Store | null>(null)
   const [showStorePicker, setShowStorePicker] = useState(false)
 
+  // 手機鍵盤彈出時（輸入框聚焦）隱藏底部固定結帳條，避免蓋住正在輸入的欄位
+  const [inputFocused, setInputFocused] = useState(false)
+  useEffect(() => {
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) setInputFocused(true)
+    }
+    const onFocusOut = () => setInputFocused(false)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
+    return () => {
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
+    }
+  }, [])
+
   // "上次選擇的門市" suggestion — looked up by phone, works for guests & members alike
   const [lastStore, setLastStore] = useState<Store | null>(null)
   const [suggestionDismissed, setSuggestionDismissed] = useState(false)
@@ -462,8 +478,8 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* Mobile sticky bottom（疊在底部導覽列上方，避免被蓋住） */}
-      <div className="fixed left-0 right-0 md:hidden bg-white border-t-2 border-gray-100 shadow-2xl z-40"
+      {/* Mobile sticky bottom（疊在底部導覽列上方；鍵盤彈出時隱藏，避免蓋住輸入框） */}
+      <div className={`fixed left-0 right-0 md:hidden bg-white border-t-2 border-gray-100 shadow-2xl z-40 ${inputFocused ? 'hidden' : ''}`}
         style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}>
         <div className="px-4 py-3">
           <div className="flex justify-between items-center mb-2">
