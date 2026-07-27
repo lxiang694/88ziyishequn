@@ -166,7 +166,7 @@ export default function CheckoutPage() {
   const totalItems = items.reduce((s, i) => s + i.quantity, 0)
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 pb-32 md:pb-10">
+    <div className="max-w-5xl mx-auto px-4 py-6 pb-56 md:pb-10">
       {/* Back button */}
       <div className="flex items-center gap-3 mb-6">
         <Link href="/cart" className="text-gray-400 hover:text-gray-600 p-1 rounded-lg transition-colors">
@@ -462,8 +462,9 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* Mobile sticky bottom */}
-      <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t-2 border-gray-100 shadow-2xl z-30">
+      {/* Mobile sticky bottom（疊在底部導覽列上方，避免被蓋住） */}
+      <div className="fixed left-0 right-0 md:hidden bg-white border-t-2 border-gray-100 shadow-2xl z-40"
+        style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}>
         <div className="px-4 py-3">
           <div className="flex justify-between items-center mb-2">
             <span className="text-gray-600 font-semibold">應付金額</span>

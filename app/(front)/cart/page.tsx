@@ -19,7 +19,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 pb-32 sm:pb-8">
+    <div className="max-w-2xl mx-auto px-4 py-6 pb-56 sm:pb-8">
       <h1 className="text-2xl font-bold text-gray-800 mb-5">
         購物車
         <span className="ml-2 text-base font-normal text-gray-400">（{items.reduce((s, i) => s + i.quantity, 0)} 件）</span>
@@ -135,8 +135,9 @@ export default function CartPage() {
         </Link>
       </div>
 
-      {/* Mobile sticky bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-100 p-4 sm:hidden z-30 shadow-2xl">
+      {/* Mobile sticky bottom（疊在底部導覽列上方，避免被蓋住） */}
+      <div className="fixed left-0 right-0 bg-white border-t-2 border-gray-100 p-4 sm:hidden z-40 shadow-2xl"
+        style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}>
         <div className="flex justify-between items-center mb-3">
           <span className="text-gray-600 font-medium">合計金額</span>
           <span className="text-xl font-bold text-green-700">{formatPrice(totalAmount)}</span>

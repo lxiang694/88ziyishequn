@@ -37,8 +37,8 @@ export default function FrontShell({ children }: { children: ReactNode }) {
           <p className="mt-4 text-xs text-gray-400">© {new Date().getFullYear()} 健康優選. All rights reserved.</p>
         </div>
       </footer>
-      {/* 底部導覽列高度的墊片，避免內容被固定列遮住（手機） */}
-      <div className="h-[60px] md:hidden" aria-hidden />
+      {/* 底部導覽列高度的墊片，避免內容被固定列遮住（手機，含瀏海機安全區） */}
+      <div className="md:hidden" aria-hidden style={{ height: 'calc(60px + env(safe-area-inset-bottom))' }} />
       <LineFloatButton />
       <MobileBottomNav />
       <Toaster
