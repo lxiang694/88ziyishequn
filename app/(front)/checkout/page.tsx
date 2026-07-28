@@ -36,9 +36,8 @@ export default function CheckoutPage() {
     }
   }, [])
 
-  // "上次選擇的門市" suggestion — looked up by phone, works for guests & members alike
-  const [lastStore, setLastStore] = useState<Store | null>(null)
-  const [suggestionDismissed, setSuggestionDismissed] = useState(false)
+  // "上次選擇的門市" — 依手機號查到後「直接帶入」為已選門市（可更換），避免使用者以為已選卻未實際選取而卡在驗證
+  const [storeFromLast, setStoreFromLast] = useState(false)
 
   // Logged-in member's saved recipient info (address book)
   const [savedAddresses, setSavedAddresses] = useState<any[]>([])
@@ -80,22 +79,24 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
-  // Detect "last used store" by phone — helps guests too, once they finish typing a valid number
+  // Detect "last used store" by phone — 查到後直接帶入為已選門市（可更換）
   useEffect(() => {
-    if (selectedStore || suggestionDismissed || !validateTWPhone(form.phone)) { setLastStore(null); return }
+    if (selectedStore || !validateTWPhone(form.phone)) return
     const t = setTimeout(() => {
       fetch('/api/orders?phone=' + encodeURIComponent(form.phone.trim()))
         .then(r => r.json())
         .then(d => {
           const last = d.success ? d.data?.[0] : null
           if (last?.store_id && last?.store_name) {
-            setLastStore({ id: last.store_id, store_name: last.store_name, address: last.store_address, county: last.county, district: last.district })
+            setSelectedStore({ id: last.store_id, store_name: last.store_name, address: last.store_address, county: last.county, district: last.district })
+            setStoreFromLast(true)
+            setErrors(e => ({ ...e, store: '' }))
           }
         })
         .catch(() => {})
     }, 500)
     return () => clearTimeout(t)
-  }, [form.phone, selectedStore, suggestionDismissed])
+  }, [form.phone, selectedStore])
 
   const applyAddress = (addr: any) => {
     setForm(f => ({ ...f, customer_name: addr.recipient_name, phone: addr.phone, line_id: addr.line_id || '' }))
@@ -109,11 +110,18 @@ export default function CheckoutPage() {
     if (!form.phone || !validateTWPhone(form.phone)) e.phone = '請填寫正確手機號碼（09xxxxxxxx）'
     if (!selectedStore) e.store = '請選擇 7-11 取貨門市'
     setErrors(e)
-    return Object.keys(e).length === 0
+    return e
   }
 
   const handleSubmit = async () => {
-    if (!validate()) { toast.error('請確認填寫資料'); return }
+    const e = validate()
+    const firstKey = Object.keys(e)[0]
+    if (firstKey) {
+      // 明確指出缺少的欄位，並捲動到該欄位，避免使用者不知道哪裡沒填
+      toast.error(e[firstKey])
+      document.getElementById(`field-${firstKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     if (items.length === 0) { toast.error('購物車是空的'); return }
     setSubmitting(true)
     try {
@@ -253,7 +261,7 @@ export default function CheckoutPage() {
               收件資料
             </h2>
             <div className="space-y-4">
-              <div>
+              <div id="field-customer_name" className="scroll-mt-24">
                 <label className="form-label">姓名 <span className="text-red-500">*</span></label>
                 <input
                   className={`form-input ${errors.customer_name ? 'border-red-400 bg-red-50' : ''}`}
@@ -265,7 +273,7 @@ export default function CheckoutPage() {
                   <p className="text-red-500 text-sm mt-1.5">⚠️ {errors.customer_name}</p>
                 )}
               </div>
-              <div>
+              <div id="field-phone" className="scroll-mt-24">
                 <label className="form-label">手機號碼 <span className="text-red-500">*</span></label>
                 <input
                   className={`form-input ${errors.phone ? 'border-red-400 bg-red-50' : ''}`}
@@ -294,7 +302,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Store picker */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div id="field-store" className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 scroll-mt-24">
             <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
               <span className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-base">🏪</span>
               選擇 7-11 取貨門市 <span className="text-red-500 text-base">*</span>
@@ -302,6 +310,9 @@ export default function CheckoutPage() {
 
             {selectedStore ? (
               <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                {storeFromLast && (
+                  <p className="text-amber-700 text-xs font-semibold mb-2">💡 已自動帶入您上次的取貨門市，如需更換請點右側「更換」</p>
+                )}
                 <div className="flex justify-between items-start gap-3">
                   <div>
                     <p className="font-bold text-green-800 text-lg leading-snug">{selectedStore.store_name}</p>
@@ -311,23 +322,6 @@ export default function CheckoutPage() {
                   <button onClick={() => setShowStorePicker(true)}
                     className="flex-shrink-0 text-green-700 font-bold text-sm border-2 border-green-300 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors whitespace-nowrap">
                     更換
-                  </button>
-                </div>
-              </div>
-            ) : lastStore ? (
-              <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-                <p className="text-amber-800 text-sm font-semibold mb-2">💡 偵測到您上次選擇的門市：</p>
-                <p className="font-bold text-gray-800">{lastStore.store_name}</p>
-                <p className="text-green-600 text-sm font-semibold mt-0.5">{lastStore.county}{lastStore.district}</p>
-                <p className="text-gray-500 text-sm mt-0.5">{lastStore.address}</p>
-                <div className="flex gap-2 mt-3">
-                  <button onClick={() => { setSelectedStore(lastStore); setErrors(e => ({ ...e, store: '' })) }}
-                    className="flex-1 bg-green-700 hover:bg-green-800 text-white font-bold text-sm py-2 rounded-lg transition-colors">
-                    直接使用此門市
-                  </button>
-                  <button onClick={() => { setSuggestionDismissed(true); setShowStorePicker(true) }}
-                    className="flex-1 border-2 border-gray-200 hover:bg-gray-50 text-gray-600 font-bold text-sm py-2 rounded-lg transition-colors">
-                    重新選擇
                   </button>
                 </div>
               </div>
@@ -495,7 +489,7 @@ export default function CheckoutPage() {
       {showStorePicker && (
         <StorePickerModal
           onClose={() => setShowStorePicker(false)}
-          onSelect={store => { setSelectedStore(store); setShowStorePicker(false); setErrors(e => ({ ...e, store: '' })) }}
+          onSelect={store => { setSelectedStore(store); setStoreFromLast(false); setShowStorePicker(false); setErrors(e => ({ ...e, store: '' })) }}
         />
       )}
     </div>
