@@ -190,7 +190,7 @@ export default function CheckoutPage() {
   const totalItems = items.reduce((s, i) => s + i.quantity, 0)
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 pb-56 md:pb-10">
+    <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-56 md:pb-10">
       {/* Back button */}
       <div className="flex items-center gap-3 mb-6">
         <Link href="/cart" className="text-gray-400 hover:text-gray-600 p-1 rounded-lg transition-colors">
