@@ -23,6 +23,9 @@ export default function CheckoutPage() {
   // 手機版訂單商品摘要：預設收起（縮圖＋件數＋金額一眼可見），點「明細」展開逐項，讓姓名／手機／門市不需下拉即可看到
   const [showItems, setShowItems] = useState(false)
 
+  // 常用收件資訊：超過 2 筆時預設只顯示 2 筆，其餘可展開／收起
+  const [showAllAddresses, setShowAllAddresses] = useState(false)
+
   // 手機鍵盤彈出時（輸入框聚焦）隱藏底部固定結帳條，避免蓋住正在輸入的欄位
   const [inputFocused, setInputFocused] = useState(false)
   useEffect(() => {
@@ -281,7 +284,7 @@ export default function CheckoutPage() {
                 常用收件資訊
               </h2>
               <div className="space-y-2">
-                {savedAddresses.map(addr => (
+                {(showAllAddresses ? savedAddresses : savedAddresses.slice(0, 2)).map(addr => (
                   <button key={addr.id} onClick={() => applyAddress(addr)}
                     className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-green-300 hover:bg-green-50 transition-colors flex items-center justify-between gap-3">
                     <div className="min-w-0">
@@ -295,6 +298,15 @@ export default function CheckoutPage() {
                   </button>
                 ))}
               </div>
+              {savedAddresses.length > 2 && (
+                <button type="button" onClick={() => setShowAllAddresses(s => !s)}
+                  className="w-full mt-2 flex items-center justify-center gap-1 text-green-700 text-sm font-bold py-2 hover:bg-green-50 rounded-lg transition-colors">
+                  {showAllAddresses ? '收起' : `展開全部 ${savedAddresses.length} 筆`}
+                  <svg className={`w-4 h-4 transition-transform ${showAllAddresses ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              )}
             </div>
           )}
 
