@@ -232,21 +232,43 @@ export default function CheckoutPage() {
               <span className="text-green-700 font-bold text-lg flex-shrink-0">{formatPrice(totalAmount)}</span>
             </button>
             {showItems && (
-              <div className="space-y-3 mt-3 pt-3 border-t border-gray-100">
-                {items.map(item => (
-                  <div key={item.variant_id} className="flex gap-3 items-center">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 relative flex-shrink-0">
-                      {item.cover_image_url
-                        ? <Image src={item.cover_image_url} alt={item.product_name} fill className="object-cover" sizes="48px" />
-                        : <div className="w-full h-full flex items-center justify-center">💊</div>}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm line-clamp-1">{item.product_name}</p>
-                      <p className="text-gray-500 text-xs">{item.variant_name} × {item.quantity}</p>
-                    </div>
-                    <p className="font-bold text-gray-700 text-sm flex-shrink-0">{formatPrice(item.unit_price * item.quantity)}</p>
-                  </div>
-                ))}
+              <div className="mt-3 overflow-hidden rounded-xl border-2 border-green-200">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-green-700 text-white">
+                      <th className="text-left font-bold px-3 py-2">商品</th>
+                      <th className="text-center font-bold px-2 py-2 whitespace-nowrap">數量</th>
+                      <th className="text-right font-bold px-3 py-2 whitespace-nowrap">小計</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, idx) => (
+                      <tr key={item.variant_id} className={idx % 2 === 0 ? 'bg-white' : 'bg-green-50/70'}>
+                        <td className="px-3 py-2.5 border-t border-green-100 align-top">
+                          <div className="flex items-center gap-2">
+                            <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 relative flex-shrink-0">
+                              {item.cover_image_url
+                                ? <Image src={item.cover_image_url} alt={item.product_name} fill className="object-cover" sizes="36px" />
+                                : <div className="w-full h-full flex items-center justify-center text-sm">💊</div>}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-gray-800 leading-snug line-clamp-2">{item.product_name}</p>
+                              <p className="text-gray-500 text-xs mt-0.5">{item.variant_name}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2.5 border-t border-green-100 text-center text-gray-600 whitespace-nowrap">×{item.quantity}</td>
+                        <td className="px-3 py-2.5 border-t border-green-100 text-right font-bold text-gray-800 whitespace-nowrap">{formatPrice(item.unit_price * item.quantity)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-amber-50">
+                      <td className="px-3 py-2.5 border-t-2 border-green-200 font-bold text-gray-700" colSpan={2}>合計（{totalItems} 件）</td>
+                      <td className="px-3 py-2.5 border-t-2 border-green-200 text-right text-green-700 font-bold text-base whitespace-nowrap">{formatPrice(totalAmount)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             )}
           </div>
