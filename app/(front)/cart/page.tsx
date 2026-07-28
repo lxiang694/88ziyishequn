@@ -19,7 +19,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 pb-56 sm:pb-8">
+    <div className="max-w-2xl mx-auto px-4 pt-14 sm:pt-6 pb-56 sm:pb-8">
       <h1 className="text-2xl font-bold text-gray-800 mb-5">
         購物車
         <span className="ml-2 text-base font-normal text-gray-400">（{items.reduce((s, i) => s + i.quantity, 0)} 件）</span>
