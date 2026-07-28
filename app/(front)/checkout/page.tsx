@@ -20,6 +20,9 @@ export default function CheckoutPage() {
   const [selectedStore, setSelectedStore] = useState<Store | null>(null)
   const [showStorePicker, setShowStorePicker] = useState(false)
 
+  // 手機版訂單商品摘要：預設收起（縮圖＋件數＋金額一眼可見），點「明細」展開逐項，讓姓名／手機／門市不需下拉即可看到
+  const [showItems, setShowItems] = useState(false)
+
   // 手機鍵盤彈出時（輸入框聚焦）隱藏底部固定結帳條，避免蓋住正在輸入的欄位
   const [inputFocused, setInputFocused] = useState(false)
   useEffect(() => {
@@ -192,7 +195,7 @@ export default function CheckoutPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-56 md:pb-10">
       {/* Back button */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-4">
         <Link href="/cart" className="text-gray-400 hover:text-gray-600 p-1 rounded-lg transition-colors">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -203,36 +206,55 @@ export default function CheckoutPage() {
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* LEFT: Form */}
-        <div className="flex-1 space-y-5 order-2 md:order-1">
+        <div className="flex-1 space-y-4 order-2 md:order-1">
 
-          {/* Mobile order summary at top */}
+          {/* Mobile order summary at top — 可展開精簡摘要 */}
           <div className="md:hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-gray-800">訂單商品（{totalItems} 件）</h2>
-              <span className="text-green-700 font-bold text-lg">{formatPrice(totalAmount)}</span>
-            </div>
-            <div className="space-y-3">
-              {items.map(item => (
-                <div key={item.variant_id} className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 relative flex-shrink-0">
-                    {item.cover_image_url
-                      ? <Image src={item.cover_image_url} alt={item.product_name} fill className="object-cover" sizes="48px" />
-                      : <div className="w-full h-full flex items-center justify-center">💊</div>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 text-sm line-clamp-1">{item.product_name}</p>
-                    <p className="text-gray-500 text-xs">{item.variant_name} × {item.quantity}</p>
-                  </div>
-                  <p className="font-bold text-gray-700 text-sm flex-shrink-0">{formatPrice(item.unit_price * item.quantity)}</p>
+            <button type="button" onClick={() => setShowItems(s => !s)}
+              className="w-full flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {/* 疊加縮圖 */}
+                <div className="flex -space-x-2 flex-shrink-0">
+                  {items.slice(0, 3).map(item => (
+                    <div key={item.variant_id} className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 relative ring-2 ring-white">
+                      {item.cover_image_url
+                        ? <Image src={item.cover_image_url} alt={item.product_name} fill className="object-cover" sizes="36px" />
+                        : <div className="w-full h-full flex items-center justify-center text-sm">💊</div>}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+                <span className="font-bold text-gray-800 text-sm whitespace-nowrap">訂單商品 {totalItems} 件</span>
+                <span className="text-green-700 text-xs font-bold whitespace-nowrap">{showItems ? '收合' : '明細'}</span>
+                <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${showItems ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+              <span className="text-green-700 font-bold text-lg flex-shrink-0">{formatPrice(totalAmount)}</span>
+            </button>
+            {showItems && (
+              <div className="space-y-3 mt-3 pt-3 border-t border-gray-100">
+                {items.map(item => (
+                  <div key={item.variant_id} className="flex gap-3 items-center">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 relative flex-shrink-0">
+                      {item.cover_image_url
+                        ? <Image src={item.cover_image_url} alt={item.product_name} fill className="object-cover" sizes="48px" />
+                        : <div className="w-full h-full flex items-center justify-center">💊</div>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm line-clamp-1">{item.product_name}</p>
+                      <p className="text-gray-500 text-xs">{item.variant_name} × {item.quantity}</p>
+                    </div>
+                    <p className="font-bold text-gray-700 text-sm flex-shrink-0">{formatPrice(item.unit_price * item.quantity)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Saved addresses quick-pick (logged-in members) */}
           {user && savedAddresses.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <h2 className="text-base font-bold text-gray-800 mb-2 flex items-center gap-2">
                 <span className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-base">⭐</span>
                 常用收件資訊
               </h2>
@@ -255,12 +277,12 @@ export default function CheckoutPage() {
           )}
 
           {/* Recipient form */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
               <span className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-base">✍️</span>
               收件資料
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div id="field-customer_name" className="scroll-mt-24">
                 <label className="form-label">姓名 <span className="text-red-500">*</span></label>
                 <input
@@ -302,8 +324,8 @@ export default function CheckoutPage() {
           </div>
 
           {/* Store picker */}
-          <div id="field-store" className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 scroll-mt-24">
-            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <div id="field-store" className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 scroll-mt-24">
+            <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
               <span className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-base">🏪</span>
               選擇 7-11 取貨門市 <span className="text-red-500 text-base">*</span>
             </h2>
