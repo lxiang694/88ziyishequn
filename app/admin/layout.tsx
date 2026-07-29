@@ -17,6 +17,7 @@ const NAV = [
   { href: '/admin/articles', label: '📚 健康知識', perms: ['products.all','all'] },
   // reports: super_admin + customer_service
   { href: '/admin/reports', label: '📈 銷售報表', perms: ['all', 'orders.view'] },
+  { href: '/admin/funnel', label: '🔻 下單漏斗', perms: ['all', 'orders.view'] },
   { href: '/admin/customers', label: '🔁 復購分析', perms: ['all', 'orders.view'] },
   { href: '/admin/events', label: '📅 社群活動', perms: ['all', 'events.view'] },
   { href: '/admin/members', label: '👤 會員管理', perms: ['all'] },

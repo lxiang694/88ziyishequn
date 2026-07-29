@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { CartItem } from '@/lib/types'
 import toast from 'react-hot-toast'
+import { trackFunnel } from '@/lib/funnel'
 
 interface CartContextType {
   items: CartItem[]
@@ -21,6 +22,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem('cart_items', JSON.stringify(items)) }, [items])
 
   const addItem = (newItem: CartItem) => {
+    // 漏斗埋點：加入購物車（意圖）
+    trackFunnel('add_to_cart', { product_id: newItem.product_id, variant_id: newItem.variant_id, quantity: newItem.quantity })
     setItems(prev => {
       const existing = prev.find(i => i.variant_id === newItem.variant_id)
       if (existing) {

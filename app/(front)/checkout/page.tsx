@@ -7,6 +7,7 @@ import { useCart } from '@/components/front/CartContext'
 import { useUserAuth } from '@/components/front/UserAuthContext'
 import { formatPrice, validateTWPhone } from '@/lib/utils'
 import StorePickerModal, { Store } from '@/components/front/StorePickerModal'
+import { trackFunnel } from '@/lib/funnel'
 import toast from 'react-hot-toast'
 
 export default function CheckoutPage() {
@@ -120,15 +121,17 @@ export default function CheckoutPage() {
   }
 
   const handleSubmit = async () => {
+    trackFunnel('submit_click')
     const e = validate()
     const firstKey = Object.keys(e)[0]
     if (firstKey) {
       // 明確指出缺少的欄位，並捲動到該欄位，避免使用者不知道哪裡沒填
+      trackFunnel('submit_fail', { reason: firstKey })
       toast.error(e[firstKey])
       document.getElementById(`field-${firstKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
-    if (items.length === 0) { toast.error('購物車是空的'); return }
+    if (items.length === 0) { trackFunnel('submit_fail', { reason: 'empty_cart' }); toast.error('購物車是空的'); return }
     setSubmitting(true)
     try {
       const fetchFn = user ? authedFetch : fetch
@@ -171,12 +174,15 @@ export default function CheckoutPage() {
             }),
           }).catch(() => {})
         }
+        trackFunnel('order_success', { order_no: data.data?.order_no })
         clearCart()
         router.push(`/order-success?order_no=${data.data.order_no}`)
       } else {
+        trackFunnel('submit_fail', { reason: 'api', error: (data.error || '').toString().slice(0, 120) })
         toast.error(data.error || '下單失敗，請稍後再試')
       }
     } catch {
+      trackFunnel('submit_fail', { reason: 'network' })
       toast.error('網路錯誤，請稍後再試')
     } finally {
       setSubmitting(false)
