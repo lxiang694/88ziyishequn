@@ -56,8 +56,21 @@ export async function GET(req: NextRequest) {
     // 商品瀏覽 / 進入結帳：來自 page_views
     const productViews = await fetchRange('page_views', 'visitor_id', start, end, q => q.like('path', '/products/%'))
     const checkoutViews = await fetchRange('page_views', 'visitor_id', start, end, q => q.eq('path', '/checkout'))
-    // 加入購物車 / 送出 / 成功 / 失敗：來自 funnel_events
+    // 加入購物車 / 送出 / 失敗：來自 funnel_events（盡力而為的前端埋點）
     const events = await fetchRange('funnel_events', 'event, visitor_id, meta', start, end)
+
+    // 下單成功：直接數真實訂單表（唯一可信來源，排除已取消），確保與實際訂單一致
+    let orderCount = 0
+    {
+      const { count, error } = await supabaseAdmin
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', start)
+        .lte('created_at', end)
+        .neq('order_status', '已取消')
+      if (error && error.code !== '42P01') throw new Error(error.message)
+      orderCount = count || 0
+    }
 
     const distinct = (rows: any[] | null) => {
       const s = new Set<string>()
@@ -84,7 +97,7 @@ export async function GET(req: NextRequest) {
       { key: 'add_to_cart', label: '加入購物車', visitors: evCount('add_to_cart') },
       { key: 'checkout_start', label: '進入結帳', visitors: distinct(checkoutViews) },
       { key: 'submit_click', label: '點擊送出', visitors: evCount('submit_click') },
-      { key: 'order_success', label: '下單成功', visitors: evCount('order_success') },
+      { key: 'order_success', label: '下單成功', visitors: orderCount, fromOrders: true },
     ]
 
     const REASON_LABELS: Record<string, string> = {

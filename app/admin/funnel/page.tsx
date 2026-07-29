@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 
-interface Stage { key: string; label: string; visitors: number }
+interface Stage { key: string; label: string; visitors: number; fromOrders?: boolean }
 interface Fail { reason: string; label: string; count: number }
 
 const RANGES = [
@@ -89,7 +89,7 @@ export default function FunnelPage() {
             <p className="text-sm font-semibold text-green-50">整體轉換率（瀏覽商品 → 下單成功）</p>
             <p className="text-4xl font-bold mt-1">{totalConv}<span className="text-2xl">%</span></p>
             <p className="text-green-50 text-xs mt-1">
-              {stages[0]?.visitors || 0} 位看商品的訪客中，有 {stages[stages.length - 1]?.visitors || 0} 位完成下單
+              {stages[0]?.visitors || 0} 位看商品的訪客，期間共 {stages[stages.length - 1]?.visitors || 0} 筆實際訂單
             </p>
           </div>
 
@@ -115,9 +115,10 @@ export default function FunnelPage() {
                       <div className="relative flex items-center justify-between px-4 py-3">
                         <span className="font-bold text-gray-800 flex items-center gap-2">
                           <span>{STAGE_ICONS[s.key]}</span>{s.label}
+                          {s.fromOrders && <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">實際訂單</span>}
                         </span>
                         <span className="font-bold text-gray-900 text-lg">
-                          {s.visitors}<span className="text-xs font-normal text-gray-400 ml-1">人</span>
+                          {s.visitors}<span className="text-xs font-normal text-gray-400 ml-1">{s.fromOrders ? '筆' : '人'}</span>
                         </span>
                       </div>
                     </div>
@@ -125,6 +126,11 @@ export default function FunnelPage() {
                 )
               })}
             </div>
+            <p className="text-gray-400 text-[11px] mt-3 leading-relaxed">
+              📌「瀏覽商品 / 進入結帳」來自伺服器瀏覽紀錄、「下單成功」直接讀真實訂單表（最準）；
+              「加入購物車 / 點擊送出」為瀏覽器埋點，屬盡力而為的估計，且僅統計功能上線後的資料，
+              因此中間兩步可能略少於實際，剛上線初期數字會逐步補齊。
+            </p>
           </div>
 
           {/* 送出失敗原因 */}
