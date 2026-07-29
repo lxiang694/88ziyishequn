@@ -467,6 +467,14 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Mobile inline submit — 隨內容捲動、不會被 LINE 內建瀏覽器底部工具列或底部固定條遮住的保底下單入口 */}
+          <div className="md:hidden space-y-2">
+            <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-4">
+              {submitting ? '處理中，請稍候...' : `確認下單・${formatPrice(totalAmount)}`}
+            </button>
+            <p className="text-center text-xs text-gray-400">按不到下方按鈕時，可直接按這裡送出；如需修改請 LINE 客服</p>
+          </div>
+
           {/* Desktop submit */}
           <div className="hidden md:block space-y-2">
             <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-5">
