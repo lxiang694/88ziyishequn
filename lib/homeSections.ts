@@ -4,14 +4,16 @@ export interface HomeSection {
   key: string
   label: string
   emoji: string
+  /** 首頁館別圖磚樣式（需為完整字串，Tailwind 才會產生對應 class） */
+  tile: string
 }
 
 // 顯示順序即首頁分區的呈現順序（本週熱銷為跨分區，不在此列）
 export const HOME_SECTIONS: HomeSection[] = [
-  { key: 'community', label: '88自醫社群團購', emoji: '🛒' },
-  { key: 'xiaozhuang', label: '小莊優選', emoji: '⭐' },
-  { key: 'home_living', label: '居家生活', emoji: '🏠' },
-  { key: 'tcm_food', label: '中醫食療', emoji: '🌿' },
+  { key: 'community', label: '88自醫社群團購', emoji: '🛒', tile: 'bg-green-50 border-green-300 text-green-900 hover:bg-green-100' },
+  { key: 'xiaozhuang', label: '小莊優選', emoji: '⭐', tile: 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100' },
+  { key: 'home_living', label: '居家生活', emoji: '🏠', tile: 'bg-sky-50 border-sky-300 text-sky-900 hover:bg-sky-100' },
+  { key: 'tcm_food', label: '中醫食療', emoji: '🌿', tile: 'bg-rose-50 border-rose-300 text-rose-900 hover:bg-rose-100' },
 ]
 
 export const HOME_SECTION_KEYS = HOME_SECTIONS.map(s => s.key)
