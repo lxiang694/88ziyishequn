@@ -98,6 +98,9 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
   const mainProducts = isDefaultView ? [] : products
   const SECTION_PREVIEW = 8
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+  // 本週熱銷：預設顯示 4 件，其餘可展開（不用橫向捲動）
+  const HOT_PREVIEW = 4
+  const [showAllHot, setShowAllHot] = useState(false)
   // 依 HOME_SECTIONS 順序分組，只保留有商品的分區
   const sectionGroups = isDefaultView
     ? HOME_SECTIONS.map(sec => ({ sec, items: products.filter(p => productSection(p) === sec.key) }))
@@ -184,7 +187,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
   const hotProducts = products.slice(0, 8)
 
   // 商品卡（全站共用：館別預覽、搜尋結果、分類篩選）
-  const renderProductCard = (product: Product) => {
+  const renderProductCard = (product: Product, rank?: number) => {
     const minPrice = getMinPrice(product.product_variants)
     const inStock = hasStock(product.product_variants)
     const isMulti = multiVariant(product.product_variants)
@@ -200,6 +203,10 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-5xl text-gray-200">💊</div>
+            )}
+            {/* 純裝飾角標：熱銷名次 */}
+            {rank !== undefined && rank < 3 && (
+              <span className="absolute top-2 left-2 bg-red-600 text-white t-badge-deco font-bold px-2 py-1 rounded-md">熱銷 {rank + 1}</span>
             )}
             {!inStock && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -321,14 +328,18 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-800 text-2xl leading-none">×</button>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-2 pb-3 overflow-x-auto no-scrollbar">
-            <span className="t-meta flex-shrink-0 font-semibold">熱門</span>
-            {HOT_TAGS.map(t => (
-              <button key={t} onClick={() => handleSearch(t)}
-                className={`chip ${search === t ? 'bg-green-700 text-white font-bold' : 'bg-white text-gray-700 border border-gray-300 hover:text-green-700 hover:border-green-400'}`}>
-                {t}
-              </button>
-            ))}
+          {/* 熱門搜尋詞：右側漸層提示還有更多可左右滑動 */}
+          <div className="relative">
+            <div className="flex items-center gap-2 mt-2 pb-3 overflow-x-auto no-scrollbar">
+              <span className="t-meta flex-shrink-0 font-semibold">熱門</span>
+              {HOT_TAGS.map(t => (
+                <button key={t} onClick={() => handleSearch(t)}
+                  className={`chip ${search === t ? 'bg-green-700 text-white font-bold' : 'bg-white text-gray-700 border border-gray-300 hover:text-green-700 hover:border-green-400'}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-gray-50 to-transparent" aria-hidden />
           </div>
           <div className="-mx-4 border-b border-gray-100" />
         </div>
@@ -394,40 +405,23 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
           <section id="sec-hot" className="pt-6 pb-2 scroll-mt-56">
             <div className="flex items-center justify-between mb-3">
               <h2 className="t-section-title">🔥 本週熱銷</h2>
-              <button onClick={scrollToProducts} className="text-green-700 text-base font-bold hover:underline min-h-[48px] px-2">看全部 →</button>
+              <span className="t-price-note">最多人購買</span>
             </div>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
-              {hotProducts.map((product, idx) => {
-                const minPrice = getMinPrice(product.product_variants)
-                const inStock = hasStock(product.product_variants)
-                const isMulti = multiVariant(product.product_variants)
-                return (
-                  <div key={product.id} className="flex-shrink-0 w-44 sm:w-48 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                    <Link href={`/products/${product.slug}`} className="block relative">
-                      <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                        {product.cover_image_url
-                          ? <Image src={product.cover_image_url} alt={product.product_name} fill className="object-cover" sizes="192px" />
-                          : <div className="w-full h-full flex items-center justify-center text-4xl text-gray-200">💊</div>}
-                        {/* 純裝飾角標：唯一允許 12px 的角色 */}
-                        {idx < 3 && <span className="absolute top-1.5 left-1.5 bg-red-600 text-white t-badge-deco font-bold px-2 py-1 rounded-md">熱銷 {idx + 1}</span>}
-                        {!inStock && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="bg-gray-900/80 text-white text-base font-bold px-4 py-2 rounded-full">已售完</span></div>}
-                      </div>
-                    </Link>
-                    <div className="p-3 flex flex-col flex-1">
-                      <Link href={`/products/${product.slug}`}>
-                        <h3 className="t-product-title line-clamp-3 hover:text-green-700">{product.product_name}</h3>
-                      </Link>
-                      <div className="mt-auto pt-2 space-y-2">
-                        {minPrice !== null && <div className="t-price">{formatPrice(minPrice)}{isMulti ? ' 起' : ''}</div>}
-                        <button onClick={() => handleAddToCart(product)} disabled={!inStock} className="btn-card">
-                          {!inStock ? '已售完' : isMulti ? '選擇規格' : '加入購物車'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+            {/* 格狀呈現：不需左右滑動，避免使用者發現不了後面還有商品 */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {(showAllHot ? hotProducts : hotProducts.slice(0, HOT_PREVIEW)).map((p, idx) => renderProductCard(p, idx))}
             </div>
+            {hotProducts.length > HOT_PREVIEW && (
+              <div className="text-center mt-5">
+                <button onClick={() => setShowAllHot(s => !s)}
+                  className="inline-flex items-center gap-1.5 border-2 border-green-600 text-green-700 font-bold px-6 py-2.5 min-h-[48px] rounded-xl hover:bg-green-50 transition-colors">
+                  {showAllHot ? '收合' : `查看全部 ${hotProducts.length} 件熱銷`}
+                  <svg className={`w-4 h-4 transition-transform ${showAllHot ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </section>
         )}
 
