@@ -156,7 +156,7 @@ export default function ProductDetail({ product }: { product: Product }) {
               <span className="text-3xl font-bold text-green-700">{formatPrice(selectedVariant.sale_price)}</span>
               {selectedVariant.original_price && selectedVariant.original_price > selectedVariant.sale_price && (
                 <>
-                  <span className="text-gray-400 line-through text-lg">{formatPrice(selectedVariant.original_price)}</span>
+                  <span className="text-gray-600 line-through text-lg">{formatPrice(selectedVariant.original_price)}</span>
                   <span className="bg-red-50 text-red-600 text-sm font-bold px-2 py-0.5 rounded-lg">
                     省 {formatPrice(selectedVariant.original_price - selectedVariant.sale_price)}
                   </span>
@@ -186,7 +186,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                 })}
               </div>
               {selectedVariant && (
-                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                <p className="text-[13px] text-gray-600 mt-2 flex items-center gap-1">
                   <span className={`w-2 h-2 rounded-full ${inStock ? 'bg-green-500' : 'bg-red-400'}`} />
                   {inStock ? `庫存充足（${selectedVariant.stock_qty} 件）` : '此規格已售完'}
                 </p>
@@ -242,7 +242,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                     <p className="font-bold text-gray-700 text-sm mb-1">建議服用時間</p>
                     <div className="flex flex-wrap gap-1.5">
                       {timingLabels(product.intake_timing).map((l, i) => (
-                        <span key={i} className="text-xs font-bold bg-green-50 text-green-700 px-2.5 py-1 rounded-full">{l}</span>
+                        <span key={i} className="text-[13px] font-bold bg-green-50 text-green-800 px-3 py-1.5 rounded-full">{l}</span>
                       ))}
                     </div>
                   </div>

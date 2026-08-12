@@ -42,7 +42,7 @@ export default function AccountDashboard() {
   }
 
   if (loading || loadingData) {
-    return <div className="py-20 text-center text-gray-400">載入中...</div>
+    return <div className="py-20 text-center text-gray-600">載入中...</div>
   }
   if (!user) return null
 
@@ -61,15 +61,15 @@ export default function AccountDashboard() {
           <div className="grid grid-cols-3 gap-3 mt-4">
             <div className="bg-white/15 backdrop-blur rounded-xl p-3 text-center">
               <p className="text-2xl font-bold">{orders.length}</p>
-              <p className="text-xs text-green-100 mt-0.5">總訂單數</p>
+              <p className="text-[13px] text-green-100 mt-0.5">總訂單數</p>
             </div>
             <div className="bg-white/15 backdrop-blur rounded-xl p-3 text-center">
               <p className="text-2xl font-bold">{completedOrders}</p>
-              <p className="text-xs text-green-100 mt-0.5">有效訂單</p>
+              <p className="text-[13px] text-green-100 mt-0.5">有效訂單</p>
             </div>
             <div className="bg-white/15 backdrop-blur rounded-xl p-3 text-center">
               <p className="text-lg font-bold">{formatPrice(totalSpent)}</p>
-              <p className="text-xs text-green-100 mt-0.5">累計消費</p>
+              <p className="text-[13px] text-green-100 mt-0.5">累計消費</p>
             </div>
           </div>
         </div>
@@ -79,17 +79,17 @@ export default function AccountDashboard() {
           <Link href="/account/orders" className="bg-white rounded-2xl border border-gray-100 p-4 hover:border-green-300 transition-colors">
             <div className="text-3xl mb-1">📦</div>
             <p className="font-bold text-gray-800">我的訂單</p>
-            <p className="text-xs text-gray-400 mt-0.5">查看訂單與物流狀態</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">查看訂單與物流狀態</p>
           </Link>
           <Link href="/account/profile" className="bg-white rounded-2xl border border-gray-100 p-4 hover:border-green-300 transition-colors">
             <div className="text-3xl mb-1">✍️</div>
             <p className="font-bold text-gray-800">個人資料</p>
-            <p className="text-xs text-gray-400 mt-0.5">姓名、手機、預設取貨門市</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">姓名、手機、預設取貨門市</p>
           </Link>
           <Link href="/account/addresses" className="bg-white rounded-2xl border border-gray-100 p-4 hover:border-green-300 transition-colors col-span-2">
             <div className="text-3xl mb-1">⭐</div>
             <p className="font-bold text-gray-800">常用收件資訊</p>
-            <p className="text-xs text-gray-400 mt-0.5">管理下單時可快速選擇的收件人與門市</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">管理下單時可快速選擇的收件人與門市</p>
           </Link>
         </div>
 
@@ -97,14 +97,14 @@ export default function AccountDashboard() {
         {profile?.phone && orders.length === 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
             <p className="font-bold text-amber-900 text-sm mb-1">🔗 找回您的舊訂單</p>
-            <p className="text-xs text-amber-700 leading-relaxed mb-3">
+            <p className="text-[13px] text-amber-700 leading-relaxed mb-3">
               如果您在註冊前曾用同一支手機號碼下過單，可以一鍵關聯到此會員帳號
             </p>
             <button onClick={linkOldOrders} disabled={linking}
               className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors">
               {linking ? '查找中...' : '一鍵關聯舊訂單'}
             </button>
-            {linkMessage && <p className="text-xs text-amber-800 mt-2">{linkMessage}</p>}
+            {linkMessage && <p className="text-[13px] text-amber-800 mt-2">{linkMessage}</p>}
           </div>
         )}
 
@@ -119,7 +119,7 @@ export default function AccountDashboard() {
           {orders.length === 0 ? (
             <div className="py-8 text-center">
               <div className="text-4xl mb-2">🛒</div>
-              <p className="text-gray-400 text-sm mb-4">還沒有訂單</p>
+              <p className="text-gray-600 text-sm mb-4">還沒有訂單</p>
               <Link href="/" className="btn-primary inline-flex">去逛逛</Link>
             </div>
           ) : (
@@ -127,9 +127,9 @@ export default function AccountDashboard() {
               {orders.slice(0, 3).map(o => (
                 <div key={o.id} className="border border-gray-100 rounded-xl p-3 flex items-center gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-mono text-xs text-gray-500 mb-0.5">{o.order_no}</p>
+                    <p className="font-mono text-[13px] text-gray-500 mb-0.5">{o.order_no}</p>
                     <p className="text-sm text-gray-700 truncate">{o.store_name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{formatDateTime(o.created_at)}</p>
+                    <p className="text-[13px] text-gray-600 mt-0.5">{formatDateTime(o.created_at)}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <span className={`status-badge ${getStatusColor(o.order_status)}`}>{o.order_status}</span>

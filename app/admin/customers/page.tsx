@@ -41,7 +41,7 @@ function StackedBars({ items, aKey, bKey, aColor, bColor, aLabel, bLabel, firstL
   const bw = 100 / n
   return (
     <div>
-      <div className="flex gap-4 text-xs text-gray-500 mb-2">
+      <div className="flex gap-4 text-[13px] text-gray-500 mb-2">
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: aColor }} />{aLabel}</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: bColor }} />{bLabel}</span>
       </div>
@@ -58,7 +58,7 @@ function StackedBars({ items, aKey, bKey, aColor, bColor, aLabel, bLabel, firstL
           )
         })}
       </svg>
-      <div className="flex justify-between text-xs text-gray-400 mt-1"><span>{firstLabel}</span><span>{lastLabel}</span></div>
+      <div className="flex justify-between text-[13px] text-gray-600 mt-1"><span>{firstLabel}</span><span>{lastLabel}</span></div>
     </div>
   )
 }
@@ -73,7 +73,7 @@ function LineChart({ items, series, firstLabel, lastLabel }: any) {
   const last = items[items.length - 1] || {}
   return (
     <div>
-      <div className="flex gap-4 text-xs text-gray-500 mb-2">
+      <div className="flex gap-4 text-[13px] text-gray-500 mb-2">
         {series.map((s: any) => (
           <span key={s.key} className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: s.color }} />
@@ -87,7 +87,7 @@ function LineChart({ items, series, firstLabel, lastLabel }: any) {
             points={items.map((d: any, i: number) => `${px(i)},${py(d[s.key] || 0)}`).join(' ')} />
         ))}
       </svg>
-      <div className="flex justify-between text-xs text-gray-400 mt-1"><span>{firstLabel}</span><span>{lastLabel}</span></div>
+      <div className="flex justify-between text-[13px] text-gray-600 mt-1"><span>{firstLabel}</span><span>{lastLabel}</span></div>
     </div>
   )
 }
@@ -194,7 +194,7 @@ export default function CustomersPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">復購分析</h1>
-          <p className="text-gray-400 text-sm mt-0.5">以手機號彙總客戶消費紀錄（已排除已取消訂單）</p>
+          <p className="text-gray-600 text-sm mt-0.5">以手機號彙總客戶消費紀錄（已排除已取消訂單）</p>
         </div>
         <button onClick={handleExport} disabled={exporting || loading}
           className="text-sm font-bold text-green-700 border-2 border-green-200 hover:bg-green-50 rounded-xl px-4 py-2 transition-colors disabled:opacity-40">
@@ -211,45 +211,45 @@ export default function CustomersPage() {
         {/* 今日復購人數 */}
         <div className="card p-4 border-2 border-green-100 bg-green-50/40">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500 font-semibold">今日復購人數</span>
+            <span className="text-[13px] text-gray-500 font-semibold">今日復購人數</span>
             <span className="text-lg">🔁</span>
           </div>
           <div className="text-3xl font-extrabold text-green-700 mt-1">{summary?.repurchase_today ?? '—'}</div>
-          <div className="text-xs text-gray-400 mt-0.5">
+          <div className="text-[13px] text-gray-600 mt-0.5">
             {summary?.reactivated_today ? `含喚醒沉睡客 ${summary.reactivated_today} 位` : '今日回頭下單的老客戶'}
           </div>
         </div>
         {/* 老客戶營收占比 */}
         <div className="card p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500 font-semibold">老客戶營收占比</span>
+            <span className="text-[13px] text-gray-500 font-semibold">老客戶營收占比</span>
             <span className="text-lg">💎</span>
           </div>
           <div className="text-3xl font-extrabold text-gray-800 mt-1">{summary ? `${summary.returning_revenue_share}%` : '—'}</div>
-          <div className="text-xs text-gray-400 mt-0.5">回購 ≥2 次客戶貢獻的營收比重</div>
+          <div className="text-[13px] text-gray-600 mt-0.5">回購 ≥2 次客戶貢獻的營收比重</div>
         </div>
         {/* 沉睡客戶數 */}
         <div className="card p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500 font-semibold">沉睡客戶</span>
+            <span className="text-[13px] text-gray-500 font-semibold">沉睡客戶</span>
             <span className="text-lg">😴</span>
           </div>
-          <div className="text-3xl font-extrabold text-orange-600 mt-1">{summary?.dormant_count ?? '—'}<span className="text-base font-bold text-gray-400"> 位</span></div>
-          <div className="text-xs mt-0.5">
-            {summary == null ? <span className="text-gray-400">—</span>
+          <div className="text-3xl font-extrabold text-orange-600 mt-1">{summary?.dormant_count ?? '—'}<span className="text-base font-bold text-gray-600"> 位</span></div>
+          <div className="text-[13px] mt-0.5">
+            {summary == null ? <span className="text-gray-600">—</span>
               : summary.dormant_change_today > 0 ? <span className="text-red-500 font-bold">今日 ▲ 新增 {summary.dormant_change_today} 位</span>
               : summary.dormant_change_today < 0 ? <span className="text-green-600 font-bold">今日 ▼ 減少 {Math.abs(summary.dormant_change_today)} 位</span>
-              : <span className="text-gray-400">今日持平</span>}
+              : <span className="text-gray-600">今日持平</span>}
           </div>
         </div>
         {/* 流失客戶數 */}
         <div className="card p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500 font-semibold">流失客戶</span>
+            <span className="text-[13px] text-gray-500 font-semibold">流失客戶</span>
             <span className="text-lg">💤</span>
           </div>
-          <div className="text-3xl font-extrabold text-gray-500 mt-1">{summary?.lost_count ?? '—'}<span className="text-base font-bold text-gray-400"> 位</span></div>
-          <div className="text-xs text-gray-400 mt-0.5">超過 180 天未回購</div>
+          <div className="text-3xl font-extrabold text-gray-500 mt-1">{summary?.lost_count ?? '—'}<span className="text-base font-bold text-gray-600"> 位</span></div>
+          <div className="text-[13px] text-gray-600 mt-0.5">超過 180 天未回購</div>
         </div>
       </div>
 
@@ -270,8 +270,8 @@ export default function CustomersPage() {
           <div key={c.label} className="card p-4 text-center">
             <div className="text-2xl mb-1">{c.icon}</div>
             <div className="text-lg font-bold text-gray-800">{c.value}</div>
-            <div className="text-xs text-gray-400 mt-0.5">{c.label}</div>
-            {c.sub && <div className="text-xs text-green-600 mt-0.5">{c.sub}</div>}
+            <div className="text-[13px] text-gray-600 mt-0.5">{c.label}</div>
+            {c.sub && <div className="text-[13px] text-green-600 mt-0.5">{c.sub}</div>}
           </div>
         ))}
       </div>
@@ -317,14 +317,14 @@ export default function CustomersPage() {
             {/* 回購率最高商品 */}
             <div className="card p-4">
               <p className="font-bold text-gray-700 text-sm mb-1">🔁 回購率最高的商品 Top 5</p>
-              <p className="text-xs text-gray-400 mb-3">買過的客戶中，有多少比例會再次回購同一商品</p>
+              <p className="text-[13px] text-gray-600 mb-3">買過的客戶中，有多少比例會再次回購同一商品</p>
               {products.repurchase_ranking.length === 0 ? (
-                <p className="text-gray-400 text-sm py-6 text-center">資料還不足以計算</p>
+                <p className="text-gray-600 text-sm py-6 text-center">資料還不足以計算</p>
               ) : (
                 <div className="space-y-2.5">
                   {products.repurchase_ranking.map((p: any, i: number) => (
                     <div key={p.product_id} className="flex items-center gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-700 font-bold text-xs flex items-center justify-center">{i + 1}</span>
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-700 font-bold text-[13px] flex items-center justify-center">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
                         <div className="h-1.5 bg-gray-100 rounded-full mt-1 overflow-hidden">
@@ -333,7 +333,7 @@ export default function CustomersPage() {
                       </div>
                       <div className="flex-shrink-0 text-right">
                         <p className="text-sm font-bold text-green-700">{p.repurchase_rate}%</p>
-                        <p className="text-xs text-gray-400">{p.repeat_buyers}/{p.buyers} 人</p>
+                        <p className="text-[13px] text-gray-600">{p.repeat_buyers}/{p.buyers} 人</p>
                       </div>
                     </div>
                   ))}
@@ -343,14 +343,14 @@ export default function CustomersPage() {
             {/* 首購後最常回購的第二件商品 */}
             <div className="card p-4">
               <p className="font-bold text-gray-700 text-sm mb-1">🛒 首購後最常回購的商品 Top 5</p>
-              <p className="text-xs text-gray-400 mb-3">老客回頭時最常「加購」的新品項（首單沒買過的）</p>
+              <p className="text-[13px] text-gray-600 mb-3">老客回頭時最常「加購」的新品項（首單沒買過的）</p>
               {products.next_product_ranking.length === 0 ? (
-                <p className="text-gray-400 text-sm py-6 text-center">資料還不足以計算</p>
+                <p className="text-gray-600 text-sm py-6 text-center">資料還不足以計算</p>
               ) : (
                 <div className="space-y-2.5">
                   {products.next_product_ranking.map((p: any, i: number) => (
                     <div key={p.product_id} className="flex items-center gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center">{i + 1}</span>
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-[13px] flex items-center justify-center">{i + 1}</span>
                       <p className="flex-1 min-w-0 text-sm font-semibold text-gray-800 truncate">{p.name}</p>
                       <span className="flex-shrink-0 text-sm font-bold text-blue-700">{p.customers} 位回購</span>
                     </div>
@@ -400,9 +400,9 @@ export default function CustomersPage() {
 
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-gray-400 text-lg">載入中...</div>
+          <div className="py-16 text-center text-gray-600 text-lg">載入中...</div>
         ) : customers.length === 0 ? (
-          <div className="py-16 text-center"><div className="text-4xl mb-3">🧑‍🤝‍🧑</div><p className="text-gray-400 text-lg">此條件下沒有客戶</p></div>
+          <div className="py-16 text-center"><div className="text-4xl mb-3">🧑‍🤝‍🧑</div><p className="text-gray-600 text-lg">此條件下沒有客戶</p></div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -418,21 +418,21 @@ export default function CustomersPage() {
                   <tr key={c.phone} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-3 py-3">
                       <div className="font-semibold text-gray-800">{c.customer_name || '—'}</div>
-                      <div className="text-gray-500 font-mono text-xs">{c.phone}</div>
+                      <div className="text-gray-500 font-mono text-[13px]">{c.phone}</div>
                       {c.line_id ? (
-                        <div className="text-xs text-green-600 mt-0.5">💬 {c.line_id}</div>
+                        <div className="text-[13px] text-green-600 mt-0.5">💬 {c.line_id}</div>
                       ) : (
-                        <div className="text-xs text-gray-300 mt-0.5">未留 LINE</div>
+                        <div className="text-[13px] text-gray-300 mt-0.5">未留 LINE</div>
                       )}
                     </td>
                     <td className="px-3 py-3">
-                      <span className={'text-xs font-bold px-2 py-1 rounded-full ' + (SEGMENT_COLOR[c.segment] || 'bg-gray-100 text-gray-600')}>{c.segment_label}</span>
+                      <span className={'text-[13px] font-bold px-2 py-1 rounded-full ' + (SEGMENT_COLOR[c.segment] || 'bg-gray-100 text-gray-600')}>{c.segment_label}</span>
                     </td>
                     <td className="px-3 py-3 font-bold text-gray-800">{c.order_count}</td>
                     <td className="px-3 py-3 font-bold text-green-700 whitespace-nowrap">{formatMoney(c.total_amount)}</td>
                     <td className="px-3 py-3 text-gray-600 whitespace-nowrap">{formatMoney(c.avg_order_value)}</td>
-                    <td className="px-3 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(c.last_order_at)}</td>
-                    <td className="px-3 py-3 text-xs whitespace-nowrap">
+                    <td className="px-3 py-3 text-gray-500 text-[13px] whitespace-nowrap">{formatDate(c.last_order_at)}</td>
+                    <td className="px-3 py-3 text-[13px] whitespace-nowrap">
                       {c.expected_next_at ? (
                         <>
                           <div className="text-gray-600">{formatDate(c.expected_next_at)}</div>
@@ -441,7 +441,7 @@ export default function CustomersPage() {
                           ) : c.overdue_days > -7 ? (
                             <span className="text-amber-600 font-bold">即將到期</span>
                           ) : (
-                            <span className="text-gray-400">還有 {-c.overdue_days} 天</span>
+                            <span className="text-gray-600">還有 {-c.overdue_days} 天</span>
                           )}
                         </>
                       ) : <span className="text-gray-300">—</span>}
@@ -449,11 +449,11 @@ export default function CustomersPage() {
                     <td className="px-3 py-3">
                       <div className="flex gap-1.5">
                         <button onClick={() => copyContact(c)}
-                          className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white transition-colors whitespace-nowrap">
+                          className="text-[13px] font-bold px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white transition-colors whitespace-nowrap">
                           複製聯絡
                         </button>
                         <Link href={`/admin/orders?search=${encodeURIComponent(c.phone)}`}
-                          className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-green-50 text-gray-600 hover:text-green-700 transition-colors whitespace-nowrap">
+                          className="text-[13px] font-bold px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-green-50 text-gray-600 hover:text-green-700 transition-colors whitespace-nowrap">
                           訂單
                         </Link>
                       </div>

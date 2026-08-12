@@ -56,7 +56,7 @@ export default function AuditPage() {
     <div>
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-gray-800">操作稽核日誌</h1>
-        <p className="text-gray-400 text-sm mt-0.5">追蹤各管理員的後台瀏覽與資料下載紀錄</p>
+        <p className="text-gray-600 text-sm mt-0.5">追蹤各管理員的後台瀏覽與資料下載紀錄</p>
       </div>
 
       {/* Filters */}
@@ -80,12 +80,12 @@ export default function AuditPage() {
       </div>
 
       {loading ? (
-        <div className="card py-16 text-center text-gray-400">載入中...</div>
+        <div className="card py-16 text-center text-gray-600">載入中...</div>
       ) : logs.length === 0 ? (
-        <div className="card py-16 text-center text-gray-400">此條件下沒有紀錄</div>
+        <div className="card py-16 text-center text-gray-600">此條件下沒有紀錄</div>
       ) : (
         <>
-          <p className="text-sm text-gray-400 mb-3">
+          <p className="text-sm text-gray-600 mb-3">
             共 {logs.length} 筆{downloadCount > 0 && <span className="text-red-500 font-bold">・其中 {downloadCount} 筆資料下載</span>}
           </p>
           <div className="card overflow-hidden">
@@ -103,18 +103,18 @@ export default function AuditPage() {
                     const isDl = isDownloadAction(l.action)
                     return (
                       <tr key={l.id} className={'border-b border-gray-100 ' + (isDl ? 'bg-red-50/60' : 'hover:bg-gray-50')}>
-                        <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDateTime(l.created_at)}</td>
+                        <td className="px-4 py-3 text-gray-500 text-[13px] whitespace-nowrap">{formatDateTime(l.created_at)}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className="font-semibold text-gray-800">{l.admin_name}</span>
-                          <span className="text-gray-400 text-xs ml-1">{l.admin_account}</span>
+                          <span className="text-gray-600 text-[13px] ml-1">{l.admin_account}</span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={'text-xs font-bold px-2 py-1 rounded-full ' + (isDl ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600')}>
+                          <span className={'text-[13px] font-bold px-2 py-1 rounded-full ' + (isDl ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600')}>
                             {isDl && '⚠️ '}{AUDIT_ACTION_LABELS[l.action] || l.action}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{l.detail || '—'}</td>
-                        <td className="px-4 py-3 text-gray-400 font-mono text-xs whitespace-nowrap">{l.ip || '—'}</td>
+                        <td className="px-4 py-3 text-gray-600 font-mono text-[13px] whitespace-nowrap">{l.ip || '—'}</td>
                       </tr>
                     )
                   })}

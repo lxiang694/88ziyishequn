@@ -88,7 +88,7 @@ export default function VitaminCPackagingVotePage() {
       </div>
 
       {loading ? (
-        <div className="py-16 text-center text-gray-400">載入中...</div>
+        <div className="py-16 text-center text-gray-600">載入中...</div>
       ) : (
         <>
           <div className="grid sm:grid-cols-2 gap-6">
@@ -99,7 +99,7 @@ export default function VitaminCPackagingVotePage() {
                 </div>
                 <div className="p-4">
                   <p className="font-bold text-gray-800 text-lg">{opt.label}</p>
-                  <p className="text-gray-400 text-sm mb-3">{opt.desc}</p>
+                  <p className="text-gray-600 text-sm mb-3">{opt.desc}</p>
                   <button
                     onClick={() => vote(opt.key)}
                     disabled={voting}
@@ -124,7 +124,7 @@ export default function VitaminCPackagingVotePage() {
               </div>
             ))}
           </div>
-          <p className="text-center text-gray-400 text-sm mt-6">
+          <p className="text-center text-gray-600 text-sm mt-6">
             目前共 {total} 票{myVote ? '・您可以隨時改投其他設計' : ''}
           </p>
         </>

@@ -49,7 +49,7 @@ export default function TrafficPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">流量監控</h1>
-        <p className="text-xs text-gray-400">※ 統計不含後台頁面</p>
+        <p className="text-[13px] text-gray-600">※ 統計不含後台頁面</p>
       </div>
 
       {/* Date filter */}
@@ -74,7 +74,7 @@ export default function TrafficPage() {
       </div>
 
       {loading ? (
-        <div className="py-20 text-center text-gray-400 text-lg">載入中...</div>
+        <div className="py-20 text-center text-gray-600 text-lg">載入中...</div>
       ) : denied ? (
         <div className="py-20 text-center">
           <div className="text-4xl mb-4">🔒</div>
@@ -102,20 +102,20 @@ export default function TrafficPage() {
           <div className="card p-5">
             <h2 className="font-bold text-gray-800 text-lg mb-4">每日流量趨勢</h2>
             {trend.length === 0 || pv === 0 ? (
-              <p className="text-gray-400 text-center py-12">此時間範圍內沒有流量資料</p>
+              <p className="text-gray-600 text-center py-12">此時間範圍內沒有流量資料</p>
             ) : (
               <div className="overflow-x-auto">
                 <div className="flex items-end gap-2 min-w-full" style={{ height: '220px' }}>
                   {trend.map(t => (
                     <div key={t.date} className="flex-1 flex flex-col items-center justify-end gap-1 min-w-[28px]" title={`${t.date}　PV ${t.pv}　UV ${t.uv}`}>
-                      <span className="text-[11px] font-bold text-blue-700">{t.pv || ''}</span>
+                      <span className="text-[13px] font-bold text-blue-700">{t.pv || ''}</span>
                       <div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-md transition-all"
                         style={{ height: `${Math.round((t.pv / maxPv) * 160)}px`, minHeight: t.pv > 0 ? '3px' : '0' }} />
-                      <span className="text-[10px] text-gray-400 whitespace-nowrap">{t.date.slice(5)}</span>
+                      <span className="text-[13px] text-gray-600 whitespace-nowrap">{t.date.slice(5)}</span>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
+                <div className="flex items-center gap-4 mt-4 text-[13px] text-gray-500">
                   <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-500 inline-block" />瀏覽量 PV</span>
                 </div>
               </div>
@@ -126,7 +126,7 @@ export default function TrafficPage() {
           <div className="card p-5">
             <h2 className="font-bold text-gray-800 text-lg mb-4">熱門頁面 Top 20</h2>
             {(!data?.top_paths || data.top_paths.length === 0) ? (
-              <p className="text-gray-400 text-center py-8">暫無資料</p>
+              <p className="text-gray-600 text-center py-8">暫無資料</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -136,7 +136,7 @@ export default function TrafficPage() {
                   <tbody className="divide-y divide-gray-100">
                     {data.top_paths.map((p: any, i: number) => (
                       <tr key={p.path} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-bold text-gray-400">#{i + 1}</td>
+                        <td className="px-4 py-3 font-bold text-gray-600">#{i + 1}</td>
                         <td className="px-4 py-3 font-mono text-gray-700 break-all">{p.path}</td>
                         <td className="px-4 py-3"><span className="bg-blue-50 text-blue-700 font-bold px-2 py-1 rounded-lg">{p.pv}</span></td>
                         <td className="px-4 py-3 font-semibold text-gray-600">{p.uv}</td>

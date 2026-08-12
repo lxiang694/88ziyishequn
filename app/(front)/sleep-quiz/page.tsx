@@ -47,12 +47,12 @@ export default function SleepQuizLanding() {
               { q: '您的情緒是否穩定？', sub: '會不會因為小事暴怒，或者莫名地低落？' },
             ].map((item, i) => (
               <div key={i} className="flex gap-3 items-start">
-                <span className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold mt-0.5">
+                <span className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex-shrink-0 flex items-center justify-center text-[13px] font-bold mt-0.5">
                   {i + 1}
                 </span>
                 <div className="flex-1">
-                  <p className="text-gray-800 font-semibold text-sm leading-snug">{item.q}</p>
-                  {item.sub && <p className="text-gray-400 text-xs mt-0.5">{item.sub}</p>}
+                  <p className="text-gray-800 font-semibold text-sm leading-relaxed">{item.q}</p>
+                  {item.sub && <p className="text-gray-600 text-[13px] mt-0.5">{item.sub}</p>}
                 </div>
               </div>
             ))}
@@ -77,7 +77,7 @@ export default function SleepQuizLanding() {
                 <span className="text-2xl flex-shrink-0">{b.icon}</span>
                 <div>
                   <p className="font-bold text-gray-800 text-sm">{b.title}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{b.desc}</p>
+                  <p className="text-gray-500 text-[13px] mt-0.5">{b.desc}</p>
                 </div>
               </div>
             ))}
@@ -88,7 +88,7 @@ export default function SleepQuizLanding() {
         <details className="bg-white rounded-2xl border border-gray-100 p-5 mb-6 group">
           <summary className="flex items-center justify-between cursor-pointer list-none">
             <span className="font-bold text-gray-700 text-sm">關於 ISI 量表</span>
-            <span className="text-gray-400 text-xs group-open:rotate-180 transition-transform">▼</span>
+            <span className="text-gray-600 text-[13px] group-open:rotate-180 transition-transform">▼</span>
           </summary>
           <div className="mt-3 text-sm text-gray-600 leading-relaxed space-y-2">
             <p>
@@ -98,7 +98,7 @@ export default function SleepQuizLanding() {
             <p>
               共 7 題，根據過去兩週的情況選擇最符合的選項。完整 CBT-I 療程平均能讓 ISI 下降 6-9 分。
             </p>
-            <p className="text-gray-400 text-xs">
+            <p className="text-gray-600 text-[13px]">
               本工具僅作健康參考，不替代醫療診斷。
             </p>
           </div>
@@ -114,25 +114,25 @@ export default function SleepQuizLanding() {
 
         {/* Other tools */}
         <div className="mt-6">
-          <p className="text-center text-xs text-gray-400 mb-3 tracking-wide">— 進階工具 —</p>
+          <p className="text-center text-[13px] text-gray-600 mb-3 tracking-wide">— 進階工具 —</p>
           <div className="grid grid-cols-3 gap-2">
             <Link href="/sleep-quiz/psqi"
               className="text-center p-3 bg-white rounded-2xl border border-purple-100 hover:border-purple-300 transition-colors">
               <div className="text-2xl mb-1">🌙</div>
-              <p className="text-xs font-bold text-gray-700">PSQI</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">完整版 19 題</p>
+              <p className="text-[13px] font-bold text-gray-700">PSQI</p>
+              <p className="text-[13px] text-gray-600 mt-0.5">完整版 19 題</p>
             </Link>
             <Link href="/sleep-quiz/ess"
               className="text-center p-3 bg-white rounded-2xl border border-cyan-100 hover:border-cyan-300 transition-colors">
               <div className="text-2xl mb-1">😴</div>
-              <p className="text-xs font-bold text-gray-700">ESS</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">嗜睡 / OSA 篩查</p>
+              <p className="text-[13px] font-bold text-gray-700">ESS</p>
+              <p className="text-[13px] text-gray-600 mt-0.5">嗜睡 / OSA 篩查</p>
             </Link>
             <Link href="/sleep-tracker"
               className="text-center p-3 bg-white rounded-2xl border border-emerald-100 hover:border-emerald-300 transition-colors">
               <div className="text-2xl mb-1">📅</div>
-              <p className="text-xs font-bold text-gray-700">21 天打卡</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">習慣養成</p>
+              <p className="text-[13px] font-bold text-gray-700">21 天打卡</p>
+              <p className="text-[13px] text-gray-600 mt-0.5">習慣養成</p>
             </Link>
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function SleepQuizLanding() {
           theme="indigo"
         />
 
-        <p className="text-center text-xs text-gray-400 mt-6 leading-relaxed">
+        <p className="text-center text-[13px] text-gray-600 mt-6 leading-relaxed">
           所有測驗結果僅供參考，不替代醫療診斷<br />
           如有嚴重失眠困擾，建議諮詢睡眠專科醫師
         </p>

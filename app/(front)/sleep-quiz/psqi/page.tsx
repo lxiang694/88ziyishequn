@@ -63,13 +63,13 @@ export default function PSQIQuizPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/sleep-quiz" className="text-gray-400 hover:text-gray-600">
+          <Link href="/sleep-quiz" className="text-gray-600 hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
             </svg>
           </Link>
           <div>
-            <p className="text-xs text-gray-400 font-medium">PSQI 完整睡眠評估</p>
+            <p className="text-[13px] text-gray-600 font-medium">PSQI 完整睡眠評估</p>
             <p className="text-sm font-bold text-gray-700">第 {step + 1} 步 / 共 {totalSteps} 步</p>
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function PSQIQuizPage() {
         </div>
 
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
-          <p className="text-xs text-purple-600 font-bold mb-2 tracking-wider">過去 1 個月的整體情況</p>
+          <p className="text-[13px] text-purple-600 font-bold mb-2 tracking-wider">過去 1 個月的整體情況</p>
 
           {/* Step 0: 睡眠時間與效率 */}
           {step === 0 && (
@@ -95,7 +95,7 @@ export default function PSQIQuizPage() {
                 <label className="form-label">從上床到入睡通常需要多少分鐘</label>
                 <input type="number" min={0} max={300} className="form-input" value={data.sleepLatency}
                   onChange={e => setField('sleepLatency', parseInt(e.target.value) || 0)} />
-                <p className="text-xs text-gray-400 mt-1">輸入分鐘數，例如 30</p>
+                <p className="text-[13px] text-gray-600 mt-1">輸入分鐘數，例如 30</p>
               </div>
 
               <div>
@@ -107,7 +107,7 @@ export default function PSQIQuizPage() {
                 <label className="form-label">每晚實際睡著的時間是多少小時</label>
                 <input type="number" min={0} max={14} step={0.5} className="form-input" value={data.actualSleep}
                   onChange={e => setField('actualSleep', parseFloat(e.target.value) || 0)} />
-                <p className="text-xs text-gray-400 mt-1">不是躺床的時間，而是真正睡著的時間，例如 6.5</p>
+                <p className="text-[13px] text-gray-600 mt-1">不是躺床的時間，而是真正睡著的時間，例如 6.5</p>
               </div>
             </div>
           )}
@@ -248,7 +248,7 @@ export default function PSQIQuizPage() {
           )}
           {step < totalSteps - 1 ? (
             <button onClick={() => setStep(s => s + 1)} disabled={!canProceed}
-              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-400 text-white font-bold py-3.5 rounded-2xl transition-all">
+              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-200 disabled:to-gray-200 disabled:text-gray-600 text-white font-bold py-3.5 rounded-2xl transition-all">
               下一步 →
             </button>
           ) : (

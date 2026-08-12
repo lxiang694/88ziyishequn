@@ -61,7 +61,7 @@ export default function SocialShareButtons({
     <div className={`rounded-2xl border-2 p-5 my-8 ${THEME_CLASSES[theme]}`}>
       <div className="text-center mb-4">
         <p className="font-bold text-gray-800 text-base">{heading}</p>
-        {subtext && <p className="text-gray-400 text-xs mt-1">{subtext}</p>}
+        {subtext && <p className="text-gray-600 text-[13px] mt-1">{subtext}</p>}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">

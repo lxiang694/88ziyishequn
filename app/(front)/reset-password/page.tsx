@@ -56,7 +56,7 @@ export default function ResetPasswordPage() {
         {!ready ? (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center">
             <p className="text-gray-500">驗證中...</p>
-            <p className="text-xs text-gray-400 mt-2">如未自動跳轉，請從信件再次點擊重設連結</p>
+            <p className="text-[13px] text-gray-600 mt-2">如未自動跳轉，請從信件再次點擊重設連結</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 space-y-4">
@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
                   className="form-input pr-12"
                   value={password} onChange={e => setPassword(e.target.value)} placeholder="至少 6 個字元" />
                 <button type="button" onClick={() => setShowPwd(s => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-600 text-[13px] font-bold">
                   {showPwd ? '隱藏' : '顯示'}
                 </button>
               </div>

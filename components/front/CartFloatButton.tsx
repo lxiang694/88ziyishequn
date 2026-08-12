@@ -47,14 +47,14 @@ export default function CartFloatButton() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
         {/* Count badge */}
-        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md ring-2 ring-white">
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[12px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md ring-2 ring-white">
           {totalItems > 99 ? '99+' : totalItems}
         </span>
       </div>
 
       {/* Count + amount */}
       <div className="flex flex-col items-start leading-tight">
-        <span className="text-[11px] font-bold opacity-90">查看購物車</span>
+        <span className="text-[13px] font-bold">查看購物車</span>
         <span className="text-sm font-bold">{formatPrice(totalAmount)}</span>
       </div>
 

@@ -76,7 +76,7 @@ export default function EventRegistrationPage() {
     }
   }
 
-  if (loading) return <div className="py-20 text-center text-gray-400">載入中...</div>
+  if (loading) return <div className="py-20 text-center text-gray-600">載入中...</div>
   if (notFound || !event) {
     return (
       <div className="max-w-lg mx-auto px-4 py-20 text-center">
@@ -93,7 +93,7 @@ export default function EventRegistrationPage() {
         <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full" />
         <div className="absolute -left-10 -bottom-12 w-44 h-44 bg-white/5 rounded-full" />
         <div className="relative text-center">
-          <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold mb-4 tracking-wide">
+          <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-[13px] font-bold mb-4 tracking-wide">
             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
             線下活動報名
           </div>
@@ -110,8 +110,8 @@ export default function EventRegistrationPage() {
             <div className="flex items-center gap-4 px-5 py-4">
               <div className="flex-shrink-0 w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center text-xl">🕒</div>
               <div>
-                <p className="text-xs text-gray-400 font-medium tracking-wide">活動時間</p>
-                <p className="text-gray-800 font-bold text-base leading-snug mt-0.5">{event.event_time}</p>
+                <p className="text-[13px] text-gray-600 font-medium tracking-wide">活動時間</p>
+                <p className="text-gray-800 font-bold text-base leading-relaxed mt-0.5">{event.event_time}</p>
               </div>
             </div>
           )}
@@ -119,8 +119,8 @@ export default function EventRegistrationPage() {
             <div className="flex items-center gap-4 px-5 py-4">
               <div className="flex-shrink-0 w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center text-xl">📍</div>
               <div>
-                <p className="text-xs text-gray-400 font-medium tracking-wide">活動地點</p>
-                <p className="text-gray-800 font-bold text-base leading-snug mt-0.5">{event.address}</p>
+                <p className="text-[13px] text-gray-600 font-medium tracking-wide">活動地點</p>
+                <p className="text-gray-800 font-bold text-base leading-relaxed mt-0.5">{event.address}</p>
               </div>
             </div>
           )}
@@ -168,7 +168,7 @@ export default function EventRegistrationPage() {
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1.5">
                 本次您最想得到什麼幫助？想討論的話題是什麼？
-                <span className="text-gray-400 font-normal ml-1">（選填）</span>
+                <span className="text-gray-600 font-normal ml-1">（選填）</span>
               </label>
               <textarea className="form-input leading-relaxed" rows={4} placeholder="例如：想了解如何改善睡眠、調整飲食習慣、營養補充建議…"
                 value={form.topic} onChange={e => setForm(f => ({ ...f, topic: e.target.value }))} />
@@ -186,7 +186,7 @@ export default function EventRegistrationPage() {
           <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-lg py-4 mt-6 disabled:opacity-50">
             {submitting ? '送出中...' : '送出報名 →'}
           </button>
-          <p className="text-center text-xs text-gray-400 mt-3">送出後我們將透過電話或 LINE 與您聯繫活動細節</p>
+          <p className="text-center text-[13px] text-gray-600 mt-3">送出後我們將透過電話或 LINE 與您聯繫活動細節</p>
         </div>
       )}
 
@@ -200,7 +200,7 @@ export default function EventRegistrationPage() {
           <span className="text-sm font-bold text-green-700 bg-green-50 px-3 py-1 rounded-full">已有 {total} 人</span>
         </div>
         {registrations.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-8">目前還沒有人報名，成為第一位吧！</p>
+          <p className="text-gray-600 text-sm text-center py-8">目前還沒有人報名，成為第一位吧！</p>
         ) : (
           <div className="space-y-1 max-h-96 overflow-y-auto -mx-1 px-1">
             {registrations.map((r, i) => (
@@ -212,17 +212,17 @@ export default function EventRegistrationPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-gray-800 text-sm">{r.name}</span>
-                      {r.companions > 0 && <span className="text-xs bg-green-50 text-green-700 font-bold px-2 py-0.5 rounded-full flex-shrink-0">攜伴 {r.companions} 人</span>}
+                      {r.companions > 0 && <span className="text-[13px] bg-green-50 text-green-700 font-bold px-2 py-0.5 rounded-full flex-shrink-0">攜伴 {r.companions} 人</span>}
                     </div>
-                    <span className="text-gray-400 font-mono text-xs">{r.phone}</span>
+                    <span className="text-gray-600 font-mono text-[13px]">{r.phone}</span>
                   </div>
                 </div>
-                <span className="text-gray-300 text-xs whitespace-nowrap flex-shrink-0">{formatDateTime(r.created_at)}</span>
+                <span className="text-gray-300 text-[13px] whitespace-nowrap flex-shrink-0">{formatDateTime(r.created_at)}</span>
               </div>
             ))}
           </div>
         )}
-        <p className="text-center text-xs text-gray-300 mt-4">為保護隱私，報名者姓名與電話已部分隱藏</p>
+        <p className="text-center text-[13px] text-gray-300 mt-4">為保護隱私，報名者姓名與電話已部分隱藏</p>
       </div>
     </div>
   )

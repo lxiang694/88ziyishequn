@@ -77,17 +77,17 @@ export default function AdminEventsPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">社群活動</h1>
-          <p className="text-gray-400 text-sm mt-0.5">建立線下活動報名頁面，公開連結可直接分享給社群</p>
+          <p className="text-gray-600 text-sm mt-0.5">建立線下活動報名頁面，公開連結可直接分享給社群</p>
         </div>
         <button onClick={openAdd} className="btn-primary py-2 px-4 text-sm">＋ 新增活動</button>
       </div>
 
       {loading ? (
-        <div className="py-16 text-center text-gray-400">載入中...</div>
+        <div className="py-16 text-center text-gray-600">載入中...</div>
       ) : events.length === 0 ? (
         <div className="card py-16 text-center">
           <div className="text-4xl mb-3">📅</div>
-          <p className="text-gray-400">還沒有活動，點右上角新增一個吧</p>
+          <p className="text-gray-600">還沒有活動，點右上角新增一個吧</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -97,21 +97,21 @@ export default function AdminEventsPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Link href={`/admin/events/${ev.id}`} className="font-bold text-gray-800 hover:text-green-700">{ev.title}</Link>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${ev.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-[13px] font-bold px-2 py-0.5 rounded-full ${ev.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {ev.is_active ? '進行中' : '已下架'}
                     </span>
-                    <span className="text-xs bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full">{ev.registration_count} 人報名</span>
+                    <span className="text-[13px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full">{ev.registration_count} 人報名</span>
                   </div>
-                  <p className="text-gray-400 text-xs font-mono mt-1">/events/{ev.slug}</p>
+                  <p className="text-gray-600 text-[13px] font-mono mt-1">/events/{ev.slug}</p>
                   {ev.event_time && <p className="text-gray-500 text-sm mt-1">🕒 {ev.event_time}</p>}
                   {ev.address && <p className="text-gray-500 text-sm">📍 {ev.address}</p>}
-                  <p className="text-gray-300 text-xs mt-1">建立於 {formatDateTime(ev.created_at)}</p>
+                  <p className="text-gray-300 text-[13px] mt-1">建立於 {formatDateTime(ev.created_at)}</p>
                 </div>
                 <div className="flex flex-col gap-1.5 flex-shrink-0">
-                  <button onClick={() => copyLink(ev.slug)} className="text-xs font-bold text-blue-600 border border-blue-200 hover:bg-blue-50 rounded-lg px-3 py-1.5 whitespace-nowrap">複製連結</button>
-                  <Link href={`/admin/events/${ev.id}`} className="text-xs font-bold text-green-700 border border-green-200 hover:bg-green-50 rounded-lg px-3 py-1.5 whitespace-nowrap text-center">查看報名</Link>
-                  <button onClick={() => openEdit(ev)} className="text-xs font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg px-3 py-1.5 whitespace-nowrap">編輯</button>
-                  <button onClick={() => handleDelete(ev.id, ev.title)} className="text-xs font-bold text-red-600 border border-red-200 hover:bg-red-50 rounded-lg px-3 py-1.5 whitespace-nowrap">刪除</button>
+                  <button onClick={() => copyLink(ev.slug)} className="text-[13px] font-bold text-blue-600 border border-blue-200 hover:bg-blue-50 rounded-lg px-3 py-1.5 whitespace-nowrap">複製連結</button>
+                  <Link href={`/admin/events/${ev.id}`} className="text-[13px] font-bold text-green-700 border border-green-200 hover:bg-green-50 rounded-lg px-3 py-1.5 whitespace-nowrap text-center">查看報名</Link>
+                  <button onClick={() => openEdit(ev)} className="text-[13px] font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg px-3 py-1.5 whitespace-nowrap">編輯</button>
+                  <button onClick={() => handleDelete(ev.id, ev.title)} className="text-[13px] font-bold text-red-600 border border-red-200 hover:bg-red-50 rounded-lg px-3 py-1.5 whitespace-nowrap">刪除</button>
                 </div>
               </div>
             </div>
@@ -132,25 +132,25 @@ export default function AdminEventsPage() {
             </div>
             {!editingId && (
               <div>
-                <label className="form-label">網址代稱 <span className="text-gray-400 font-normal text-sm">（選填，留空會自動產生，建議用英文/數字）</span></label>
+                <label className="form-label">網址代稱 <span className="text-gray-600 font-normal text-sm">（選填，留空會自動產生，建議用英文/數字）</span></label>
                 <input className="form-input" placeholder="例如 banqiao-2026-07" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} />
               </div>
             )}
             <div>
-              <label className="form-label">活動時間 <span className="text-gray-400 font-normal text-sm">（顯示用文字）</span></label>
+              <label className="form-label">活動時間 <span className="text-gray-600 font-normal text-sm">（顯示用文字）</span></label>
               <input className="form-input" placeholder="例如 7月26號下午13：30~17：00" value={form.event_time} onChange={e => setForm(f => ({ ...f, event_time: e.target.value }))} />
             </div>
             <div>
-              <label className="form-label">活動開始時間 <span className="text-gray-400 font-normal text-sm">（用於自動截止報名）</span></label>
+              <label className="form-label">活動開始時間 <span className="text-gray-600 font-normal text-sm">（用於自動截止報名）</span></label>
               <input type="datetime-local" className="form-input" value={form.starts_at_local} onChange={e => setForm(f => ({ ...f, starts_at_local: e.target.value }))} />
-              <p className="text-xs text-gray-400 mt-1">設定後，系統會在活動開始前 2 小時自動關閉報名。留空則不自動關閉。</p>
+              <p className="text-[13px] text-gray-600 mt-1">設定後，系統會在活動開始前 2 小時自動關閉報名。留空則不自動關閉。</p>
             </div>
             <div>
               <label className="form-label">活動地址</label>
               <input className="form-input" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
             </div>
             <div>
-              <label className="form-label">活動說明 <span className="text-gray-400 font-normal text-sm">（選填，顯示在報名表單上方）</span></label>
+              <label className="form-label">活動說明 <span className="text-gray-600 font-normal text-sm">（選填，顯示在報名表單上方）</span></label>
               <textarea className="form-input" rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">

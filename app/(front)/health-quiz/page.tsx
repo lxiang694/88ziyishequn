@@ -94,13 +94,13 @@ export default function HealthQuizPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/" className="text-gray-400 hover:text-gray-600 transition-colors">
+          <Link href="/" className="text-gray-600 hover:text-gray-600 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
           <div>
-            <p className="text-xs text-gray-400 font-medium">健康風險自測</p>
+            <p className="text-[13px] text-gray-600 font-medium">健康風險自測</p>
             <p className="text-sm font-bold text-gray-700">步驟 {stepIndex + 1} / {totalSteps}</p>
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function HealthQuizPage() {
                   )
                 })}
               </div>
-              <p className="text-xs text-gray-400 mt-3 text-right">
+              <p className="text-[13px] text-gray-600 mt-3 text-right">
                 已選 {multiAnswer.length} / 最多 {current.maxSelect ?? 3} 項
               </p>
             </>
@@ -183,7 +183,7 @@ export default function HealthQuizPage() {
             <button
               onClick={handleNext}
               disabled={!canProceed}
-              className="flex-1 bg-green-700 hover:bg-green-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-4 rounded-2xl text-base transition-colors"
+              className="flex-1 bg-green-700 hover:bg-green-800 disabled:bg-gray-200 disabled:text-gray-600 text-white font-bold py-4 rounded-2xl text-base transition-colors"
             >
               {isLast ? '查看結果 →' : '下一題 →'}
             </button>
@@ -191,7 +191,7 @@ export default function HealthQuizPage() {
         </div>
 
         {/* Medical disclaimer */}
-        <p className="text-center text-xs text-gray-400 mt-6 leading-relaxed">
+        <p className="text-center text-[13px] text-gray-600 mt-6 leading-relaxed">
           本測驗結果僅供參考，所有保健品補充請先諮詢您的主治醫師
         </p>
       </div>

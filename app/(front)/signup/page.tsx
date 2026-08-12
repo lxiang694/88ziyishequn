@@ -72,7 +72,7 @@ export default function SignupPage() {
             我們已寄出驗證郵件到<br /><strong className="text-green-700">{email}</strong><br />
             請到信箱點擊連結完成驗證後再登入
           </p>
-          <p className="text-sm text-gray-400 mb-6">沒收到？請檢查垃圾郵件夾</p>
+          <p className="text-sm text-gray-600 mb-6">沒收到？請檢查垃圾郵件夾</p>
           <Link href="/login" className="btn-primary w-full block">前往登入</Link>
         </div>
       </div>
@@ -103,14 +103,14 @@ export default function SignupPage() {
             <label className="form-label">手機號碼 <span className="text-red-500">*</span></label>
             <input type="tel" inputMode="numeric" required className="form-input"
               value={phone} onChange={e => setPhone(e.target.value)} placeholder="09xxxxxxxx" />
-            <p className="text-xs text-gray-400 mt-1">用於訂單聯繫，未來下單會自動帶入</p>
+            <p className="text-[13px] text-gray-600 mt-1">用於訂單聯繫，未來下單會自動帶入</p>
           </div>
 
           <div>
             <label className="form-label">Email <span className="text-red-500">*</span></label>
             <input type="email" required autoComplete="email" className="form-input"
               value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" />
-            <p className="text-xs text-gray-400 mt-1">登入帳號 + 接收訂單通知</p>
+            <p className="text-[13px] text-gray-600 mt-1">登入帳號 + 接收訂單通知</p>
           </div>
 
           <div>
@@ -120,7 +120,7 @@ export default function SignupPage() {
                 className="form-input pr-12"
                 value={password} onChange={e => setPassword(e.target.value)} placeholder="至少 6 個字元" />
               <button type="button" onClick={() => setShowPwd(s => !s)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold">
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-600 text-[13px] font-bold">
                 {showPwd ? '隱藏' : '顯示'}
               </button>
             </div>

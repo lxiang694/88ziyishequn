@@ -44,13 +44,13 @@ export default function SleepQuizStart() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/sleep-quiz" className="text-gray-400 hover:text-gray-600">
+          <Link href="/sleep-quiz" className="text-gray-600 hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
           <div>
-            <p className="text-xs text-gray-400 font-medium">睡眠健康自測</p>
+            <p className="text-[13px] text-gray-600 font-medium">睡眠健康自測</p>
             <p className="text-sm font-bold text-gray-700">第 {stepIndex + 1} 題 / 共 {total} 題</p>
           </div>
         </div>
@@ -65,7 +65,7 @@ export default function SleepQuizStart() {
 
         {/* Question card */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
-          <p className="text-xs text-gray-400 font-bold mb-2 tracking-wider">過去 2 週中</p>
+          <p className="text-[13px] text-gray-600 font-bold mb-2 tracking-wider">過去 2 週中</p>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug mb-2">
             {current.text}
           </h2>
@@ -95,7 +95,7 @@ export default function SleepQuizStart() {
                     )}
                   </span>
                   <span className="flex-1 text-left">{opt.label}</span>
-                  <span className="text-xs text-gray-400 font-mono">{opt.value} 分</span>
+                  <span className="text-[13px] text-gray-600 font-mono">{opt.value} 分</span>
                 </button>
               )
             })}
@@ -112,7 +112,7 @@ export default function SleepQuizStart() {
           </button>
         )}
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="text-center text-[13px] text-gray-600 mt-6">
           選擇後會自動進入下一題
         </p>
       </div>

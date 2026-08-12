@@ -104,7 +104,7 @@ export default function UsersPage() {
 
         {/* 權限設定 */}
         <div className="border-2 border-gray-100 rounded-xl p-4 mb-4">
-          <p className="font-bold text-gray-700 text-sm mb-3">權限設定 <span className="text-gray-400 font-normal">（可依此帳號自由勾選，會覆蓋角色預設）</span></p>
+          <p className="font-bold text-gray-700 text-sm mb-3">權限設定 <span className="text-gray-600 font-normal">（可依此帳號自由勾選，會覆蓋角色預設）</span></p>
           <label className="flex items-center gap-2 mb-3 cursor-pointer">
             <input type="checkbox" checked={isAll} onChange={e => { setIsAll(e.target.checked); if (e.target.checked) setPerms([]) }} className="w-4 h-4 accent-green-600" />
             <span className="font-bold text-green-700 text-sm">超級管理員（擁有全部權限，並可查看稽核日誌）</span>
@@ -116,7 +116,7 @@ export default function UsersPage() {
                   <input type="checkbox" checked={perms.includes(p.key)} onChange={() => togglePerm(p.key)} className="w-4 h-4 accent-green-600 mt-0.5" />
                   <span className="text-sm text-gray-700 leading-snug">
                     {p.label}
-                    {p.hint && <span className="block text-xs text-gray-400">{p.hint}</span>}
+                    {p.hint && <span className="block text-[13px] text-gray-600">{p.hint}</span>}
                   </span>
                 </label>
               ))}
@@ -135,7 +135,7 @@ export default function UsersPage() {
       </div>
 
       <div className="card overflow-hidden">
-        {loading ? <div className="py-12 text-center text-gray-400">載入中...</div> : (
+        {loading ? <div className="py-12 text-center text-gray-600">載入中...</div> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50"><tr>{['姓名','帳號','角色','權限','狀態','操作'].map(h => <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600">{h}</th>)}</tr></thead>
@@ -145,8 +145,8 @@ export default function UsersPage() {
                     <td className="px-4 py-3 font-semibold text-gray-800">{u.name}</td>
                     <td className="px-4 py-3 text-gray-600 font-mono">{u.account}</td>
                     <td className="px-4 py-3 text-gray-600">{u.admin_roles?.role_name}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{permLabel(u)}</td>
-                    <td className="px-4 py-3"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{u.is_active ? '啟用' : '停用'}</span></td>
+                    <td className="px-4 py-3 text-gray-500 text-[13px]">{permLabel(u)}</td>
+                    <td className="px-4 py-3"><span className={`text-[13px] font-semibold px-2 py-1 rounded-full ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>{u.is_active ? '啟用' : '停用'}</span></td>
                     <td className="px-4 py-3 flex gap-3">
                       <button onClick={() => startEdit(u)} className="text-green-700 font-semibold hover:underline">編輯</button>
                       <button onClick={() => handleDelete(u.id)} className="text-red-500 font-semibold hover:underline">刪除</button>

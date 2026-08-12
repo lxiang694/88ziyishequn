@@ -50,7 +50,7 @@ export default async function ArticlesListPage() {
         </div>
 
         {articles.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-gray-600">
             <p className="text-5xl mb-4">📝</p>
             <p>文章準備中，敬請期待</p>
           </div>
@@ -77,7 +77,7 @@ export default async function ArticlesListPage() {
                       <div className="w-full h-full flex items-center justify-center text-5xl">📝</div>
                     )}
                     {dirInfo && (
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-green-800 flex items-center gap-1">
+                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[13px] font-bold text-green-800 flex items-center gap-1">
                         <span>{dirInfo.icon}</span>
                         <span>{dirInfo.name}</span>
                       </div>
@@ -92,7 +92,7 @@ export default async function ArticlesListPage() {
                         {article.excerpt}
                       </p>
                     )}
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <div className="flex items-center gap-3 text-[13px] text-gray-600">
                       <span>📖 約 {article.reading_minutes} 分鐘</span>
                       {article.view_count > 0 && <span>· 👁 {article.view_count} 次閱讀</span>}
                     </div>

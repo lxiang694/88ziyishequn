@@ -52,7 +52,7 @@ export default function FrontError({
           </button>
         </div>
 
-        <details className="text-left bg-gray-50 rounded-xl p-4 text-xs text-gray-600">
+        <details className="text-left bg-gray-50 rounded-xl p-4 text-[13px] text-gray-600">
           <summary className="cursor-pointer font-bold">技術詳情（提供給技術支援）</summary>
           <pre className="mt-2 whitespace-pre-wrap break-all">
             {error.message}

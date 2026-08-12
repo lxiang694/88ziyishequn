@@ -178,21 +178,17 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
     const a = variants.filter(v => v.is_active)
     return a.length ? Math.min(...a.map(v => v.sale_price)) : null
   }
-  const getMaxPrice = (variants: Variant[]) => {
-    const a = variants.filter(v => v.is_active)
-    return a.length ? Math.max(...a.map(v => v.sale_price)) : null
-  }
   const hasStock = (variants: Variant[]) => variants.some(v => v.is_active && v.stock_qty > 0)
   const multiVariant = (variants: Variant[]) => variants.filter(v => v.is_active && v.stock_qty > 0).length > 1
 
   const hotProducts = products.slice(0, 8)
 
-  // 商品卡（供「小莊優選」「88自醫社群團購商品」共用）
+  // 商品卡（全站共用：館別預覽、搜尋結果、分類篩選）
   const renderProductCard = (product: Product) => {
     const minPrice = getMinPrice(product.product_variants)
-    const maxPrice = getMaxPrice(product.product_variants)
     const inStock = hasStock(product.product_variants)
     const isMulti = multiVariant(product.product_variants)
+    const variantCount = product.product_variants.filter(v => v.is_active).length
     const cats = product.product_category_relations?.map(r => r.health_categories).filter(Boolean) || []
     return (
       <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-200 flex flex-col">
@@ -207,7 +203,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             )}
             {!inStock && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <span className="bg-gray-900/80 text-white text-sm font-bold px-4 py-1.5 rounded-full">已售完</span>
+                <span className="bg-gray-900/80 text-white text-base font-bold px-4 py-2 rounded-full">已售完</span>
               </div>
             )}
           </div>
@@ -216,43 +212,41 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
           {cats.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
               {cats.slice(0, 1).map((cat: any) => (
-                <span key={cat.id} className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-semibold border border-green-100">
+                <span key={cat.id} className="t-meta bg-green-50 text-green-800 px-2.5 py-1 rounded-full font-semibold border border-green-100">
                   {CATEGORY_ICONS[cat.slug] || ''} {cat.name}
                 </span>
               ))}
             </div>
           )}
           <Link href={`/products/${product.slug}`}>
-            <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug mb-1 hover:text-green-700 line-clamp-2">{product.product_name}</h3>
+            <h3 className="t-product-title mb-1 hover:text-green-700 line-clamp-3">{product.product_name}</h3>
           </Link>
           {product.short_intro && (
-            <p className="text-gray-500 text-xs sm:text-sm leading-relaxed mb-2 line-clamp-2 hidden sm:block">{product.short_intro}</p>
+            <p className="t-meta leading-relaxed mb-2 line-clamp-2 hidden sm:block">{product.short_intro}</p>
           )}
-          <div className="mt-auto space-y-2 pt-2">
-            {(product.sales_count || 0) >= 5 && (
-              <p className="text-xs font-bold text-orange-600 leading-none">
-                🔥 {(product.sales_count || 0) >= 100 ? `熱銷 ${product.sales_count} 件` : `已售 ${product.sales_count} 件`}
-              </p>
-            )}
-            {minPrice !== null ? (
+          {/* 價格（大、紅）→ 規格數（小、灰）→ CTA → 已購買人數（小、灰、置中） */}
+          <div className="mt-auto pt-2 space-y-2">
+            {minPrice !== null && (
               <div>
-                <div className="text-green-700 font-extrabold text-base sm:text-lg leading-tight">
-                  {minPrice === maxPrice ? formatPrice(minPrice) : `${formatPrice(minPrice)} 起`}
+                <div className="t-price">
+                  {formatPrice(minPrice)}{isMulti ? ' 起' : ''}
                 </div>
-                {maxPrice !== null && minPrice !== maxPrice && (
-                  <div className="text-gray-400 text-xs">最高 {formatPrice(maxPrice)}</div>
+                {variantCount > 1 && (
+                  <div className="t-price-note mt-0.5">共 {variantCount} 種規格可選</div>
                 )}
               </div>
-            ) : null}
-            <button onClick={() => handleAddToCart(product)} disabled={!inStock}
-              className={`w-full font-bold py-3 rounded-xl text-sm sm:text-base transition-colors
-                ${inStock ? 'bg-green-700 hover:bg-green-800 active:bg-green-900 text-white shadow-sm' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+            )}
+            <button onClick={() => handleAddToCart(product)} disabled={!inStock} className="btn-card">
               {!inStock ? '已售完' : isMulti ? '選擇規格' : '加入購物車'}
             </button>
-            <Link href={`/products/${product.slug}`}
-              className="block w-full text-center border-2 border-gray-200 hover:border-green-400 text-gray-600 hover:text-green-700 font-semibold py-2 rounded-xl text-xs sm:text-sm transition-colors">
+            <Link href={`/products/${product.slug}`} className="btn-card-ghost">
               查看詳情 →
             </Link>
+            {(product.sales_count || 0) >= 5 && (
+              <p className="t-meta text-center font-semibold text-orange-700">
+                🔥 已有 {product.sales_count} 人購買
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -284,7 +278,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
               <span className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-2xl">🩺</span>
               <span className="text-left leading-tight">
                 <span className="block font-bold text-base sm:text-lg">不知道怎麼選？做個健康自測</span>
-                <span className="block text-xs sm:text-sm text-green-600 font-semibold mt-0.5">2 分鐘・幫你推薦適合的保健品</span>
+                <span className="block text-[15px] text-green-700 font-semibold mt-0.5">2 分鐘・幫你推薦適合的保健品</span>
               </span>
               <span className="flex-shrink-0 text-green-700 font-bold text-lg group-hover:translate-x-0.5 transition-transform">→</span>
             </a>
@@ -299,7 +293,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
                 <div key={b.title} className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
                   <div className="text-2xl mb-1">{b.icon}</div>
                   <div className="font-bold text-sm leading-tight">{b.title}</div>
-                  <div className="text-green-200 text-xs mt-0.5">{b.desc}</div>
+                  <div className="text-green-100 text-[13px] mt-0.5">{b.desc}</div>
                 </div>
               ))}
             </div>
@@ -324,14 +318,14 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             />
             {search && (
               <button onClick={() => handleSearch('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-800 text-2xl leading-none">×</button>
             )}
           </div>
-          <div className="flex items-center gap-1.5 mt-2 pb-3 overflow-x-auto no-scrollbar">
-            <span className="text-xs text-gray-400 flex-shrink-0">熱門</span>
+          <div className="flex items-center gap-2 mt-2 pb-3 overflow-x-auto no-scrollbar">
+            <span className="t-meta flex-shrink-0 font-semibold">熱門</span>
             {HOT_TAGS.map(t => (
               <button key={t} onClick={() => handleSearch(t)}
-                className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full transition-colors ${search === t ? 'bg-green-700 text-white font-semibold' : 'bg-white/80 text-gray-500 border border-gray-200 hover:text-green-700 hover:border-green-300'}`}>
+                className={`chip ${search === t ? 'bg-green-700 text-white font-bold' : 'bg-white text-gray-700 border border-gray-300 hover:text-green-700 hover:border-green-400'}`}>
                 {t}
               </button>
             ))}
@@ -342,25 +336,25 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
         {/* ─── 館別入口：格狀圖磚，全部一次可見，不需左右滑動 ─── */}
         {isDefaultView && sectionGroups.length > 0 && (
           <section className="pt-5">
-            <h2 className="text-xl font-bold text-gray-800 mb-3">選購館別</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <h2 className="t-section-title mb-3">選購館別</h2>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
               {hotProducts.length > 0 && (
                 <button onClick={() => scrollToId('sec-hot')}
-                  className="flex items-center gap-3 p-3.5 rounded-2xl border-2 bg-orange-50 border-orange-300 text-orange-900 hover:bg-orange-100 shadow-sm hover:shadow-md transition-all text-left">
+                  className="flex items-center gap-3 p-4 min-h-[48px] rounded-2xl border-2 bg-orange-50 border-orange-300 text-orange-900 hover:bg-orange-100 shadow-sm hover:shadow-md transition-all text-left">
                   <span className="text-3xl flex-shrink-0">🔥</span>
                   <span className="min-w-0">
-                    <span className="block font-bold text-sm sm:text-base leading-tight">本週熱銷</span>
-                    <span className="block text-xs opacity-70 mt-0.5">最多人買</span>
+                    <span className="block font-bold text-[15px] sm:text-base leading-snug">本週熱銷</span>
+                    <span className="block text-[13px] text-orange-800 mt-0.5">最多人買</span>
                   </span>
                 </button>
               )}
               {sectionGroups.map(({ sec, items }) => (
                 <button key={sec.key} onClick={() => scrollToId('sec-' + sec.key)}
-                  className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 shadow-sm hover:shadow-md transition-all text-left ${sec.tile}`}>
+                  className={`flex items-center gap-3 p-4 min-h-[48px] rounded-2xl border-2 shadow-sm hover:shadow-md transition-all text-left ${sec.tile}`}>
                   <span className="text-3xl flex-shrink-0">{sec.emoji}</span>
                   <span className="min-w-0">
-                    <span className="block font-bold text-sm sm:text-base leading-tight">{sec.label}</span>
-                    <span className="block text-xs opacity-70 mt-0.5">{items.length} 件商品</span>
+                    <span className="block font-bold text-[15px] sm:text-base leading-snug">{sec.label}</span>
+                    <span className="block text-[13px] mt-0.5">{items.length} 件商品</span>
                   </span>
                 </button>
               ))}
@@ -371,19 +365,19 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
         {/* ─── CATEGORY GRID ─── */}
         {!search && categories.length > 0 && (
           <section className="py-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">依健康方向選購</h2>
+            <h2 className="t-section-title mb-4">依健康方向選購</h2>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {categories.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => handleCat(cat.slug)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all
+                  className={`flex flex-col items-center justify-center gap-2 p-3 min-h-[88px] rounded-2xl border-2 transition-all
                     ${selectedCat === cat.slug
-                      ? 'border-green-600 bg-green-50 shadow-md scale-[1.03]'
-                      : 'border-gray-100 bg-white hover:border-green-300 hover:shadow-sm'}`}
+                      ? 'border-green-600 bg-green-50 shadow-md'
+                      : 'border-gray-200 bg-white hover:border-green-300 hover:shadow-sm'}`}
                 >
                   <span className="text-2xl">{CATEGORY_ICONS[cat.slug] || '💊'}</span>
-                  <span className={`text-xs font-semibold leading-tight text-center
+                  <span className={`text-[15px] font-semibold leading-snug text-center
                     ${selectedCat === cat.slug ? 'text-green-800' : 'text-gray-700'}`}>
                     {cat.name}
                   </span>
@@ -399,8 +393,8 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
         {hotProducts.length > 0 && (
           <section id="sec-hot" className="pt-6 pb-2 scroll-mt-56">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold text-gray-800">🔥 本週熱銷</h2>
-              <button onClick={scrollToProducts} className="text-green-700 text-sm font-bold hover:underline">看全部 →</button>
+              <h2 className="t-section-title">🔥 本週熱銷</h2>
+              <button onClick={scrollToProducts} className="text-green-700 text-base font-bold hover:underline min-h-[48px] px-2">看全部 →</button>
             </div>
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
               {hotProducts.map((product, idx) => {
@@ -408,25 +402,25 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
                 const inStock = hasStock(product.product_variants)
                 const isMulti = multiVariant(product.product_variants)
                 return (
-                  <div key={product.id} className="flex-shrink-0 w-36 sm:w-40 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                  <div key={product.id} className="flex-shrink-0 w-44 sm:w-48 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
                     <Link href={`/products/${product.slug}`} className="block relative">
                       <div className="aspect-square bg-gray-50 relative overflow-hidden">
                         {product.cover_image_url
-                          ? <Image src={product.cover_image_url} alt={product.product_name} fill className="object-cover" sizes="160px" />
+                          ? <Image src={product.cover_image_url} alt={product.product_name} fill className="object-cover" sizes="192px" />
                           : <div className="w-full h-full flex items-center justify-center text-4xl text-gray-200">💊</div>}
-                        {idx < 3 && <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-md">熱銷 {idx + 1}</span>}
-                        {!inStock && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="bg-gray-900/80 text-white text-xs font-bold px-3 py-1 rounded-full">已售完</span></div>}
+                        {/* 純裝飾角標：唯一允許 12px 的角色 */}
+                        {idx < 3 && <span className="absolute top-1.5 left-1.5 bg-red-600 text-white t-badge-deco font-bold px-2 py-1 rounded-md">熱銷 {idx + 1}</span>}
+                        {!inStock && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="bg-gray-900/80 text-white text-base font-bold px-4 py-2 rounded-full">已售完</span></div>}
                       </div>
                     </Link>
-                    <div className="p-2.5 flex flex-col flex-1">
+                    <div className="p-3 flex flex-col flex-1">
                       <Link href={`/products/${product.slug}`}>
-                        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 hover:text-green-700">{product.product_name}</h3>
+                        <h3 className="t-product-title line-clamp-3 hover:text-green-700">{product.product_name}</h3>
                       </Link>
-                      <div className="mt-auto pt-2">
-                        {minPrice !== null && <div className="text-green-700 font-extrabold text-base leading-tight mb-1.5">{formatPrice(minPrice)}{multiVariant(product.product_variants) ? ' 起' : ''}</div>}
-                        <button onClick={() => handleAddToCart(product)} disabled={!inStock}
-                          className={`w-full font-bold py-2 rounded-xl text-xs transition-colors ${inStock ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
-                          {!inStock ? '已售完' : isMulti ? '選規格' : '加入購物車'}
+                      <div className="mt-auto pt-2 space-y-2">
+                        {minPrice !== null && <div className="t-price">{formatPrice(minPrice)}{isMulti ? ' 起' : ''}</div>}
+                        <button onClick={() => handleAddToCart(product)} disabled={!inStock} className="btn-card">
+                          {!inStock ? '已售完' : isMulti ? '選擇規格' : '加入購物車'}
                         </button>
                       </div>
                     </div>
@@ -443,7 +437,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-700 to-emerald-600 p-5 shadow-md hover:shadow-lg transition-shadow h-full">
               <div className="flex items-center justify-between gap-3 h-full">
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold text-base leading-snug mb-1">
+                  <p className="text-white font-bold text-base leading-relaxed mb-1">
                     🩺 健康自測
                   </p>
                   <p className="text-green-100 text-sm leading-relaxed">
@@ -460,7 +454,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 p-5 shadow-md hover:shadow-lg transition-shadow h-full">
               <div className="flex items-center justify-between gap-3 h-full">
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold text-base leading-snug mb-1">
+                  <p className="text-white font-bold text-base leading-relaxed mb-1">
                     🌙 睡眠自測
                   </p>
                   <p className="text-indigo-100 text-sm leading-relaxed">
@@ -477,7 +471,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-600 to-orange-500 p-5 shadow-md hover:shadow-lg transition-shadow h-full">
               <div className="flex items-center justify-between gap-3 h-full">
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold text-base leading-snug mb-1">
+                  <p className="text-white font-bold text-base leading-relaxed mb-1">
                     📚 健康知識
                   </p>
                   <p className="text-amber-50 text-sm leading-relaxed">
@@ -503,14 +497,14 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
                   🎉
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="inline-flex items-center gap-1.5 bg-white/25 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-xs font-bold text-white mb-1.5">
+                  <div className="inline-flex items-center gap-1.5 bg-white/25 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[13px] font-bold text-white mb-1.5">
                     <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                     線下活動・開放報名
                   </div>
-                  <p className="text-white font-bold text-base sm:text-xl leading-snug">
+                  <p className="text-white font-bold text-base sm:text-xl leading-relaxed">
                     🎉 88自醫社群・線下健康見面會
                   </p>
-                  <p className="text-white/90 text-xs sm:text-sm mt-0.5 leading-relaxed">
+                  <p className="text-white text-sm mt-0.5 leading-relaxed">
                     多場次・不同地點陸續開放，查看場次報名 →
                   </p>
                 </div>
@@ -593,100 +587,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {mainProducts.slice(0, visibleCount).map(product => {
-                  const minPrice = getMinPrice(product.product_variants)
-                  const maxPrice = getMaxPrice(product.product_variants)
-                  const inStock = hasStock(product.product_variants)
-                  const isMulti = multiVariant(product.product_variants)
-                  const cats = product.product_category_relations?.map(r => r.health_categories).filter(Boolean) || []
-
-                  return (
-                    <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-200 flex flex-col">
-                      <Link href={`/products/${product.slug}`} className="block relative">
-                        <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                          {product.cover_image_url ? (
-                            <Image
-                              src={product.cover_image_url}
-                              alt={product.product_name}
-                              fill
-                              className="object-cover hover:scale-105 transition-transform duration-300"
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-5xl text-gray-200">💊</div>
-                          )}
-                          {!inStock && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                              <span className="bg-gray-900/80 text-white text-sm font-bold px-4 py-1.5 rounded-full">已售完</span>
-                            </div>
-                          )}
-                        </div>
-                      </Link>
-
-                      <div className="p-3 sm:p-4 flex flex-col flex-1">
-                        {/* Category tags */}
-                        {cats.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {cats.slice(0, 1).map((cat: any) => (
-                              <span key={cat.id} className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-semibold border border-green-100">
-                                {CATEGORY_ICONS[cat.slug] || ''} {cat.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Product name */}
-                        <Link href={`/products/${product.slug}`}>
-                          <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug mb-1 hover:text-green-700 line-clamp-2">{product.product_name}</h3>
-                        </Link>
-
-                        {/* Short intro */}
-                        {product.short_intro && (
-                          <p className="text-gray-500 text-xs sm:text-sm leading-relaxed mb-2 line-clamp-2 hidden sm:block">{product.short_intro}</p>
-                        )}
-
-                        <div className="mt-auto space-y-2 pt-2">
-                          {/* Sales count — 銷量 ≥ 5 才顯示 */}
-                          {(product.sales_count || 0) >= 5 && (
-                            <p className="text-xs font-bold text-orange-600 leading-none">
-                              🔥 {(product.sales_count || 0) >= 100 ? `熱銷 ${product.sales_count} 件` : `已售 ${product.sales_count} 件`}
-                            </p>
-                          )}
-
-                          {/* Price — 大字清晰顯示 */}
-                          {minPrice !== null ? (
-                            <div>
-                              <div className="text-green-700 font-extrabold text-base sm:text-lg leading-tight">
-                                {minPrice === maxPrice ? formatPrice(minPrice) : `${formatPrice(minPrice)} 起`}
-                              </div>
-                              {maxPrice !== null && minPrice !== maxPrice && (
-                                <div className="text-gray-400 text-xs">最高 {formatPrice(maxPrice)}</div>
-                              )}
-                            </div>
-                          ) : null}
-
-                          {/* 加入購物車主按鈕 — 大且醒目 */}
-                          <button
-                            onClick={() => handleAddToCart(product)}
-                            disabled={!inStock}
-                            className={`w-full font-bold py-3 rounded-xl text-sm sm:text-base transition-colors
-                              ${inStock
-                                ? 'bg-green-700 hover:bg-green-800 active:bg-green-900 text-white shadow-sm'
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-                          >
-                            {!inStock ? '已售完' : isMulti ? '選擇規格' : '加入購物車'}
-                          </button>
-
-                          {/* 查看詳情次要按鈕 */}
-                          <Link href={`/products/${product.slug}`}
-                            className="block w-full text-center border-2 border-gray-200 hover:border-green-400 text-gray-600 hover:text-green-700 font-semibold py-2 rounded-xl text-xs sm:text-sm transition-colors">
-                            查看詳情 →
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+                {mainProducts.slice(0, visibleCount).map(renderProductCard)}
 
                 {/* Loading skeleton */}
                 {loading && products.length === 0 && [...Array(8)].map((_, i) => (
@@ -703,7 +604,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
 
               {/* 無限捲動哨兵 + 載入指示 */}
               {(visibleCount < mainProducts.length || products.length < total) && (
-                <div ref={sentinelRef} className="flex justify-center items-center gap-2 py-8 text-gray-400 text-sm">
+                <div ref={sentinelRef} className="flex justify-center items-center gap-2 py-8 text-gray-600 text-base">
                   <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />

@@ -58,7 +58,7 @@ export default function QuizResultCart({ product }: { product: Product }) {
         className={`w-full font-bold py-2.5 rounded-xl text-sm transition-colors
           ${inStock
             ? 'bg-green-700 hover:bg-green-800 text-white'
-            : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+            : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
       >
         {!inStock ? '已售完' : activeVariants.length > 1 ? '選擇規格' : '加入購物車'}
       </button>

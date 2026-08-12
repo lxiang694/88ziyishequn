@@ -123,7 +123,7 @@ export default function SleepTrackerPage() {
   }, [state, today])
 
   if (!loaded) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-400">載入中...</div>
+    return <div className="min-h-screen flex items-center justify-center text-gray-600">載入中...</div>
   }
 
   // ========== Empty state — show intro ==========
@@ -153,7 +153,7 @@ export default function SleepTrackerPage() {
               {DAILY_HABITS.map(h => (
                 <div key={h.id} className="flex items-start gap-3 p-3 bg-emerald-50/60 rounded-xl">
                   <span className="text-2xl flex-shrink-0">{h.icon}</span>
-                  <p className="text-sm text-gray-700 leading-snug font-medium">{h.text}</p>
+                  <p className="text-sm text-gray-700 leading-relaxed font-medium">{h.text}</p>
                 </div>
               ))}
             </div>
@@ -176,7 +176,7 @@ export default function SleepTrackerPage() {
             從今天開始 21 天計畫 →
           </button>
 
-          <p className="text-center text-xs text-gray-400 mt-6 leading-relaxed">
+          <p className="text-center text-[13px] text-gray-600 mt-6 leading-relaxed">
             開始日期：{today.replace(/-/g, '/')}
           </p>
         </div>
@@ -194,17 +194,17 @@ export default function SleepTrackerPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/sleep-quiz" className="text-gray-400 hover:text-gray-600">
+          <Link href="/sleep-quiz" className="text-gray-600 hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
             </svg>
           </Link>
           <div className="flex-1">
-            <p className="text-xs text-gray-400 font-medium">21 天睡眠習慣計畫</p>
+            <p className="text-[13px] text-gray-600 font-medium">21 天睡眠習慣計畫</p>
             <p className="text-sm font-bold text-gray-700">第 {Math.max(1, currentDayIdx + 1)} 天 / 共 21 天</p>
           </div>
           <button onClick={restart}
-            className="text-xs text-gray-400 hover:text-red-500 transition-colors">重新開始</button>
+            className="text-[13px] text-gray-600 hover:text-red-500 transition-colors">重新開始</button>
         </div>
 
         {/* Stats card */}
@@ -212,15 +212,15 @@ export default function SleepTrackerPage() {
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
               <p className="text-3xl font-bold">{stats?.completionRate}%</p>
-              <p className="text-xs text-emerald-100 mt-0.5">總完成率</p>
+              <p className="text-[13px] text-emerald-100 mt-0.5">總完成率</p>
             </div>
             <div className="border-x border-white/20">
               <p className="text-3xl font-bold">{stats?.currentStreak}</p>
-              <p className="text-xs text-emerald-100 mt-0.5">連續完美日</p>
+              <p className="text-[13px] text-emerald-100 mt-0.5">連續完美日</p>
             </div>
             <div>
               <p className="text-3xl font-bold">{stats?.perfectDays}</p>
-              <p className="text-xs text-emerald-100 mt-0.5">累計滿分日</p>
+              <p className="text-[13px] text-emerald-100 mt-0.5">累計滿分日</p>
             </div>
           </div>
         </div>
@@ -230,7 +230,7 @@ export default function SleepTrackerPage() {
           <div className="bg-white rounded-3xl shadow-md border-2 border-emerald-300 p-5 mb-5">
             <div className="flex items-center justify-between mb-4">
               <p className="font-bold text-gray-800 text-lg">📌 今日打卡（{formatShort(today)}）</p>
-              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-bold">
+              <span className="text-[13px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-bold">
                 {DAILY_HABITS.filter(h => state.data[today]?.[h.id]).length} / {DAILY_HABITS.length}
               </span>
             </div>
@@ -274,8 +274,8 @@ export default function SleepTrackerPage() {
                 const isToday = d === today
                 const isFuture = d > today
                 return (
-                  <div key={d} className={`text-center text-[10px] font-bold py-1
-                    ${isToday ? 'text-emerald-700' : isFuture ? 'text-gray-300' : 'text-gray-400'}`}>
+                  <div key={d} className={`text-center text-[13px] font-bold py-1
+                    ${isToday ? 'text-emerald-700' : isFuture ? 'text-gray-300' : 'text-gray-600'}`}>
                     {isToday ? '今' : i + 1}
                   </div>
                 )
@@ -284,7 +284,7 @@ export default function SleepTrackerPage() {
             {/* Habit rows */}
             {DAILY_HABITS.map(h => (
               <div key={h.id} className="grid grid-cols-[140px_repeat(21,1fr)] gap-1 mb-1">
-                <div className="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
+                <div className="flex items-center gap-1.5 text-[13px] text-gray-700 font-medium">
                   <span>{h.icon}</span>
                   <span className="truncate">{h.shortText}</span>
                 </div>
@@ -309,7 +309,7 @@ export default function SleepTrackerPage() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-400 mt-3 text-center">點擊任一格可手動勾選 / 取消（過去日子也可補勾）</p>
+          <p className="text-[13px] text-gray-600 mt-3 text-center">點擊任一格可手動勾選 / 取消（過去日子也可補勾）</p>
         </div>
 
         {/* Encouragement */}
@@ -358,7 +358,7 @@ export default function SleepTrackerPage() {
         />
 
         {/* Footer note */}
-        <p className="text-center text-xs text-gray-400 leading-relaxed">
+        <p className="text-center text-[13px] text-gray-600 leading-relaxed">
           💾 您的進度只儲存在這台裝置的瀏覽器，不會上傳雲端<br />
           清除瀏覽器資料會讓進度消失，請定期截圖留存
         </p>

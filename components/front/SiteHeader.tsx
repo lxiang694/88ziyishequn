@@ -52,7 +52,7 @@ export default function SiteHeader() {
             </svg>
             <span>購物車</span>
             {totalItems > 0 && (
-              <span className="ml-1 bg-red-500 text-white text-xs rounded-full min-w-[22px] h-[22px] flex items-center justify-center font-bold px-1 shadow">
+              <span className="ml-1 bg-red-500 text-white text-[13px] rounded-full min-w-[22px] h-[22px] flex items-center justify-center font-bold px-1 shadow">
                 {totalItems > 9 ? '9+' : totalItems}
               </span>
             )}

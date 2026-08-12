@@ -22,7 +22,7 @@ export default function CartPage() {
     <div className="max-w-2xl mx-auto px-4 pt-14 sm:pt-6 pb-56 sm:pb-8">
       <h1 className="text-2xl font-bold text-gray-800 mb-5">
         購物車
-        <span className="ml-2 text-base font-normal text-gray-400">（{items.reduce((s, i) => s + i.quantity, 0)} 件）</span>
+        <span className="ml-2 text-base font-normal text-gray-600">（{items.reduce((s, i) => s + i.quantity, 0)} 件）</span>
       </h1>
 
       <div className="space-y-3 mb-6">
@@ -49,7 +49,7 @@ export default function CartPage() {
                   </div>
                   <button
                     onClick={() => removeItem(item.variant_id)}
-                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors text-lg"
+                    className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors text-xl"
                     aria-label="移除"
                   >✕</button>
                 </div>
@@ -59,12 +59,12 @@ export default function CartPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => updateQty(item.variant_id, item.quantity - 1)}
-                      className="w-9 h-9 rounded-xl border-2 border-gray-200 hover:border-green-500 font-bold text-lg flex items-center justify-center transition-colors"
+                      className="w-12 h-12 rounded-xl border-2 border-gray-300 hover:border-green-500 font-bold text-xl flex items-center justify-center transition-colors"
                     >−</button>
-                    <span className="w-9 text-center font-bold text-lg">{item.quantity}</span>
+                    <span className="w-10 text-center font-bold text-lg">{item.quantity}</span>
                     <button
                       onClick={() => updateQty(item.variant_id, item.quantity + 1)}
-                      className="w-9 h-9 rounded-xl border-2 border-gray-200 hover:border-green-500 font-bold text-lg flex items-center justify-center transition-colors"
+                      className="w-12 h-12 rounded-xl border-2 border-gray-300 hover:border-green-500 font-bold text-xl flex items-center justify-center transition-colors"
                     >+</button>
                   </div>
 
@@ -72,7 +72,7 @@ export default function CartPage() {
                   <div className="text-right">
                     <div className="font-bold text-gray-800 text-lg">{formatPrice(item.unit_price * item.quantity)}</div>
                     {item.quantity > 1 && (
-                      <div className="text-gray-400 text-xs">{formatPrice(item.unit_price)} × {item.quantity}</div>
+                      <div className="text-gray-600 text-[13px]">{formatPrice(item.unit_price)} × {item.quantity}</div>
                     )}
                   </div>
                 </div>
@@ -85,15 +85,15 @@ export default function CartPage() {
       {/* Total card */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
         <div className="space-y-2 mb-3">
-          <div className="flex justify-between text-gray-500 text-sm">
+          <div className="flex justify-between text-gray-600 text-base">
             <span>商品小計</span>
             <span>{formatPrice(totalAmount)}</span>
           </div>
-          <div className="flex justify-between text-gray-500 text-sm">
+          <div className="flex justify-between text-gray-600 text-base">
             <span>取貨方式</span>
             <span>7-11 門市取貨</span>
           </div>
-          <div className="flex justify-between text-gray-500 text-sm">
+          <div className="flex justify-between text-gray-600 text-base">
             <span>付款方式</span>
             <span className="text-green-700 font-bold">取貨付款</span>
           </div>
@@ -109,18 +109,18 @@ export default function CartPage() {
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
             <div className="text-xl mb-0.5">🏪</div>
-            <p className="text-xs font-bold text-green-800">取貨時付款</p>
-            <p className="text-[11px] text-green-600 mt-0.5">不預先扣款</p>
+            <p className="text-[13px] font-bold text-green-800">取貨時付款</p>
+            <p className="text-[13px] text-green-600 mt-0.5">不預先扣款</p>
           </div>
           <div>
             <div className="text-xl mb-0.5">📦</div>
-            <p className="text-xs font-bold text-green-800">約 3 工作日</p>
-            <p className="text-[11px] text-green-600 mt-0.5">送達 7-11</p>
+            <p className="text-[13px] font-bold text-green-800">約 3 工作日</p>
+            <p className="text-[13px] text-green-600 mt-0.5">送達 7-11</p>
           </div>
           <div>
             <div className="text-xl mb-0.5">💬</div>
-            <p className="text-xs font-bold text-green-800">LINE 通知</p>
-            <p className="text-[11px] text-green-600 mt-0.5">到店即時提醒</p>
+            <p className="text-[13px] font-bold text-green-800">LINE 通知</p>
+            <p className="text-[13px] text-green-600 mt-0.5">到店即時提醒</p>
           </div>
         </div>
       </div>

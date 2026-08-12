@@ -205,7 +205,7 @@ export default function CheckoutPage() {
     <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-56 md:pb-10">
       {/* Back button */}
       <div className="flex items-center gap-3 mb-4">
-        <Link href="/cart" className="text-gray-400 hover:text-gray-600 p-1 rounded-lg transition-colors">
+        <Link href="/cart" className="text-gray-600 hover:text-gray-600 p-1 rounded-lg transition-colors">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -233,8 +233,8 @@ export default function CheckoutPage() {
                   ))}
                 </div>
                 <span className="font-bold text-gray-800 text-sm whitespace-nowrap">訂單商品 {totalItems} 件</span>
-                <span className="text-green-700 text-xs font-bold whitespace-nowrap">{showItems ? '收合' : '明細'}</span>
-                <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${showItems ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-green-700 text-[13px] font-bold whitespace-nowrap">{showItems ? '收合' : '明細'}</span>
+                <svg className={`w-4 h-4 text-gray-600 flex-shrink-0 transition-transform ${showItems ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
@@ -261,8 +261,8 @@ export default function CheckoutPage() {
                                 : <div className="w-full h-full flex items-center justify-center text-sm">💊</div>}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-gray-800 leading-snug line-clamp-2">{item.product_name}</p>
-                              <p className="text-gray-500 text-xs mt-0.5">{item.variant_name}</p>
+                              <p className="font-semibold text-gray-800 leading-relaxed line-clamp-2">{item.product_name}</p>
+                              <p className="text-gray-500 text-[13px] mt-0.5">{item.variant_name}</p>
                             </div>
                           </div>
                         </td>
@@ -296,9 +296,9 @@ export default function CheckoutPage() {
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-800 text-sm truncate">
                         {addr.label ? `${addr.label}・` : ''}{addr.recipient_name} {addr.phone}
-                        {addr.is_default && <span className="ml-1.5 text-xs text-green-600 font-bold">預設</span>}
+                        {addr.is_default && <span className="ml-1.5 text-[13px] text-green-600 font-bold">預設</span>}
                       </p>
-                      <p className="text-gray-500 text-xs mt-0.5 truncate">{addr.store_name}（{addr.store_county}{addr.store_district}）</p>
+                      <p className="text-gray-500 text-[13px] mt-0.5 truncate">{addr.store_name}（{addr.store_county}{addr.store_district}）</p>
                     </div>
                     <span className="flex-shrink-0 text-green-700 text-sm font-bold">使用</span>
                   </button>
@@ -345,11 +345,11 @@ export default function CheckoutPage() {
                 />
                 {errors.phone
                   ? <p className="text-red-500 text-sm mt-1.5">⚠️ {errors.phone}</p>
-                  : <p className="text-gray-400 text-xs mt-1">事後用此號碼查詢訂單狀態</p>
+                  : <p className="text-gray-600 text-[13px] mt-1">事後用此號碼查詢訂單狀態</p>
                 }
               </div>
               <div>
-                <label className="form-label">LINE ID <span className="text-gray-400 font-normal text-sm">（選填，方便客服聯繫）</span></label>
+                <label className="form-label">LINE ID <span className="text-gray-600 font-normal text-sm">（選填，方便客服聯繫）</span></label>
                 <input className="form-input" placeholder="your_line_id"
                   value={form.line_id} onChange={e => setForm(f => ({ ...f, line_id: e.target.value }))} />
               </div>
@@ -373,11 +373,11 @@ export default function CheckoutPage() {
             {selectedStore ? (
               <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
                 {storeFromLast && (
-                  <p className="text-amber-700 text-xs font-semibold mb-2">💡 已自動帶入您上次的取貨門市，如需更換請點右側「更換」</p>
+                  <p className="text-amber-700 text-[13px] font-semibold mb-2">💡 已自動帶入您上次的取貨門市，如需更換請點右側「更換」</p>
                 )}
                 <div className="flex justify-between items-start gap-3">
                   <div>
-                    <p className="font-bold text-green-800 text-lg leading-snug">{selectedStore.store_name}</p>
+                    <p className="font-bold text-green-800 text-lg leading-relaxed">{selectedStore.store_name}</p>
                     <p className="text-green-600 text-sm font-semibold mt-1">{selectedStore.county}{selectedStore.district}</p>
                     <p className="text-gray-600 text-sm mt-1">{selectedStore.address}</p>
                   </div>
@@ -397,7 +397,7 @@ export default function CheckoutPage() {
                     <p className={`font-bold text-base ${errors.store ? 'text-red-600' : 'text-gray-600'}`}>
                       點此選擇 7-11 取貨門市
                     </p>
-                    <p className="text-gray-400 text-sm mt-0.5">全台 7,000+ 家門市，輸入地址或區域即可搜尋</p>
+                    <p className="text-gray-600 text-sm mt-0.5">全台 7,000+ 家門市，輸入地址或區域即可搜尋</p>
                   </div>
                 </div>
               </button>
@@ -442,21 +442,21 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+            <p className="text-[13px] text-gray-600 mt-3 leading-relaxed">
               💡 7-11 商品保留期限為到店後 7 天，請您於期限內取貨
             </p>
           </div>
 
           {/* Note */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <label className="form-label">備註 <span className="text-gray-400 font-normal text-sm">（選填）</span></label>
+            <label className="form-label">備註 <span className="text-gray-600 font-normal text-sm">（選填）</span></label>
             <textarea className="form-input" rows={3} placeholder="有任何特殊需求請填寫..."
               value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
           </div>
 
           {/* Trust badges */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <p className="text-xs font-bold text-gray-500 mb-3 text-center tracking-wide">— 安心下單保障 —</p>
+            <p className="text-[13px] font-bold text-gray-500 mb-3 text-center tracking-wide">— 安心下單保障 —</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { icon: '🔒', title: 'SSL 加密', desc: '個資安全保護' },
@@ -466,8 +466,8 @@ export default function CheckoutPage() {
               ].map(badge => (
                 <div key={badge.title} className="text-center px-2">
                   <div className="text-2xl mb-1">{badge.icon}</div>
-                  <p className="text-xs font-bold text-gray-700 leading-tight">{badge.title}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5 leading-tight">{badge.desc}</p>
+                  <p className="text-[13px] font-bold text-gray-700 leading-tight">{badge.title}</p>
+                  <p className="text-[13px] text-gray-600 mt-0.5 leading-tight">{badge.desc}</p>
                 </div>
               ))}
             </div>
@@ -478,7 +478,7 @@ export default function CheckoutPage() {
             <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-4">
               {submitting ? '處理中，請稍候...' : `確認下單・${formatPrice(totalAmount)}`}
             </button>
-            <p className="text-center text-xs text-gray-400">按不到下方按鈕時，可直接按這裡送出；如需修改請 LINE 客服</p>
+            <p className="text-center text-[13px] text-gray-600">按不到下方按鈕時，可直接按這裡送出；如需修改請 LINE 客服</p>
           </div>
 
           {/* Desktop submit */}
@@ -494,7 +494,7 @@ export default function CheckoutPage() {
                 </span>
               ) : `確認下單・${formatPrice(totalAmount)}`}
             </button>
-            <p className="text-center text-sm text-gray-400">下單後如需修改，請透過 LINE 聯絡客服</p>
+            <p className="text-center text-sm text-gray-600">下單後如需修改，請透過 LINE 聯絡客服</p>
           </div>
         </div>
 
@@ -513,8 +513,8 @@ export default function CheckoutPage() {
                       : <div className="w-full h-full flex items-center justify-center text-xl">💊</div>}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 text-sm line-clamp-2 leading-snug">{item.product_name}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{item.variant_name} × {item.quantity}</p>
+                    <p className="font-semibold text-gray-800 text-sm line-clamp-2 leading-relaxed">{item.product_name}</p>
+                    <p className="text-gray-500 text-[13px] mt-0.5">{item.variant_name} × {item.quantity}</p>
                     <p className="text-green-700 font-bold text-sm mt-1">{formatPrice(item.unit_price * item.quantity)}</p>
                   </div>
                 </div>
@@ -535,7 +535,7 @@ export default function CheckoutPage() {
                 <span className="text-green-700">{formatPrice(totalAmount)}</span>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-3 text-center leading-relaxed">
+            <p className="text-[13px] text-gray-600 mt-3 text-center leading-relaxed">
               📦 約 3 工作日送達 7-11<br />到店後 LINE 通知您
             </p>
           </div>

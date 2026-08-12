@@ -37,7 +37,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     finally { setUpdating(false) }
   }
 
-  if (loading) return <div className="py-16 text-center text-gray-400">載入中...</div>
+  if (loading) return <div className="py-16 text-center text-gray-600">載入中...</div>
   if (!order) return <div className="py-16 text-center text-gray-500">訂單不存在</div>
 
   return (
@@ -78,7 +78,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             { label: '備註', value: order.note || '無' },
           ].map(f => (
             <div key={f.label}>
-              <p className="text-xs text-gray-500 mb-0.5">{f.label}</p>
+              <p className="text-[13px] text-gray-500 mb-0.5">{f.label}</p>
               <p className="font-semibold text-gray-800">{f.value}</p>
             </div>
           ))}
@@ -107,7 +107,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-800">{item.product_name_snapshot}</p>
                 <p className="text-gray-500 text-sm mt-0.5">{item.variant_name_snapshot}</p>
-                {item.sku_snapshot && <p className="text-gray-400 text-xs mt-0.5">SKU: {item.sku_snapshot}</p>}
+                {item.sku_snapshot && <p className="text-gray-600 text-[13px] mt-0.5">SKU: {item.sku_snapshot}</p>}
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-gray-500 text-sm">{formatPrice(item.unit_price)} × {item.quantity}</span>
                   <span className="font-bold text-gray-800">{formatPrice(item.subtotal)}</span>

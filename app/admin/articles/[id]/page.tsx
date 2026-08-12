@@ -26,9 +26,9 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
       <h1 className="text-2xl font-bold text-gray-800 mb-6">編輯文章</h1>
 
       {loading ? (
-        <div className="card p-16 text-center text-gray-400">載入中...</div>
+        <div className="card p-16 text-center text-gray-600">載入中...</div>
       ) : !article ? (
-        <div className="card p-16 text-center text-gray-400">找不到此文章</div>
+        <div className="card p-16 text-center text-gray-600">找不到此文章</div>
       ) : (
         <ArticleEditor initial={article} />
       )}

@@ -160,7 +160,7 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
         )}
 
         {/* Meta */}
-        <div className="flex items-center gap-3 text-sm text-gray-400 mb-8">
+        <div className="flex items-center gap-3 text-sm text-gray-600 mb-8">
           <span>📖 約 {article.reading_minutes} 分鐘</span>
           {article.view_count > 0 && <span>· 👁 {article.view_count} 次閱讀</span>}
         </div>
@@ -213,7 +213,7 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                   {dirInfo ? `為您智能推薦的${dirInfo.name}保健品` : '為您智能推薦'}
                 </h2>
-                <span className="text-xs text-gray-500 whitespace-nowrap">依成分匹配 · 自動更新</span>
+                <span className="text-[13px] text-gray-500 whitespace-nowrap">依成分匹配 · 自動更新</span>
               </div>
               <p className="text-gray-600 text-sm mb-6">根據文章主題自動匹配關鍵成分，新上架商品會即時加入推薦池</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -239,7 +239,7 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
                           <div className="w-full h-full flex items-center justify-center text-5xl">💊</div>
                         )}
                         {isNew && (
-                          <span className="absolute top-2 left-2 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
+                          <span className="absolute top-2 left-2 bg-amber-500 text-white text-[13px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                             ✨ 新品
                           </span>
                         )}
@@ -247,7 +247,7 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
                       <div className="p-3 flex flex-col flex-1">
                         {/* Match reason */}
                         <div className="mb-1.5">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full leading-tight">
+                          <span className="inline-flex items-center gap-1 text-[13px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full leading-tight">
                             🎯 {reason}
                           </span>
                         </div>
@@ -275,7 +275,7 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
         {/* Disclaimer */}
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 my-8 text-center">
           <p className="text-sm text-amber-700 font-semibold mb-1">⚠️ 健康聲明</p>
-          <p className="text-xs text-amber-600 leading-relaxed">
+          <p className="text-[13px] text-amber-600 leading-relaxed">
             本文內容僅供生活保健參考，所有保健品補充請先諮詢您的主治醫師。
             本網站所有商品非藥品，不具備診斷、治療或預防疾病之效果。
           </p>

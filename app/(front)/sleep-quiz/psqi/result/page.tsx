@@ -45,7 +45,7 @@ export default function PSQIResult({
         <div className="text-center mb-6">
           <p className="text-sm text-gray-500 mb-2">您的 PSQI 報告</p>
           <h1 className="text-2xl font-bold text-gray-900">匹茲堡睡眠品質指數</h1>
-          <p className="text-xs text-gray-400 mt-1">完整版 19 題評估 · {new Date().toLocaleDateString('zh-TW')}</p>
+          <p className="text-[13px] text-gray-600 mt-1">完整版 19 題評估 · {new Date().toLocaleDateString('zh-TW')}</p>
         </div>
 
         {/* Main score */}
@@ -58,7 +58,7 @@ export default function PSQIResult({
           <div className="bg-white/70 backdrop-blur rounded-2xl p-4 mb-4">
             <div className="flex items-baseline justify-center gap-2 mb-3">
               <span className={`text-5xl font-bold ${c.accent}`}>{validScore}</span>
-              <span className="text-gray-400 text-lg">/ 21 分</span>
+              <span className="text-gray-600 text-lg">/ 21 分</span>
             </div>
             <div className="relative h-3 rounded-full bg-gray-200 overflow-hidden mb-2">
               <div className="absolute inset-0 flex">
@@ -70,10 +70,10 @@ export default function PSQIResult({
               <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-gray-700 rounded-full shadow-lg"
                 style={{ left: `calc(${(validScore / 21) * 100}% - 8px)` }} />
             </div>
-            <div className="flex justify-between text-[10px] text-gray-500 px-1 mt-1">
+            <div className="flex justify-between text-[13px] text-gray-500 px-1 mt-1">
               <span>0</span><span>6</span><span>11</span><span>16</span><span>21</span>
             </div>
-            <div className="flex justify-between text-[10px] text-gray-400 px-1 mt-0.5">
+            <div className="flex justify-between text-[13px] text-gray-600 px-1 mt-0.5">
               <span>優秀</span><span>尚可</span><span>較差</span><span>很差</span>
             </div>
           </div>
@@ -90,9 +90,9 @@ export default function PSQIResult({
                 <p className={`text-2xl font-bold ${efficiency >= 85 ? 'text-green-700' : efficiency >= 75 ? 'text-yellow-700' : efficiency >= 65 ? 'text-orange-700' : 'text-red-700'}`}>
                   {efficiency}%
                 </p>
-                <p className="text-xs text-gray-400 mt-1">健康人應該 ≥ 85%</p>
+                <p className="text-[13px] text-gray-600 mt-1">健康人應該 ≥ 85%</p>
               </div>
-              <div className="text-right text-xs text-gray-400 leading-relaxed">
+              <div className="text-right text-[13px] text-gray-600 leading-relaxed">
                 睡眠效率 = <br />
                 實際睡眠 ÷ 在床時間 × 100%
               </div>
@@ -121,7 +121,7 @@ export default function PSQIResult({
               <span className="text-gray-500">嚴重睡眠問題</span>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+          <p className="text-[13px] text-gray-600 mt-3 leading-relaxed">
             💡 在華人族群中，PSQI {'>'}  7 分已被視為睡眠品質差的篩查閾值
           </p>
         </div>
@@ -167,7 +167,7 @@ export default function PSQIResult({
 
         {/* Disclaimer */}
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-center">
-          <p className="text-xs text-amber-700 leading-relaxed">
+          <p className="text-[13px] text-amber-700 leading-relaxed">
             ⚠️ 本評估僅供參考，不替代醫療診斷
           </p>
         </div>
@@ -177,17 +177,17 @@ export default function PSQIResult({
           <Link href="/sleep-tracker" className="bg-white border-2 border-gray-100 hover:border-indigo-300 rounded-2xl p-4 text-center transition-colors">
             <div className="text-3xl mb-1">📅</div>
             <p className="font-bold text-gray-800 text-sm">21 天打卡</p>
-            <p className="text-xs text-gray-400 mt-0.5">習慣養成計畫</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">習慣養成計畫</p>
           </Link>
           <Link href="/sleep-quiz/ess" className="bg-white border-2 border-gray-100 hover:border-indigo-300 rounded-2xl p-4 text-center transition-colors">
             <div className="text-3xl mb-1">😴</div>
             <p className="font-bold text-gray-800 text-sm">ESS 量表</p>
-            <p className="text-xs text-gray-400 mt-0.5">日間嗜睡篩查</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">日間嗜睡篩查</p>
           </Link>
           <Link href="/sleep-quiz/start" className="bg-white border-2 border-gray-100 hover:border-indigo-300 rounded-2xl p-4 text-center transition-colors">
             <div className="text-3xl mb-1">📊</div>
             <p className="font-bold text-gray-800 text-sm">ISI 量表</p>
-            <p className="text-xs text-gray-400 mt-0.5">失眠嚴重度</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">失眠嚴重度</p>
           </Link>
         </div>
 

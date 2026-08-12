@@ -79,7 +79,7 @@ export default function FunnelPage() {
       )}
 
       {loading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-gray-400">載入中...</div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-gray-600">載入中...</div>
       ) : error ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-red-500">{error}</div>
       ) : (
@@ -88,7 +88,7 @@ export default function FunnelPage() {
           <div className="bg-gradient-to-br from-green-600 to-emerald-600 rounded-2xl p-5 mb-4 text-white">
             <p className="text-sm font-semibold text-green-50">整體轉換率（瀏覽商品 → 下單成功）</p>
             <p className="text-4xl font-bold mt-1">{totalConv}<span className="text-2xl">%</span></p>
-            <p className="text-green-50 text-xs mt-1">
+            <p className="text-green-50 text-[13px] mt-1">
               {stages[0]?.visitors || 0} 位看商品的訪客，期間共 {stages[stages.length - 1]?.visitors || 0} 筆實際訂單
             </p>
           </div>
@@ -103,7 +103,7 @@ export default function FunnelPage() {
                   <div key={s.key}>
                     {i > 0 && (
                       <div className="flex items-center justify-center py-1">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${conv !== null && conv < 50 ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-500'}`}>
+                        <span className={`text-[13px] font-semibold px-2 py-0.5 rounded-full ${conv !== null && conv < 50 ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-500'}`}>
                           ↓ 轉換 {conv === null ? '—' : conv + '%'}
                           {dropped > 0 && conv !== null && <span className="ml-1">（流失 {dropped} 人）</span>}
                         </span>
@@ -115,10 +115,10 @@ export default function FunnelPage() {
                       <div className="relative flex items-center justify-between px-4 py-3">
                         <span className="font-bold text-gray-800 flex items-center gap-2">
                           <span>{STAGE_ICONS[s.key]}</span>{s.label}
-                          {s.fromOrders && <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">實際訂單</span>}
+                          {s.fromOrders && <span className="text-[13px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded">實際訂單</span>}
                         </span>
                         <span className="font-bold text-gray-900 text-lg">
-                          {s.visitors}<span className="text-xs font-normal text-gray-400 ml-1">{s.fromOrders ? '筆' : '人'}</span>
+                          {s.visitors}<span className="text-[13px] font-normal text-gray-600 ml-1">{s.fromOrders ? '筆' : '人'}</span>
                         </span>
                       </div>
                     </div>
@@ -126,7 +126,7 @@ export default function FunnelPage() {
                 )
               })}
             </div>
-            <p className="text-gray-400 text-[11px] mt-3 leading-relaxed">
+            <p className="text-gray-600 text-[13px] mt-3 leading-relaxed">
               📌「瀏覽商品 / 進入結帳」來自伺服器瀏覽紀錄、「下單成功」直接讀真實訂單表（最準）；
               「加入購物車 / 點擊送出」為瀏覽器埋點，屬盡力而為的估計，且僅統計功能上線後的資料，
               因此中間兩步可能略少於實際，剛上線初期數字會逐步補齊。
@@ -136,9 +136,9 @@ export default function FunnelPage() {
           {/* 送出失敗原因 */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 className="font-bold text-gray-800 mb-1">送出失敗原因分佈</h2>
-            <p className="text-gray-400 text-xs mb-3">顧客按了「確認下單」卻沒成功的原因（次數）</p>
+            <p className="text-gray-600 text-[13px] mb-3">顧客按了「確認下單」卻沒成功的原因（次數）</p>
             {fails.length === 0 ? (
-              <p className="text-gray-400 text-sm py-4 text-center">此期間沒有送出失敗紀錄 🎉</p>
+              <p className="text-gray-600 text-sm py-4 text-center">此期間沒有送出失敗紀錄 🎉</p>
             ) : (
               <div className="space-y-2">
                 {fails.map(f => (
@@ -151,7 +151,7 @@ export default function FunnelPage() {
                 ))}
               </div>
             )}
-            <p className="text-gray-400 text-[11px] mt-3 leading-relaxed">
+            <p className="text-gray-600 text-[13px] mt-3 leading-relaxed">
               💡「未選門市 / 姓名未填」多屬正常操作提醒；若「系統/庫存錯誤」「網路錯誤」偏高，代表可能有技術問題需要處理。
             </p>
           </div>

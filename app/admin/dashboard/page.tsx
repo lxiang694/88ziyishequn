@@ -101,7 +101,7 @@ export default function DashboardPage() {
             <Link href="/admin/orders" className="text-green-700 text-sm font-semibold hover:underline">查看全部 →</Link>
           </div>
           {recentOrders.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">暫無訂單</p>
+            <p className="text-gray-600 text-center py-8">暫無訂單</p>
           ) : (
             <div className="space-y-3">
               {recentOrders.map((o: any) => (
@@ -109,10 +109,10 @@ export default function DashboardPage() {
                   className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-50">
                   <div>
                     <p className="font-mono font-semibold text-gray-800 text-sm">{o.order_no}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{o.customer_name} · {formatDateTime(o.created_at)}</p>
+                    <p className="text-gray-500 text-[13px] mt-0.5">{o.customer_name} · {formatDateTime(o.created_at)}</p>
                   </div>
                   <div className="text-right">
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                    <span className={`text-[13px] font-bold px-2 py-1 rounded-full ${
                       o.order_status === '待確認' ? 'bg-yellow-100 text-yellow-700' :
                       o.order_status === '已到店' ? 'bg-green-100 text-green-700' :
                       o.order_status === '已取消' ? 'bg-red-100 text-red-600' :
@@ -143,7 +143,7 @@ export default function DashboardPage() {
                 <span className="text-2xl flex-shrink-0">{item.icon}</span>
                 <div>
                   <p className="font-semibold text-gray-800">{item.label}</p>
-                  <p className="text-gray-400 text-xs mt-0.5">{item.desc}</p>
+                  <p className="text-gray-600 text-[13px] mt-0.5">{item.desc}</p>
                 </div>
                 <span className="ml-auto text-gray-300">→</span>
               </Link>

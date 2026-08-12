@@ -94,7 +94,7 @@ export default async function SleepQuizResult({
         <div className="text-center mb-8">
           <p className="text-sm text-gray-500 mb-2">您的睡眠健康報告</p>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">ISI 失眠嚴重度評估</h1>
-          <p className="text-xs text-gray-400">基於國際標準量表 · {new Date().toLocaleDateString('zh-TW')}</p>
+          <p className="text-[13px] text-gray-600">基於國際標準量表 · {new Date().toLocaleDateString('zh-TW')}</p>
         </div>
 
         {/* Score card */}
@@ -111,7 +111,7 @@ export default async function SleepQuizResult({
           <div className="bg-white/70 backdrop-blur rounded-2xl p-4 mb-4">
             <div className="flex items-baseline justify-center gap-2 mb-3">
               <span className={`text-5xl font-bold ${severity.accentColor}`}>{validScore}</span>
-              <span className="text-gray-400 text-lg">/ 28 分</span>
+              <span className="text-gray-600 text-lg">/ 28 分</span>
             </div>
             <div className="relative h-3 rounded-full bg-gray-200 overflow-hidden mb-2">
               <div className="absolute inset-0 flex">
@@ -125,14 +125,14 @@ export default async function SleepQuizResult({
                 style={{ left: `calc(${scorePercent}% - 8px)` }}
               />
             </div>
-            <div className="flex justify-between text-[10px] text-gray-500 px-1">
+            <div className="flex justify-between text-[13px] text-gray-500 px-1">
               <span>0</span>
               <span>8</span>
               <span>15</span>
               <span>22</span>
               <span>28</span>
             </div>
-            <div className="flex justify-between text-[10px] text-gray-400 px-1 mt-0.5">
+            <div className="flex justify-between text-[13px] text-gray-600 px-1 mt-0.5">
               <span>正常</span>
               <span>輕度</span>
               <span>中度</span>
@@ -161,7 +161,7 @@ export default async function SleepQuizResult({
                   <li>· 各省市的睡眠專科：北京大學第六醫院、復旦華山等</li>
                   <li>· 多導睡眠監測（PSG）是診斷 OSA 的金標準</li>
                 </ul>
-                <p className="text-xs text-red-600">
+                <p className="text-[13px] text-red-600">
                   ⚠️ 失眠是可治療的——CBT-I 認知行為療法的有效率達 70-80%，且優於安眠藥
                 </p>
               </div>
@@ -184,10 +184,10 @@ export default async function SleepQuizResult({
                       {i + 1}
                     </span>
                     <div className="flex-1">
-                      <p className="font-bold text-gray-900 text-base leading-snug">{s.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{s.oneliner}</p>
+                      <p className="font-bold text-gray-900 text-base leading-relaxed">{s.title}</p>
+                      <p className="text-[13px] text-gray-500 mt-0.5">{s.oneliner}</p>
                     </div>
-                    <span className="text-gray-400 text-xs group-open:rotate-180 transition-transform">▼</span>
+                    <span className="text-gray-600 text-[13px] group-open:rotate-180 transition-transform">▼</span>
                   </summary>
                   <ul className="mt-4 space-y-2 pl-11">
                     {s.steps.map((step, j) => (
@@ -214,18 +214,18 @@ export default async function SleepQuizResult({
               <div className="space-y-3">
                 {nutrients.map(n => (
                   <div key={n.name} className="flex gap-3 items-start pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-                    <span className={`flex-shrink-0 px-2 py-0.5 rounded-md text-xs font-bold
+                    <span className={`flex-shrink-0 px-2 py-0.5 rounded-md text-[13px] font-bold
                       ${n.evidence === 'A' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                       {n.evidence} 級證據
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-gray-800 text-sm">{n.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.mechanism}</p>
+                      <p className="text-[13px] text-gray-500 mt-0.5 leading-relaxed">{n.mechanism}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-400 mt-4 text-center leading-relaxed">
+              <p className="text-[13px] text-gray-600 mt-4 text-center leading-relaxed">
                 💡 證據等級為國際睡眠醫學會（AASM）共識，A 級證據最強
               </p>
             </div>
@@ -240,7 +240,7 @@ export default async function SleepQuizResult({
                 <span className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-base">💊</span>
                 為您智能推薦
               </h2>
-              <span className="text-xs text-gray-400">依分數匹配 · 自動更新</span>
+              <span className="text-[13px] text-gray-600">依分數匹配 · 自動更新</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {scoredProducts.map(({ product, reason, isNew }) => {
@@ -257,7 +257,7 @@ export default async function SleepQuizResult({
                           <div className="w-full h-full flex items-center justify-center text-4xl">💊</div>
                         )}
                         {isNew && (
-                          <span className="absolute top-2 left-2 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
+                          <span className="absolute top-2 left-2 bg-amber-500 text-white text-[13px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                             ✨ 新品
                           </span>
                         )}
@@ -266,7 +266,7 @@ export default async function SleepQuizResult({
                     <div className="p-3 flex flex-col flex-1">
                       {/* Match reason tag */}
                       <div className="mb-1.5">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full leading-tight">
+                        <span className="inline-flex items-center gap-1 text-[13px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full leading-tight">
                           🎯 {reason}
                         </span>
                       </div>
@@ -284,7 +284,7 @@ export default async function SleepQuizResult({
                 )
               })}
             </div>
-            <p className="text-xs text-gray-400 mt-3 text-center leading-relaxed">
+            <p className="text-[13px] text-gray-600 mt-3 text-center leading-relaxed">
               推薦邏輯：依您的失眠等級匹配成分（GABA、褪黑激素、鎂等）+ 銷量 + 新品時效。<br />
               管理員新增的睡眠保健品會自動納入推薦池。
             </p>
@@ -312,7 +312,7 @@ export default async function SleepQuizResult({
                   )}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{a.title}</h3>
-                    <p className="text-xs text-gray-400 mt-1">📖 約 {a.reading_minutes} 分鐘</p>
+                    <p className="text-[13px] text-gray-600 mt-1">📖 約 {a.reading_minutes} 分鐘</p>
                   </div>
                   <svg className="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -346,7 +346,7 @@ export default async function SleepQuizResult({
                 <span className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">🌙</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-gray-800 text-base">PSQI 完整評估（19 題）</p>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">7 個成份分項打分 + 睡眠效率計算，醫學黃金標準</p>
+                  <p className="text-[13px] text-gray-500 mt-0.5 leading-relaxed">7 個成份分項打分 + 睡眠效率計算，醫學黃金標準</p>
                 </div>
                 <span className="text-purple-400 text-lg flex-shrink-0">→</span>
               </Link>
@@ -356,7 +356,7 @@ export default async function SleepQuizResult({
                 <span className="w-12 h-12 bg-cyan-100 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">😴</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-gray-800 text-base">ESS 日間嗜睡量表（8 題）</p>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">篩查睡眠呼吸中止症（OSA）與發作性睡病</p>
+                  <p className="text-[13px] text-gray-500 mt-0.5 leading-relaxed">篩查睡眠呼吸中止症（OSA）與發作性睡病</p>
                 </div>
                 <span className="text-cyan-400 text-lg flex-shrink-0">→</span>
               </Link>
@@ -366,7 +366,7 @@ export default async function SleepQuizResult({
                 <span className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">📅</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-gray-800 text-base">21 天習慣養成計畫</p>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">每天打卡 8 個睡眠關鍵習慣，4 週後重測看改善</p>
+                  <p className="text-[13px] text-gray-500 mt-0.5 leading-relaxed">每天打卡 8 個睡眠關鍵習慣，4 週後重測看改善</p>
                 </div>
                 <span className="text-emerald-400 text-lg flex-shrink-0">→</span>
               </Link>
@@ -393,7 +393,7 @@ export default async function SleepQuizResult({
 
         {/* Disclaimer */}
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-center">
-          <p className="text-xs text-amber-700 leading-relaxed">
+          <p className="text-[13px] text-amber-700 leading-relaxed">
             ⚠️ 本測驗結果僅供參考，不替代醫療診斷。
             如有嚴重失眠困擾或合併情緒、心血管問題，請諮詢專科醫師。
           </p>

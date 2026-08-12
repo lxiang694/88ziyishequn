@@ -67,7 +67,7 @@ function OrderSuccessContent() {
           <p className="text-2xl sm:text-3xl font-bold text-green-900 font-mono tracking-wider mb-2 select-all">
             {order_no}
           </p>
-          <p className="text-xs text-green-700 leading-relaxed">
+          <p className="text-[13px] text-green-700 leading-relaxed">
             💡 建議您<strong>截圖保存</strong>此編號，方便日後查詢訂單
           </p>
         </div>
@@ -76,7 +76,7 @@ function OrderSuccessContent() {
       {/* Loading */}
       {loading && (
         <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center mb-5">
-          <p className="text-gray-400">載入訂單詳情中...</p>
+          <p className="text-gray-600">載入訂單詳情中...</p>
         </div>
       )}
 
@@ -87,7 +87,7 @@ function OrderSuccessContent() {
           <div className="px-5 py-4 bg-gray-50 border-b border-gray-100">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span className="text-sm font-bold text-gray-700">📦 訂單明細</span>
-              <span className="text-xs text-gray-500">{formatDateTime(order.created_at)}</span>
+              <span className="text-[13px] text-gray-500">{formatDateTime(order.created_at)}</span>
             </div>
           </div>
 
@@ -101,9 +101,9 @@ function OrderSuccessContent() {
                     : <div className="w-full h-full flex items-center justify-center text-2xl">💊</div>}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-gray-800 text-sm leading-snug line-clamp-2">{item.product_name_snapshot}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{item.variant_name_snapshot}</p>
-                  <p className="text-gray-400 text-xs mt-1">
+                  <p className="font-bold text-gray-800 text-sm leading-relaxed line-clamp-2">{item.product_name_snapshot}</p>
+                  <p className="text-gray-500 text-[13px] mt-0.5">{item.variant_name_snapshot}</p>
+                  <p className="text-gray-600 text-[13px] mt-1">
                     {formatPrice(item.unit_price)} × {item.quantity}
                   </p>
                 </div>
@@ -126,12 +126,12 @@ function OrderSuccessContent() {
               <span className="text-base font-bold text-gray-800">應付總金額</span>
               <span className="text-2xl font-bold text-green-700">{formatPrice(order.total_amount)}</span>
             </div>
-            <p className="text-xs text-gray-500 text-right mt-1">取貨時於 7-11 櫃台付款</p>
+            <p className="text-[13px] text-gray-500 text-right mt-1">取貨時於 7-11 櫃台付款</p>
           </div>
 
           {/* Pickup store */}
           <div className="px-5 py-4 border-t border-gray-100 bg-green-50/50">
-            <p className="text-xs font-bold text-gray-500 mb-1">🏪 取貨門市</p>
+            <p className="text-[13px] font-bold text-gray-500 mb-1">🏪 取貨門市</p>
             <p className="font-bold text-gray-800">{order.store_name}</p>
             <p className="text-green-700 text-sm font-semibold mt-0.5">{order.county}{order.district}</p>
             <p className="text-gray-500 text-sm mt-1">{order.store_address}</p>
@@ -150,10 +150,10 @@ function OrderSuccessContent() {
             { t: '7-11 取貨付款', d: '憑訂單編號或手機號碼至門市櫃台，現金或行動支付付款' },
           ].map((s, i) => (
             <div key={i} className="flex items-start gap-3 text-sm text-blue-900">
-              <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5">{i + 1}</span>
+              <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-[13px] font-bold mt-0.5">{i + 1}</span>
               <div className="flex-1">
                 <p className="font-bold">{s.t}</p>
-                <p className="text-blue-700 text-xs mt-0.5 leading-relaxed">{s.d}</p>
+                <p className="text-blue-700 text-[13px] mt-0.5 leading-relaxed">{s.d}</p>
               </div>
             </div>
           ))}
@@ -166,7 +166,7 @@ function OrderSuccessContent() {
         <div className="space-y-3">
           <div className="bg-white rounded-xl p-4 border border-amber-100">
             <p className="font-bold text-gray-800 mb-1 flex items-center gap-2">
-              <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+              <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-[13px] font-bold">1</span>
               用「下單時填的手機號碼」查
             </p>
             <p className="text-sm text-gray-600 leading-relaxed mb-2 ml-8">不需註冊，直接到訂單查詢頁輸入手機就能查</p>
@@ -181,7 +181,7 @@ function OrderSuccessContent() {
 
           <div className="bg-white rounded-xl p-4 border border-amber-100">
             <p className="font-bold text-gray-800 mb-1 flex items-center gap-2">
-              <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+              <span className="w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-[13px] font-bold">2</span>
               註冊會員，跨裝置看訂單紀錄
             </p>
             <p className="text-sm text-gray-600 leading-relaxed mb-2 ml-8">註冊後系統會自動關聯您所有以此手機號碼的訂單，下次結帳資料也會自動帶入</p>
@@ -212,7 +212,7 @@ function OrderSuccessContent() {
             <a href="https://line.me/ti/p/yw13134" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors">
               加 LINE 找小莊
-              <span className="text-xs opacity-90">ID：yw13134</span>
+              <span className="text-[13px] opacity-90">ID：yw13134</span>
             </a>
           </div>
         </div>
@@ -233,7 +233,7 @@ function OrderSuccessContent() {
 
 export default function OrderSuccessPage() {
   return (
-    <Suspense fallback={<div className="py-20 text-center text-gray-400">載入中...</div>}>
+    <Suspense fallback={<div className="py-20 text-center text-gray-600">載入中...</div>}>
       <OrderSuccessContent />
     </Suspense>
   )
