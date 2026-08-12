@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 
@@ -11,6 +12,22 @@ import { useRouter, usePathname } from 'next/navigation'
 export default function BackHomeNav() {
   const pathname = usePathname()
   const router = useRouter()
+
+  // 往下捲時收起（避免浮動鈕長期蓋住頁面內容），往上捲或回到頂端時再出現
+  const [visible, setVisible] = useState(true)
+  const lastY = useRef(0)
+  useEffect(() => {
+    lastY.current = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      if (y < 80) setVisible(true)
+      else if (y > lastY.current + 8) setVisible(false)
+      else if (y < lastY.current - 8) setVisible(true)
+      lastY.current = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   // Don't show on homepage
   if (pathname === '/') return null
@@ -29,7 +46,7 @@ export default function BackHomeNav() {
 
   return (
     <div
-      className="fixed left-2 sm:left-3 z-30 flex gap-1.5"
+      className={`fixed left-2 sm:left-3 z-30 flex gap-1.5 transition-all duration-200 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3 pointer-events-none'}`}
       style={{ top: 'calc(64px + 8px)' }}
     >
       <button
