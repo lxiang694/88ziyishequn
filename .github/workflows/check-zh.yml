@@ -1,0 +1,25 @@
+name: 正體中文檢查
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-zh:
+    name: 簡體字 / 中國用語檢查（僅原始碼）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 安裝相依套件
+        run: npm ci
+
+      # 僅掃描原始碼，不連資料庫（DB 掃描需 service role key，請在本機執行 npm run check:zh:db）
+      - name: 檢查簡體字 / 中國用語
+        run: npm run check:zh
