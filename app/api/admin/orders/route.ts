@@ -56,5 +56,32 @@ export async function GET(req: NextRequest) {
 
   const { data, error, count } = await query
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true, data: data || [], total: count || 0, page, limit })
+
+  const rows = data || []
+
+  // 以手機號為客戶識別，算出「這筆是該客戶第幾次購買」與「累計購買次數」（不計已取消）
+  const phones = Array.from(new Set(rows.map((r: any) => r.phone).filter(Boolean)))
+  const seqByOrderId: Record<string, number> = {}
+  const totalByPhone: Record<string, number> = {}
+  if (phones.length > 0) {
+    const { data: history } = await supabaseAdmin
+      .from('orders')
+      .select('id, phone, created_at')
+      .in('phone', phones)
+      .neq('order_status', '已取消')
+      .order('created_at', { ascending: true })
+    for (const o of history || []) {
+      const p = (o as any).phone
+      totalByPhone[p] = (totalByPhone[p] || 0) + 1
+      seqByOrderId[(o as any).id] = totalByPhone[p]
+    }
+  }
+
+  const withSeq = rows.map((r: any) => ({
+    ...r,
+    purchase_seq: seqByOrderId[r.id] ?? null,        // 這筆是第幾次購買（已取消的訂單為 null）
+    customer_orders: totalByPhone[r.phone] ?? 0,      // 該客戶累計購買次數
+  }))
+
+  return NextResponse.json({ success: true, data: withSeq, total: count || 0, page, limit })
 }

@@ -129,7 +129,24 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
         </td>
         <td className="px-3 py-4"><span className="font-mono font-bold text-gray-800 text-xs">{order.order_no}</span></td>
         <td className="px-3 py-4 text-gray-500 text-xs whitespace-nowrap">{formatDateTime(order.created_at)}</td>
-        <td className="px-3 py-4 font-semibold text-gray-800">{order.customer_name}</td>
+        <td className="px-3 py-4">
+          <div className="flex items-center gap-1.5 whitespace-nowrap">
+            <span className="font-semibold text-gray-800">{order.customer_name}</span>
+            {order.purchase_seq ? (
+              <span
+                title={`此客戶累計購買 ${order.customer_orders} 次`}
+                className={'text-xs font-bold px-1.5 py-0.5 rounded-md border ' + (
+                  order.purchase_seq === 1
+                    ? 'bg-gray-100 text-gray-500 border-gray-200'
+                    : order.purchase_seq === 2
+                    ? 'bg-blue-50 text-blue-600 border-blue-200'
+                    : 'bg-orange-50 text-orange-600 border-orange-200'
+                )}>
+                {order.purchase_seq === 1 ? '新客' : `第${order.purchase_seq}次`}
+              </span>
+            ) : null}
+          </div>
+        </td>
         <td className="px-3 py-4 text-gray-600 font-mono text-sm">{order.phone}</td>
         <td className="px-3 py-4 text-gray-600 text-sm max-w-28 truncate">{order.store_name}</td>
         <td className="px-3 py-4 font-bold text-green-700 whitespace-nowrap">{formatPrice(order.total_amount)}</td>
