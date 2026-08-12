@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -26,6 +26,17 @@ export default function CheckoutPage() {
 
   // 常用收件資訊：超過 2 筆時預設只顯示 2 筆，其餘可展開／收起
   const [showAllAddresses, setShowAllAddresses] = useState(false)
+
+  // 流程內的下單按鈕是否在畫面中 — 若看得到就不再顯示底部固定條，避免同時出現兩顆「確認下單」
+  const inlineSubmitRef = useRef<HTMLDivElement>(null)
+  const [inlineSubmitVisible, setInlineSubmitVisible] = useState(false)
+  useEffect(() => {
+    const el = inlineSubmitRef.current
+    if (!el) return
+    const io = new IntersectionObserver(([e]) => setInlineSubmitVisible(e.isIntersecting), { rootMargin: '0px 0px -80px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
 
   // 手機鍵盤彈出時（輸入框聚焦）隱藏底部固定結帳條，避免蓋住正在輸入的欄位
   const [inputFocused, setInputFocused] = useState(false)
@@ -202,7 +213,7 @@ export default function CheckoutPage() {
   const totalItems = items.reduce((s, i) => s + i.quantity, 0)
 
   return (
-    <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-56 md:pb-10">
+    <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-8 md:pb-10">
       {/* Back button */}
       <div className="flex items-center gap-3 mb-4">
         <Link href="/cart" className="text-gray-600 hover:text-gray-600 p-1 rounded-lg transition-colors">
@@ -474,11 +485,11 @@ export default function CheckoutPage() {
           </div>
 
           {/* Mobile inline submit — 隨內容捲動、不會被 LINE 內建瀏覽器底部工具列或底部固定條遮住的保底下單入口 */}
-          <div className="md:hidden space-y-2">
+          <div ref={inlineSubmitRef} className="md:hidden space-y-2">
             <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-4">
               {submitting ? '處理中，請稍候...' : `確認下單・${formatPrice(totalAmount)}`}
             </button>
-            <p className="text-center text-[13px] text-gray-600">按不到下方按鈕時，可直接按這裡送出；如需修改請 LINE 客服</p>
+            <p className="text-center text-[13px] text-gray-600">下單後如需修改，請透過 LINE 聯絡客服</p>
           </div>
 
           {/* Desktop submit */}
@@ -543,7 +554,7 @@ export default function CheckoutPage() {
       </div>
 
       {/* Mobile sticky bottom（疊在底部導覽列上方；鍵盤彈出時隱藏，避免蓋住輸入框） */}
-      <div className={`fixed left-0 right-0 md:hidden bg-white border-t-2 border-gray-100 shadow-2xl z-40 ${inputFocused ? 'hidden' : ''}`}
+      <div className={`fixed left-0 right-0 md:hidden bg-white border-t-2 border-gray-100 shadow-2xl z-40 ${inputFocused || inlineSubmitVisible ? 'hidden' : ''}`}
         style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}>
         <div className="px-4 py-3">
           <div className="flex justify-between items-center mb-2">
