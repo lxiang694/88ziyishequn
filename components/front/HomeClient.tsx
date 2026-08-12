@@ -104,7 +104,11 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
         .filter(g => g.items.length > 0)
     : []
 
+  // 分類導覽目前高亮的區塊 id
+  const [activeSection, setActiveSection] = useState('')
+
   const scrollToId = (id: string) => {
+    setActiveSection(id)
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -186,6 +190,27 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
   const multiVariant = (variants: Variant[]) => variants.filter(v => v.is_active && v.stock_qty > 0).length > 1
 
   const hotProducts = products.slice(0, 8)
+
+  // 分類導覽：捲動到哪一區，該分類就高亮（scroll spy），讓導覽列一眼看出目前位置
+  useEffect(() => {
+    if (!isDefaultView) { setActiveSection(''); return }
+    const ids = [
+      ...(hotProducts.length > 0 ? ['sec-hot'] : []),
+      ...sectionGroups.map(g => 'sec-' + g.sec.key),
+    ]
+    const els = ids.map(id => document.getElementById(id)).filter(Boolean) as HTMLElement[]
+    if (els.length === 0) return
+    const io = new IntersectionObserver(entries => {
+      const visible = entries.filter(e => e.isIntersecting)
+      if (visible.length === 0) return
+      // 取最靠近吸頂列下方的那一區當作「目前所在」
+      const topMost = visible.reduce((a, b) => (a.boundingClientRect.top <= b.boundingClientRect.top ? a : b))
+      setActiveSection(topMost.target.id)
+    }, { rootMargin: '-210px 0px -65% 0px' })
+    els.forEach(el => io.observe(el))
+    return () => io.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDefaultView, sectionGroups.length, hotProducts.length, products.length])
 
   // 商品卡（供「小莊優選」「88自醫社群團購商品」共用）
   const renderProductCard = (product: Product) => {
@@ -310,7 +335,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
       <div className="max-w-5xl mx-auto px-4">
 
         {/* ─── STICKY SEARCH ─── */}
-        <div className="sticky top-16 sm:top-20 z-30 -mx-4 px-4 pt-3 pb-3 bg-gray-50/95 backdrop-blur border-b border-gray-100">
+        <div className="sticky top-16 sm:top-20 z-30 -mx-4 px-4 pt-3 bg-gray-50/95 backdrop-blur">
           <div className="relative">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-green-600 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -327,31 +352,47 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar">
+          {/* 熱門關鍵字（次要）：小字淺色，讓下方分類導覽成為視覺重點 */}
+          <div className="flex items-center gap-1.5 mt-2 pb-2.5 overflow-x-auto no-scrollbar">
             <span className="text-xs text-gray-400 flex-shrink-0">熱門</span>
             {HOT_TAGS.map(t => (
               <button key={t} onClick={() => handleSearch(t)}
-                className={`flex-shrink-0 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${search === t ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-700'}`}>
+                className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full transition-colors ${search === t ? 'bg-green-700 text-white font-semibold' : 'bg-white/80 text-gray-500 border border-gray-200 hover:text-green-700 hover:border-green-300'}`}>
                 {t}
               </button>
             ))}
           </div>
-          {/* 分類快速導覽（吸頂）：一鍵跳到各賣場分區，平衡每個分類的曝光 */}
-          {isDefaultView && sectionGroups.length > 0 && (
-            <div className="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar">
-              {hotProducts.length > 0 && (
-                <button onClick={() => scrollToId('sec-hot')}
-                  className="flex-shrink-0 text-sm font-bold px-3 py-1.5 rounded-full border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors">
-                  🔥 本週熱銷
-                </button>
-              )}
-              {sectionGroups.map(({ sec }) => (
-                <button key={sec.key} onClick={() => scrollToId('sec-' + sec.key)}
-                  className="flex-shrink-0 text-sm font-bold px-3 py-1.5 rounded-full border border-green-200 bg-white text-green-800 hover:bg-green-50 transition-colors">
-                  {sec.emoji} {sec.label}
-                </button>
-              ))}
+
+          {/* ─── 分類導覽列（主要）：獨立白色導覽帶，捲動時高亮目前分區 ─── */}
+          {isDefaultView && sectionGroups.length > 0 ? (
+            <div className="-mx-4 px-4 py-2.5 bg-white border-t border-gray-100 border-b-2 border-b-green-600 shadow-sm">
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                {hotProducts.length > 0 && (
+                  <button onClick={() => scrollToId('sec-hot')}
+                    className={`flex-shrink-0 text-sm font-bold px-4 py-2 rounded-full border-2 transition-all ${
+                      activeSection === 'sec-hot'
+                        ? 'bg-orange-500 text-white border-orange-500 shadow-md scale-105'
+                        : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'}`}>
+                    🔥 本週熱銷
+                  </button>
+                )}
+                {sectionGroups.map(({ sec, items }) => {
+                  const active = activeSection === 'sec-' + sec.key
+                  return (
+                    <button key={sec.key} onClick={() => scrollToId('sec-' + sec.key)}
+                      className={`flex-shrink-0 text-sm font-bold px-4 py-2 rounded-full border-2 transition-all ${
+                        active
+                          ? 'bg-green-700 text-white border-green-700 shadow-md scale-105'
+                          : 'bg-white text-green-800 border-green-300 hover:bg-green-50'}`}>
+                      {sec.emoji} {sec.label}
+                      <span className={`ml-1 text-xs font-semibold ${active ? 'text-green-100' : 'text-green-500'}`}>{items.length}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
+          ) : (
+            <div className="-mx-4 border-b border-gray-100" />
           )}
         </div>
 
