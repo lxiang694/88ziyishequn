@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCart } from '@/components/front/CartContext'
@@ -6,6 +7,17 @@ import { formatPrice } from '@/lib/utils'
 
 export default function CartPage() {
   const { items, removeItem, updateQty, totalAmount } = useCart()
+
+  // 流程內的結帳按鈕是否在畫面中 — 看得到就隱藏底部固定條，避免重複顯示合計金額與按鈕
+  const inlineCheckoutRef = useRef<HTMLDivElement>(null)
+  const [inlineVisible, setInlineVisible] = useState(false)
+  useEffect(() => {
+    const el = inlineCheckoutRef.current
+    if (!el) return
+    const io = new IntersectionObserver(([e]) => setInlineVisible(e.isIntersecting), { rootMargin: '0px 0px -80px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [items.length])
 
   if (items.length === 0) {
     return (
@@ -19,7 +31,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-14 sm:pt-6 pb-56 sm:pb-8">
+    <div className="max-w-2xl mx-auto px-4 pt-14 sm:pt-6 pb-8">
       <h1 className="text-2xl font-bold text-gray-800 mb-5">
         購物車
         <span className="ml-2 text-base font-normal text-gray-600">（{items.reduce((s, i) => s + i.quantity, 0)} 件）</span>
@@ -125,18 +137,18 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* Desktop checkout button */}
-      <div className="hidden sm:block">
+      {/* 流程內結帳按鈕（各裝置皆顯示；手機捲到此處時底部固定條會自動隱藏） */}
+      <div ref={inlineCheckoutRef}>
         <Link href="/checkout" className="btn-primary w-full block text-center text-xl py-4">
           前往結帳 →
         </Link>
-        <Link href="/" className="block text-center text-green-700 font-semibold mt-3 py-2 hover:underline text-base">
+        <Link href="/" className="block text-center text-green-700 font-semibold mt-3 py-3 hover:underline text-base min-h-[48px]">
           ← 繼續購物
         </Link>
       </div>
 
       {/* Mobile sticky bottom（疊在底部導覽列上方，避免被蓋住） */}
-      <div className="fixed left-0 right-0 bg-white border-t-2 border-gray-100 p-4 sm:hidden z-40 shadow-2xl"
+      <div className={`fixed left-0 right-0 bg-white border-t-2 border-gray-100 p-4 sm:hidden z-40 shadow-2xl ${inlineVisible ? 'hidden' : ''}`}
         style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}>
         <div className="flex justify-between items-center mb-3">
           <span className="text-gray-600 font-medium">合計金額</span>
