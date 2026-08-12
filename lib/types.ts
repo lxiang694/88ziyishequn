@@ -110,6 +110,10 @@ export interface Order {
   created_at: string
   updated_at: string
   order_items?: OrderItem[]
+  /** 這筆是該客戶第幾次購買（依手機號，不計已取消；已取消訂單為 null） */
+  purchase_seq?: number | null
+  /** 該客戶累計購買次數（依手機號，不計已取消） */
+  customer_orders?: number
 }
 
 // Cart types (client-side only)
