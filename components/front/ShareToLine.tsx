@@ -54,7 +54,7 @@ export default function ShareToLine({ url, title }: { url: string; title: string
           )}
         </button>
       </div>
-      <p className="text-gray-400 text-xs mt-3 text-center">分享給家人朋友，一起重視健康</p>
+      <p className="text-gray-600 text-[13px] mt-3 text-center">分享給家人朋友，一起重視健康</p>
     </div>
   )
 }

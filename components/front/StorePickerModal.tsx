@@ -57,7 +57,7 @@ export default function StorePickerModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <h3 className="text-xl font-bold text-gray-800">{title}</h3>
           <button onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl transition-colors">✕</button>
+            className="w-12 h-12 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl transition-colors">✕</button>
         </div>
         <div className="px-4 py-3 space-y-3 border-b border-gray-100 flex-shrink-0">
           <input className="form-input" placeholder="🔍 搜尋門市名稱或地址..."
@@ -75,11 +75,11 @@ export default function StorePickerModal({
         </div>
         <div className="overflow-y-auto flex-1 p-2">
           {loadingStores ? (
-            <div className="py-12 text-center text-gray-400 text-base">搜尋中...</div>
+            <div className="py-12 text-center text-gray-600 text-base">搜尋中...</div>
           ) : stores.length === 0 ? (
             <div className="py-12 text-center">
               <div className="text-3xl mb-2">🔍</div>
-              <p className="text-gray-400">找不到門市，請嘗試其他關鍵字或縣市</p>
+              <p className="text-gray-600">找不到門市，請嘗試其他關鍵字或縣市</p>
             </div>
           ) : (
             <div className="space-y-0.5">

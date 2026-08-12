@@ -42,8 +42,8 @@ export default function AdminEventDetailPage() {
     }).catch(() => {})
   }
 
-  if (loading) return <div className="py-16 text-center text-gray-400">載入中...</div>
-  if (!event) return <div className="py-16 text-center text-gray-400">找不到此活動</div>
+  if (loading) return <div className="py-16 text-center text-gray-600">載入中...</div>
+  if (!event) return <div className="py-16 text-center text-gray-600">找不到此活動</div>
 
   return (
     <div>
@@ -56,7 +56,7 @@ export default function AdminEventDetailPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">{event.title}</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <p className="text-gray-600 text-sm mt-0.5">
             共 {registrations.length} 筆報名・含同行預估 {totalPeople} 人
           </p>
         </div>
@@ -67,7 +67,7 @@ export default function AdminEventDetailPage() {
 
       <div className="card overflow-hidden">
         {registrations.length === 0 ? (
-          <div className="py-16 text-center text-gray-400">還沒有人報名</div>
+          <div className="py-16 text-center text-gray-600">還沒有人報名</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -85,7 +85,7 @@ export default function AdminEventDetailPage() {
                     <td className="px-4 py-3 font-mono text-gray-600 whitespace-nowrap">{r.phone}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{COMPANION_LABEL[r.companions] ?? r.companions}</td>
                     <td className="px-4 py-3 text-gray-600 max-w-md">{r.topic || <span className="text-gray-300">未填寫</span>}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{formatDateTime(r.created_at)}</td>
+                    <td className="px-4 py-3 text-gray-600 text-[13px] whitespace-nowrap">{formatDateTime(r.created_at)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -57,7 +57,7 @@ export default function AdminProductsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">商品管理</h1>
-          <p className="text-gray-400 text-sm mt-0.5">共 {total} 件商品</p>
+          <p className="text-gray-600 text-sm mt-0.5">共 {total} 件商品</p>
         </div>
         <Link href="/admin/products/new" className="btn-primary py-2.5 px-5 text-base">
           ＋ 新增商品
@@ -92,11 +92,11 @@ export default function AdminProductsPage() {
       {/* Product list */}
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="py-20 text-center text-gray-400 text-lg">載入中...</div>
+          <div className="py-20 text-center text-gray-600 text-lg">載入中...</div>
         ) : products.length === 0 ? (
           <div className="py-20 text-center">
             <div className="text-4xl mb-3">📦</div>
-            <p className="text-gray-400 text-lg mb-4">
+            <p className="text-gray-600 text-lg mb-4">
               {search || catFilter || pubFilter ? '找不到符合條件的商品' : '尚無商品'}
             </p>
             {!search && !catFilter && !pubFilter && (
@@ -127,7 +127,7 @@ export default function AdminProductsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-2 flex-wrap">
                       <p className="font-bold text-gray-800 text-base">{p.product_name}</p>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0
+                      <span className={`text-[13px] font-bold px-2 py-0.5 rounded-full flex-shrink-0
                         ${p.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                         {p.is_published ? '已上架' : '未上架'}
                       </span>
@@ -135,7 +135,7 @@ export default function AdminProductsPage() {
                     {cats.length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {cats.map((c: string) => (
-                          <span key={c} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{c}</span>
+                          <span key={c} className="text-[13px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{c}</span>
                         ))}
                       </div>
                     )}
@@ -146,7 +146,7 @@ export default function AdminProductsPage() {
                       <span className={`font-semibold ${outOfStock ? 'text-red-500' : lowStock ? 'text-orange-500' : 'text-gray-500'}`}>
                         {outOfStock ? '⚠️ 已售完' : lowStock ? `⚠️ 庫存剩 ${totalStock}` : `庫存 ${totalStock} 件`}
                       </span>
-                      <span className="text-gray-400">{variants.length} 規格</span>
+                      <span className="text-gray-600">{variants.length} 規格</span>
                     </div>
                   </div>
 

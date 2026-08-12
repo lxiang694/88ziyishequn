@@ -66,7 +66,7 @@ export default function MemberOrdersPage() {
     }
   }
 
-  if (loading || loadingData) return <div className="py-20 text-center text-gray-400">載入中...</div>
+  if (loading || loadingData) return <div className="py-20 text-center text-gray-600">載入中...</div>
   if (!user) return null
 
   return (
@@ -85,7 +85,7 @@ export default function MemberOrdersPage() {
         {orders.length === 0 ? (
           <div className="bg-white rounded-2xl p-10 text-center border border-gray-100">
             <div className="text-5xl mb-3">🛒</div>
-            <p className="text-gray-400 mb-5">還沒有訂單</p>
+            <p className="text-gray-600 mb-5">還沒有訂單</p>
             <Link href="/" className="btn-primary inline-flex">去逛逛</Link>
           </div>
         ) : (
@@ -96,21 +96,21 @@ export default function MemberOrdersPage() {
                   className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors">
                   <div className="flex-1 min-w-0 text-left">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="font-mono text-xs font-bold text-gray-700">{order.order_no}</p>
-                      <span className={`status-badge ${getStatusColor(order.order_status)} text-xs`}>{order.order_status}</span>
+                      <p className="font-mono text-[13px] font-bold text-gray-700">{order.order_no}</p>
+                      <span className={`status-badge ${getStatusColor(order.order_status)} text-[13px]`}>{order.order_status}</span>
                     </div>
                     <p className="text-sm text-gray-700 truncate">{order.store_name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{formatDateTime(order.created_at)} · {order.items_count} 件</p>
+                    <p className="text-[13px] text-gray-600 mt-0.5">{formatDateTime(order.created_at)} · {order.items_count} 件</p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="font-bold text-green-700 text-lg">{formatPrice(order.total_amount)}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{expanded === order.id ? '收起 ▲' : '展開 ▼'}</p>
+                    <p className="text-[13px] text-gray-600 mt-0.5">{expanded === order.id ? '收起 ▲' : '展開 ▼'}</p>
                   </div>
                 </button>
 
                 {expanded === order.id && (
                   <div className="border-t border-gray-100 p-4 bg-gray-50/50">
-                    <p className="text-xs font-bold text-gray-500 mb-3 tracking-wide">商品明細</p>
+                    <p className="text-[13px] font-bold text-gray-500 mb-3 tracking-wide">商品明細</p>
                     <div className="space-y-2 mb-4">
                       {(order.order_items || []).map((item: any) => (
                         <div key={item.id} className="flex gap-3 items-center bg-white rounded-xl p-2.5">
@@ -121,14 +121,14 @@ export default function MemberOrdersPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold text-gray-800 line-clamp-1">{item.product_name_snapshot}</p>
-                            <p className="text-xs text-gray-500">{item.variant_name_snapshot} × {item.quantity}</p>
+                            <p className="text-[13px] text-gray-500">{item.variant_name_snapshot} × {item.quantity}</p>
                           </div>
                           <p className="font-bold text-gray-700 text-sm flex-shrink-0">{formatPrice(item.subtotal)}</p>
                         </div>
                       ))}
                     </div>
 
-                    <div className="text-xs text-gray-500 mb-4 space-y-1">
+                    <div className="text-[13px] text-gray-500 mb-4 space-y-1">
                       <p>📍 取貨門市：{order.store_name} ({order.county}{order.district})</p>
                       <p>📞 聯絡手機：{order.phone}</p>
                     </div>

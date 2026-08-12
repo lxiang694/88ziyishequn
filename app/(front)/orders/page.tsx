@@ -36,11 +36,11 @@ function StatusProgress({ status }: { status: string }) {
         return (
           <div key={step} className="flex items-center flex-shrink-0">
             <div className="flex flex-col items-center gap-1">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors
-                ${done ? 'bg-green-600 text-white' : active ? 'bg-green-700 text-white ring-2 ring-green-300' : 'bg-gray-100 text-gray-400'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-bold transition-colors
+                ${done ? 'bg-green-600 text-white' : active ? 'bg-green-700 text-white ring-2 ring-green-300' : 'bg-gray-100 text-gray-600'}`}>
                 {done ? '✓' : idx}
               </div>
-              <span className={`text-xs font-medium whitespace-nowrap ${active ? 'text-green-700 font-bold' : done ? 'text-green-600' : 'text-gray-400'}`}>
+              <span className={`text-[13px] font-medium whitespace-nowrap ${active ? 'text-green-700 font-bold' : done ? 'text-green-600' : 'text-gray-600'}`}>
                 {step}
               </span>
             </div>
@@ -76,7 +76,7 @@ function ContactXiaojuangCard({ context }: { context: 'no-orders' | 'with-orders
           </svg>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-gray-900 text-lg leading-snug">{titleMap[context]}</p>
+          <p className="font-bold text-gray-900 text-lg leading-relaxed">{titleMap[context]}</p>
           <p className="text-sm text-gray-600 mt-1 leading-relaxed">{subMap[context]}</p>
         </div>
       </div>
@@ -109,7 +109,7 @@ function ContactXiaojuangCard({ context }: { context: 'no-orders' | 'with-orders
         加 LINE 找小莊
       </a>
 
-      <div className="mt-3 flex flex-col sm:flex-row gap-2 items-center justify-center text-xs text-gray-500">
+      <div className="mt-3 flex flex-col sm:flex-row gap-2 items-center justify-center text-[13px] text-gray-500">
         <span>LINE ID：<strong className="text-gray-700 font-mono">{XIAOJUANG_LINE_ID}</strong></span>
         <span className="hidden sm:inline">·</span>
         <span>通常 1 小時內回覆（深夜除外）</span>
@@ -165,7 +165,7 @@ function OrderQueryContent() {
             {loading ? '查詢中...' : '🔍 查詢訂單'}
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+        <p className="text-[13px] text-gray-600 mt-2 leading-relaxed">
           💡 系統會找出所有以這個手機號碼下單的訂單記錄
         </p>
       </div>
@@ -206,12 +206,12 @@ function OrderQueryContent() {
                   <div className={`px-5 py-3 ${order.order_status === '已取消' ? 'bg-red-50' : order.order_status === '已到店' ? 'bg-green-50' : 'bg-gray-50'}`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-xs text-gray-500 mb-0.5">訂單編號</p>
+                        <p className="text-[13px] text-gray-500 mb-0.5">訂單編號</p>
                         <p className="font-bold text-gray-800 font-mono tracking-wide">{order.order_no}</p>
                       </div>
                       <span className={`status-badge ${getStatusColor(order.order_status)}`}>{order.order_status}</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">{formatDateTime(order.created_at)}</p>
+                    <p className="text-[13px] text-gray-600 mt-1">{formatDateTime(order.created_at)}</p>
                   </div>
 
                   {/* Progress */}
@@ -221,7 +221,7 @@ function OrderQueryContent() {
 
                   {/* Store */}
                   <div className="px-5 py-3 bg-gradient-to-r from-green-50/50 to-transparent border-b border-gray-50">
-                    <p className="text-xs font-semibold text-gray-500 mb-1">📍 取貨門市</p>
+                    <p className="text-[13px] font-semibold text-gray-500 mb-1">📍 取貨門市</p>
                     <p className="font-bold text-gray-800">{order.store_name}</p>
                     <p className="text-gray-500 text-sm">{order.county}{order.district} · {order.store_address}</p>
                   </div>
@@ -238,7 +238,7 @@ function OrderQueryContent() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-800 text-sm line-clamp-1">{item.product_name_snapshot}</p>
-                            <p className="text-gray-500 text-xs">{item.variant_name_snapshot} × {item.quantity}</p>
+                            <p className="text-gray-500 text-[13px]">{item.variant_name_snapshot} × {item.quantity}</p>
                           </div>
                           <p className="font-bold text-gray-700 text-sm flex-shrink-0">{formatPrice(item.subtotal)}</p>
                         </div>
@@ -272,5 +272,5 @@ function OrderQueryContent() {
 }
 
 export default function OrdersPage() {
-  return <Suspense fallback={<div className="py-20 text-center text-gray-400">載入中...</div>}><OrderQueryContent /></Suspense>
+  return <Suspense fallback={<div className="py-20 text-center text-gray-600">載入中...</div>}><OrderQueryContent /></Suspense>
 }

@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
               若帳號存在，您將收到一封含重設連結的信件。<br />
               請到信箱點擊連結重新設定密碼
             </p>
-            <p className="text-sm text-gray-400 mb-6">沒收到？請檢查垃圾郵件夾</p>
+            <p className="text-sm text-gray-600 mb-6">沒收到？請檢查垃圾郵件夾</p>
             <Link href="/login" className="btn-primary w-full block">返回登入</Link>
           </div>
         ) : (

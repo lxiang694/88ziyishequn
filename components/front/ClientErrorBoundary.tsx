@@ -56,7 +56,7 @@ export default class ClientErrorBoundary extends Component<Props, State> {
               清除狀態並回首頁
             </button>
             {this.state.error?.message && (
-              <details className="mt-6 text-xs text-gray-400">
+              <details className="mt-6 text-[13px] text-gray-600">
                 <summary className="cursor-pointer">技術詳情</summary>
                 <pre className="text-left mt-2 p-2 bg-gray-50 rounded overflow-auto max-h-32">
                   {this.state.error.message}

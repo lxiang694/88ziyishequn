@@ -199,10 +199,10 @@ export default function ArticleAudioPlayer({ title, content }: Props) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-bold text-gray-800 text-base">語音導讀</p>
-          <p className="text-xs text-gray-500">點擊播放，邊聽邊看更輕鬆</p>
+          <p className="text-[13px] text-gray-500">點擊播放，邊聽邊看更輕鬆</p>
         </div>
         {selectedVoice && (
-          <p className="hidden sm:block text-xs text-gray-400 truncate max-w-[120px]" title={selectedVoice.name}>
+          <p className="hidden sm:block text-[13px] text-gray-600 truncate max-w-[120px]" title={selectedVoice.name}>
             {selectedVoice.name}
           </p>
         )}
@@ -217,7 +217,7 @@ export default function ArticleAudioPlayer({ title, content }: Props) {
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-xs text-amber-700 mt-1.5 font-medium">
+          <p className="text-[13px] text-amber-700 mt-1.5 font-medium">
             {currentIdx + 1} / {total} 段 · {progress}%
           </p>
         </div>
@@ -293,7 +293,7 @@ export default function ArticleAudioPlayer({ title, content }: Props) {
         )}
       </div>
 
-      <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+      <p className="text-[13px] text-gray-600 mt-3 leading-relaxed">
         💡 提示：使用 Chrome 或 Edge 瀏覽器音質最好；iPhone Safari 可使用系統內建語音
       </p>
     </div>

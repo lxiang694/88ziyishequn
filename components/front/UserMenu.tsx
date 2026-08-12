@@ -42,7 +42,7 @@ export default function UserMenu() {
           <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
             <div className="p-4 border-b border-gray-100 bg-green-50/50">
               <p className="font-bold text-gray-800 text-sm">您好！</p>
-              <p className="text-xs text-gray-500 mt-0.5">登入後享受更多服務</p>
+              <p className="text-[13px] text-gray-500 mt-0.5">登入後享受更多服務</p>
             </div>
             <div className="py-2">
               <Link href="/login" onClick={() => setOpen(false)}
@@ -61,7 +61,7 @@ export default function UserMenu() {
                 <span className="text-lg flex-shrink-0">📦</span>
                 <div className="leading-tight">
                   <p className="text-sm font-semibold">用手機查訂單</p>
-                  <p className="text-xs text-gray-400 mt-0.5">不需註冊也能查</p>
+                  <p className="text-[13px] text-gray-600 mt-0.5">不需註冊也能查</p>
                 </div>
               </Link>
             </div>
@@ -106,7 +106,7 @@ export default function UserMenu() {
         <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
           <div className="p-4 border-b border-gray-100 bg-green-50/50">
             <p className="font-bold text-gray-800 text-sm">{displayName}</p>
-            <p className="text-xs text-gray-500 mt-0.5 truncate">{user.email}</p>
+            <p className="text-[13px] text-gray-500 mt-0.5 truncate">{user.email}</p>
           </div>
           <div className="py-2">
             {[

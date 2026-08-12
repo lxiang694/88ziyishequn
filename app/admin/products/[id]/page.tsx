@@ -15,7 +15,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     })
   }, [params.id])
 
-  if (loading) return <div className="py-16 text-center text-gray-400">載入中...</div>
+  if (loading) return <div className="py-16 text-center text-gray-600">載入中...</div>
   if (!product) return <div className="py-16 text-center text-gray-500">商品不存在</div>
 
   return (

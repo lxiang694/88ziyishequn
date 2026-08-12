@@ -198,7 +198,7 @@ export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
         <div>
           <label className="form-label">
             網址識別碼 (slug) <span className="text-red-500">*</span>
-            <span className="ml-2 text-gray-400 font-normal text-xs">英文小寫、數字、減號</span>
+            <span className="ml-2 text-gray-600 font-normal text-[13px]">英文小寫、數字、減號</span>
           </label>
           <input
             type="text"
@@ -207,7 +207,7 @@ export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
             onChange={e => update('slug', e.target.value)}
             placeholder="bone-joint-degeneration"
           />
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-[13px] text-gray-600 mt-1">
             完整網址：healthec.vercel.app/health-articles/<strong>{data.slug || 'your-slug'}</strong>
           </p>
         </div>
@@ -251,7 +251,7 @@ export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
             <label className="border-2 border-dashed border-gray-300 hover:border-green-400 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer max-w-md transition-colors">
               <span className="text-3xl mb-2">📷</span>
               <span className="text-gray-600 font-bold text-sm">點擊上傳封面圖</span>
-              <span className="text-gray-400 text-xs mt-1">JPG、PNG，最大 5MB</span>
+              <span className="text-gray-600 text-[13px] mt-1">JPG、PNG，最大 5MB</span>
               <input
                 type="file" accept="image/*" className="hidden"
                 onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], 'cover')}
@@ -299,7 +299,7 @@ export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
               />
             </label>
           </label>
-          <div className="mb-2 text-xs text-gray-500 bg-gray-50 rounded-lg p-3 leading-relaxed">
+          <div className="mb-2 text-[13px] text-gray-500 bg-gray-50 rounded-lg p-3 leading-relaxed">
             <strong>格式說明：</strong>
             <code className="bg-white px-1 rounded">## 大標題</code>、
             <code className="bg-white px-1 rounded">### 小標題</code>、
@@ -309,12 +309,12 @@ export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
             <code className="bg-white px-1 rounded">![圖說](網址)</code>。段落間用空行分隔。
           </div>
           <div className="mb-2 flex items-center justify-between gap-2 bg-green-50 border border-green-100 rounded-lg p-3">
-            <p className="text-xs text-green-800 leading-relaxed">
+            <p className="text-[13px] text-green-800 leading-relaxed">
               <strong>💡 問題導向寫法（建議）：</strong>先分型 → 飲食 → 生活 → 營養素搭配（主力/時間/來源）→ 就醫提醒 → 導到自測，讀者更容易對號入座並行動。
             </p>
             <button type="button"
               onClick={() => { if (!data.content.trim() || confirm('將以問題導向模板覆蓋目前內容？')) update('content', PROBLEM_TEMPLATE) }}
-              className="flex-shrink-0 text-xs font-bold text-green-700 border-2 border-green-200 hover:bg-green-100 rounded-lg px-3 py-1.5 whitespace-nowrap">
+              className="flex-shrink-0 text-[13px] font-bold text-green-700 border-2 border-green-200 hover:bg-green-100 rounded-lg px-3 py-1.5 whitespace-nowrap">
               套用模板
             </button>
           </div>

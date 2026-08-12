@@ -82,15 +82,15 @@ export default function LoginPrompt({
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-0">
             <p className={`font-bold ${t.accent} text-sm`}>👤 {title}</p>
-            <p className="text-xs text-gray-600 mt-0.5">{message}</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">{message}</p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <Link href={buildHref('/login')}
-              className={`border-2 ${t.secondary} font-bold text-xs px-3 py-2 rounded-xl transition-colors whitespace-nowrap`}>
+              className={`border-2 ${t.secondary} font-bold text-[13px] px-3 py-2 rounded-xl transition-colors whitespace-nowrap`}>
               登入
             </Link>
             <Link href={buildHref('/signup')}
-              className={`${t.button} text-white font-bold text-xs px-3 py-2 rounded-xl transition-colors whitespace-nowrap`}>
+              className={`${t.button} text-white font-bold text-[13px] px-3 py-2 rounded-xl transition-colors whitespace-nowrap`}>
               註冊會員
             </Link>
           </div>

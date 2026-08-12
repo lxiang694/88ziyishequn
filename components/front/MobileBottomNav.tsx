@@ -53,7 +53,7 @@ export default function MobileBottomNav() {
   }
 
   const itemCls = (active: boolean) =>
-    `flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${active ? 'text-green-700' : 'text-gray-400'}`
+    `flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${active ? 'text-green-700' : 'text-gray-600'}`
 
   return (
     <>
@@ -65,17 +65,17 @@ export default function MobileBottomNav() {
             <div className="flex justify-center pb-2"><div className="w-10 h-1 bg-gray-300 rounded-full" /></div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-gray-800 text-lg">依健康方向選購</h3>
-              <button onClick={() => setShowCats(false)} className="text-gray-400 text-xl w-8 h-8">✕</button>
+              <button onClick={() => setShowCats(false)} className="text-gray-600 text-2xl w-12 h-12 flex items-center justify-center">✕</button>
             </div>
             {cats.length === 0 ? (
-              <p className="text-center text-gray-400 py-8">載入中...</p>
+              <p className="text-center text-gray-600 py-8 text-base">載入中...</p>
             ) : (
               <div className="grid grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto">
                 {cats.map(c => (
                   <button key={c.id} onClick={() => goCategory(c.slug)}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 border-gray-100 hover:border-green-300 active:bg-green-50 transition-colors">
                     <span className="text-2xl">{CATEGORY_ICONS[c.slug] || '💊'}</span>
-                    <span className="text-xs font-semibold text-gray-700 text-center leading-tight">{c.name}</span>
+                    <span className="text-[15px] font-semibold text-gray-700 text-center leading-snug">{c.name}</span>
                   </button>
                 ))}
               </div>
@@ -90,24 +90,24 @@ export default function MobileBottomNav() {
         <div className="flex items-stretch h-full max-w-5xl mx-auto">
           <Link href="/" className={itemCls(isHome)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3v-6h6v6h3a1 1 0 001-1V10" /></svg>
-            <span className="text-xs font-semibold">首頁</span>
+            <span className="text-[13px] font-semibold">首頁</span>
           </Link>
           <button onClick={() => setShowCats(true)} className={itemCls(false)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-            <span className="text-xs font-semibold">分類</span>
+            <span className="text-[13px] font-semibold">分類</span>
           </button>
           <Link href="/cart" className={itemCls(isCart)}>
             <div className="relative">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
               {totalItems > 0 && (
-                <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{totalItems > 9 ? '9+' : totalItems}</span>
+                <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[12px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{totalItems > 9 ? '9+' : totalItems}</span>
               )}
             </div>
-            <span className="text-xs font-semibold">購物車</span>
+            <span className="text-[13px] font-semibold">購物車</span>
           </Link>
           <Link href="/account" className={itemCls(isAccount)}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-            <span className="text-xs font-semibold">會員</span>
+            <span className="text-[13px] font-semibold">會員</span>
           </Link>
         </div>
       </nav>

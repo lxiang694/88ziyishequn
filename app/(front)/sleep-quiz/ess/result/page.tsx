@@ -38,7 +38,7 @@ export default function ESSResult({
         <div className="text-center mb-6">
           <p className="text-sm text-gray-500 mb-2">您的 ESS 報告</p>
           <h1 className="text-2xl font-bold text-gray-900">愛潑沃斯嗜睡量表</h1>
-          <p className="text-xs text-gray-400 mt-1">日間嗜睡篩查 · {new Date().toLocaleDateString('zh-TW')}</p>
+          <p className="text-[13px] text-gray-600 mt-1">日間嗜睡篩查 · {new Date().toLocaleDateString('zh-TW')}</p>
         </div>
 
         {/* OSA 紅色警告 — 最重要的提示放最上方 */}
@@ -54,7 +54,7 @@ export default function ESSResult({
                 </p>
                 <div className="bg-white/70 rounded-xl p-3 mb-3">
                   <p className="text-sm font-bold text-red-800 mb-1">⚠️ OSA 長期不治療的後果</p>
-                  <ul className="text-xs text-red-700 space-y-0.5">
+                  <ul className="text-[13px] text-red-700 space-y-0.5">
                     <li>· 顯著抬高心血管疾病、腦卒中風險</li>
                     <li>· 增加猝死風險</li>
                     <li>· 中華醫學會 2024 版指南特別強調此組合需單獨關注</li>
@@ -79,7 +79,7 @@ export default function ESSResult({
           <div className="bg-white/70 backdrop-blur rounded-2xl p-4">
             <div className="flex items-baseline justify-center gap-2 mb-3">
               <span className={`text-5xl font-bold ${c.accent}`}>{validScore}</span>
-              <span className="text-gray-400 text-lg">/ 24 分</span>
+              <span className="text-gray-600 text-lg">/ 24 分</span>
             </div>
             <div className="relative h-3 rounded-full bg-gray-200 overflow-hidden mb-2">
               <div className="absolute inset-0 flex">
@@ -91,10 +91,10 @@ export default function ESSResult({
               <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-gray-700 rounded-full shadow-lg"
                 style={{ left: `calc(${(validScore / 24) * 100}% - 8px)` }} />
             </div>
-            <div className="flex justify-between text-[10px] text-gray-500 px-1 mt-1">
+            <div className="flex justify-between text-[13px] text-gray-500 px-1 mt-1">
               <span>0</span><span>8</span><span>10</span><span>16</span><span>24</span>
             </div>
-            <div className="flex justify-between text-[10px] text-gray-400 px-1 mt-0.5">
+            <div className="flex justify-between text-[13px] text-gray-600 px-1 mt-0.5">
               <span>正常</span><span>輕</span><span>中</span><span>重</span>
             </div>
           </div>
@@ -111,7 +111,7 @@ export default function ESSResult({
         <details className="bg-white rounded-2xl border border-gray-100 p-5 mb-6 group">
           <summary className="font-bold text-gray-700 cursor-pointer list-none flex items-center justify-between">
             <span>🔍 什麼是阻塞性睡眠呼吸中止症（OSA）？</span>
-            <span className="text-gray-400 text-xs group-open:rotate-180 transition-transform">▼</span>
+            <span className="text-gray-600 text-[13px] group-open:rotate-180 transition-transform">▼</span>
           </summary>
           <div className="mt-3 text-sm text-gray-600 leading-relaxed space-y-2">
             <p>
@@ -177,17 +177,17 @@ export default function ESSResult({
           <Link href="/sleep-quiz/start" className="bg-white border-2 border-gray-100 hover:border-cyan-300 rounded-2xl p-4 text-center transition-colors">
             <div className="text-3xl mb-1">📊</div>
             <p className="font-bold text-gray-800 text-sm">ISI 量表</p>
-            <p className="text-xs text-gray-400 mt-0.5">失眠嚴重度</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">失眠嚴重度</p>
           </Link>
           <Link href="/sleep-quiz/psqi" className="bg-white border-2 border-gray-100 hover:border-cyan-300 rounded-2xl p-4 text-center transition-colors">
             <div className="text-3xl mb-1">🌙</div>
             <p className="font-bold text-gray-800 text-sm">PSQI 完整評估</p>
-            <p className="text-xs text-gray-400 mt-0.5">19 題深入版</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">19 題深入版</p>
           </Link>
           <Link href="/sleep-tracker" className="bg-white border-2 border-gray-100 hover:border-cyan-300 rounded-2xl p-4 text-center transition-colors">
             <div className="text-3xl mb-1">📅</div>
             <p className="font-bold text-gray-800 text-sm">21 天打卡</p>
-            <p className="text-xs text-gray-400 mt-0.5">習慣養成</p>
+            <p className="text-[13px] text-gray-600 mt-0.5">習慣養成</p>
           </Link>
         </div>
 

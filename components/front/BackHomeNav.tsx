@@ -34,7 +34,7 @@ export default function BackHomeNav() {
     >
       <button
         onClick={handleBack}
-        className="flex items-center gap-1 bg-white/95 backdrop-blur border-2 border-gray-200 hover:border-green-500 hover:text-green-700 text-gray-700 rounded-full pl-2.5 pr-3 py-1.5 text-xs font-bold shadow-md transition-colors"
+        className="flex items-center gap-1 bg-white/95 backdrop-blur border-2 border-gray-200 hover:border-green-500 hover:text-green-700 text-gray-700 rounded-full pl-2.5 pr-3 py-1.5 text-[13px] font-bold shadow-md transition-colors"
         aria-label="返回上一頁"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +45,7 @@ export default function BackHomeNav() {
 
       <Link
         href="/"
-        className="flex items-center gap-1 bg-white/95 backdrop-blur border-2 border-gray-200 hover:border-green-500 hover:text-green-700 text-gray-700 rounded-full pl-2.5 pr-3 py-1.5 text-xs font-bold shadow-md transition-colors"
+        className="flex items-center gap-1 bg-white/95 backdrop-blur border-2 border-gray-200 hover:border-green-500 hover:text-green-700 text-gray-700 rounded-full pl-2.5 pr-3 py-1.5 text-[13px] font-bold shadow-md transition-colors"
         aria-label="回首頁"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

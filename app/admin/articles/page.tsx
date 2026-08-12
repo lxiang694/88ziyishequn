@@ -43,13 +43,13 @@ export default function AdminArticlesPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">健康知識文章</h1>
-          <p className="text-gray-400 text-sm mt-0.5">共 {articles.length} 篇</p>
+          <p className="text-gray-600 text-sm mt-0.5">共 {articles.length} 篇</p>
         </div>
         <Link href="/admin/articles/new" className="btn-primary">+ 新增文章</Link>
       </div>
 
       {loading ? (
-        <div className="py-16 text-center text-gray-400">載入中...</div>
+        <div className="py-16 text-center text-gray-600">載入中...</div>
       ) : articles.length === 0 ? (
         <div className="card p-12 text-center">
           <div className="text-5xl mb-3">📝</div>
@@ -67,7 +67,7 @@ export default function AdminArticlesPage() {
                   <div className="w-full h-full flex items-center justify-center text-4xl">📝</div>
                 )}
                 {!article.is_published && (
-                  <div className="absolute top-2 left-2 bg-gray-700/90 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  <div className="absolute top-2 left-2 bg-gray-700/90 text-white text-[13px] font-bold px-2 py-0.5 rounded-full">
                     草稿
                   </div>
                 )}
@@ -76,12 +76,12 @@ export default function AdminArticlesPage() {
                 <h3 className="font-bold text-gray-900 text-base leading-snug mb-1.5 line-clamp-2">
                   {article.title}
                 </h3>
-                <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
+                <div className="flex items-center gap-2 text-[13px] text-gray-600 mb-3">
                   <span>📖 {article.reading_minutes} 分鐘</span>
                   <span>·</span>
                   <span>👁 {article.view_count}</span>
                 </div>
-                <p className="text-xs text-gray-400 mb-3">{formatDateTime(article.created_at)}</p>
+                <p className="text-[13px] text-gray-600 mb-3">{formatDateTime(article.created_at)}</p>
                 <div className="mt-auto flex gap-2">
                   <Link
                     href={`/admin/articles/${article.id}`}

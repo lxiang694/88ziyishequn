@@ -84,7 +84,7 @@ function ProductMini({ product }: { product: any }) {
           <Link href={`/products/${product.slug}`}>
             <h3 className="font-bold text-gray-900 text-sm leading-snug mb-1 hover:text-green-700 line-clamp-2">{product.product_name}</h3>
           </Link>
-          {product.short_intro && <p className="text-xs text-gray-500 line-clamp-2 mb-2">{product.short_intro}</p>}
+          {product.short_intro && <p className="text-[13px] text-gray-500 line-clamp-2 mb-2">{product.short_intro}</p>}
           {minPrice !== null && <p className="text-green-700 font-bold text-base">{formatPrice(minPrice)}</p>}
         </div>
         <div className="mt-2">
@@ -119,7 +119,7 @@ export default async function QuizResultPage({
 
         {/* 個人化分析摘要 */}
         <div className="bg-gradient-to-br from-green-700 to-emerald-600 rounded-2xl p-5 text-white shadow-md mb-6">
-          <p className="text-xs font-bold text-green-100 mb-1.5 tracking-wide">📋 個人化分析</p>
+          <p className="text-[13px] font-bold text-green-100 mb-1.5 tracking-wide">📋 個人化分析</p>
           <p className="text-sm leading-relaxed">{analysis.summary}</p>
         </div>
 
@@ -134,8 +134,8 @@ export default async function QuizResultPage({
                     <span className="text-2xl">{d.icon}</span>
                     <h2 className="text-lg font-bold text-gray-900">{d.name}保健方案</h2>
                     {d.primary
-                      ? <span className="text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">您關注的</span>
-                      : <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">建議留意</span>}
+                      ? <span className="text-[13px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">您關注的</span>
+                      : <span className="text-[13px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">建議留意</span>}
                   </div>
                   <p className="text-sm text-gray-500 leading-relaxed">{d.detailAdvice || d.advice}</p>
                 </div>
@@ -175,7 +175,7 @@ export default async function QuizResultPage({
 
         {/* Empty state */}
         {recommendations.length === 0 && (
-          <div className="text-center py-10 text-gray-400">
+          <div className="text-center py-10 text-gray-600">
             <p className="text-5xl mb-4">🔍</p>
             <p>目前沒有找到符合的商品，請查看所有商品</p>
           </div>
@@ -201,7 +201,7 @@ export default async function QuizResultPage({
         {/* Disclaimer */}
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-center">
           <p className="text-sm text-amber-700 font-semibold mb-1">⚠️ 健康聲明</p>
-          <p className="text-xs text-amber-600 leading-relaxed">
+          <p className="text-[13px] text-amber-600 leading-relaxed">
             本測驗結果僅供參考，所有保健品補充請先諮詢您的主治醫師。
             本網站所有商品非藥品，不具備診斷、治療或預防疾病之效果。
           </p>

@@ -75,7 +75,7 @@ function LoginForm() {
                 className="form-input pr-12"
                 value={password} onChange={e => setPassword(e.target.value)} placeholder="輸入密碼" />
               <button type="button" onClick={() => setShowPwd(s => !s)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold">
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-600 text-[13px] font-bold">
                 {showPwd ? '隱藏' : '顯示'}
               </button>
             </div>
@@ -100,7 +100,7 @@ function LoginForm() {
         {/* Guest order query — for users who don't want to register */}
         <div className="mt-8 bg-amber-50 border border-amber-200 rounded-2xl p-4">
           <p className="text-sm font-bold text-amber-900 mb-1">📦 不想註冊？沒關係</p>
-          <p className="text-xs text-amber-700 leading-relaxed mb-3">
+          <p className="text-[13px] text-amber-700 leading-relaxed mb-3">
             您可以直接用<strong>下單時填的手機號碼</strong>查詢訂單狀態，不必註冊會員。
           </p>
           <Link
@@ -114,7 +114,7 @@ function LoginForm() {
           </Link>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-8 leading-relaxed">
+        <p className="text-center text-[13px] text-gray-600 mt-8 leading-relaxed">
           有問題嗎？右下角 LINE 真人客服即時回覆
         </p>
       </div>
@@ -124,7 +124,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="py-20 text-center text-gray-400">載入中...</div>}>
+    <Suspense fallback={<div className="py-20 text-center text-gray-600">載入中...</div>}>
       <LoginForm />
     </Suspense>
   )

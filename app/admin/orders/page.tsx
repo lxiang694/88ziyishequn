@@ -123,19 +123,19 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
           <input type="checkbox" className="w-4 h-4 rounded accent-green-700 cursor-pointer" checked={selected} onChange={() => onToggleSelect(order.id)} />
         </td>
         <td className="pl-2 pr-2 py-4 w-8">
-          <div className={'w-6 h-6 flex items-center justify-center text-gray-400 transition-transform duration-200 ' + (expanded ? 'rotate-90 text-green-600' : '')}>
+          <div className={'w-6 h-6 flex items-center justify-center text-gray-600 transition-transform duration-200 ' + (expanded ? 'rotate-90 text-green-600' : '')}>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
           </div>
         </td>
-        <td className="px-3 py-4"><span className="font-mono font-bold text-gray-800 text-xs">{order.order_no}</span></td>
-        <td className="px-3 py-4 text-gray-500 text-xs whitespace-nowrap">{formatDateTime(order.created_at)}</td>
+        <td className="px-3 py-4"><span className="font-mono font-bold text-gray-800 text-[13px]">{order.order_no}</span></td>
+        <td className="px-3 py-4 text-gray-500 text-[13px] whitespace-nowrap">{formatDateTime(order.created_at)}</td>
         <td className="px-3 py-4">
           <div className="flex items-center gap-1.5 whitespace-nowrap">
             <span className="font-semibold text-gray-800">{order.customer_name}</span>
             {order.purchase_seq ? (
               <span
                 title={`此客戶累計購買 ${order.customer_orders} 次`}
-                className={'text-xs font-bold px-1.5 py-0.5 rounded-md border ' + (
+                className={'text-[13px] font-bold px-1.5 py-0.5 rounded-md border ' + (
                   order.purchase_seq === 1
                     ? 'bg-gray-100 text-gray-500 border-gray-200'
                     : order.purchase_seq === 2
@@ -163,17 +163,17 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
         <tr className="bg-green-50/40">
           <td colSpan={10} className="px-4 pb-5 pt-1">
             {loadingDetail ? (
-              <div className="py-8 text-center text-gray-400">載入詳情中...</div>
+              <div className="py-8 text-center text-gray-600">載入詳情中...</div>
             ) : detail ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2">
                 {/* Customer */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-bold text-gray-600 text-xs uppercase tracking-wider flex items-center gap-2">
+                    <h4 className="font-bold text-gray-600 text-[13px] uppercase tracking-wider flex items-center gap-2">
                       <span className="w-5 h-5 bg-blue-50 rounded flex items-center justify-center">👤</span>客戶資料
                     </h4>
                     <button onClick={e => { e.stopPropagation(); handleCopyInfo() }}
-                      className="flex items-center gap-1 text-xs font-bold text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 rounded-lg px-2 py-1 transition-colors">
+                      className="flex items-center gap-1 text-[13px] font-bold text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 rounded-lg px-2 py-1 transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
@@ -184,11 +184,11 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                     {[
                       { l: '姓名', v: detail.customer_name, copy: detail.customer_name },
                       { l: '手機', v: detail.phone, copy: detail.phone },
-                      { l: 'LINE ID', v: detail.line_id || <span className="text-gray-400">未提供</span>, copy: '' },
-                      { l: '備註', v: detail.note || <span className="text-gray-400">無</span>, copy: '' },
+                      { l: 'LINE ID', v: detail.line_id || <span className="text-gray-600">未提供</span>, copy: '' },
+                      { l: '備註', v: detail.note || <span className="text-gray-600">無</span>, copy: '' },
                     ].map((f, i) => (
                       <div key={i} className="flex items-start gap-3">
-                        <span className="text-gray-400 text-xs w-14 flex-shrink-0 pt-0.5">{f.l}</span>
+                        <span className="text-gray-600 text-[13px] w-14 flex-shrink-0 pt-0.5">{f.l}</span>
                         <span className="text-sm font-semibold text-gray-800 break-all flex-1">{f.v}</span>
                         {f.copy && <CopyIconButton value={f.copy} label={f.l} />}
                       </div>
@@ -197,7 +197,7 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                 </div>
                 {/* Store + Status */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-                  <h4 className="font-bold text-gray-600 mb-3 text-xs uppercase tracking-wider flex items-center gap-2">
+                  <h4 className="font-bold text-gray-600 mb-3 text-[13px] uppercase tracking-wider flex items-center gap-2">
                     <span className="w-5 h-5 bg-green-50 rounded flex items-center justify-center">🏪</span>取貨門市
                   </h4>
                   <div className="flex items-center gap-2">
@@ -207,7 +207,7 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                   <p className="text-green-700 text-sm font-semibold mt-0.5">{detail.county}{detail.district}</p>
                   <p className="text-gray-500 text-sm mt-1 leading-relaxed">{detail.store_address}</p>
                   <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="font-bold text-gray-600 text-xs uppercase tracking-wider mb-2">更新訂單狀態</p>
+                    <p className="font-bold text-gray-600 text-[13px] uppercase tracking-wider mb-2">更新訂單狀態</p>
                     <div className="flex gap-2">
                       <select value={newStatus} onChange={e => setNewStatus(e.target.value)} onClick={e => e.stopPropagation()}
                         className="flex-1 border-2 border-gray-200 rounded-xl px-3 text-sm font-semibold focus:outline-none focus:border-green-500 bg-white"
@@ -222,7 +222,7 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                       </button>
                     </div>
                     {newStatus === '已取消' && newStatus !== order.order_status && (
-                      <p className="text-red-500 text-xs mt-1.5 font-medium">⚠️ 取消後將自動回補庫存，無法還原</p>
+                      <p className="text-red-500 text-[13px] mt-1.5 font-medium">⚠️ 取消後將自動回補庫存，無法還原</p>
                     )}
                   </div>
                   <div className="mt-3 pt-3 border-t border-gray-100">
@@ -234,12 +234,12 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                       </svg>
                       {deleting ? '刪除中...' : '永久刪除此訂單'}
                     </button>
-                    <p className="text-red-500 text-xs mt-1.5 text-center">⚠️ 將同步刪除商品明細，無法還原</p>
+                    <p className="text-red-500 text-[13px] mt-1.5 text-center">⚠️ 將同步刪除商品明細，無法還原</p>
                   </div>
                 </div>
                 {/* Items */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-                  <h4 className="font-bold text-gray-600 mb-3 text-xs uppercase tracking-wider flex items-center gap-2">
+                  <h4 className="font-bold text-gray-600 mb-3 text-[13px] uppercase tracking-wider flex items-center gap-2">
                     <span className="w-5 h-5 bg-purple-50 rounded flex items-center justify-center">📦</span>
                     商品明細（{detail.items_count} 件）
                   </h4>
@@ -252,12 +252,12 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                             : <div className="w-full h-full flex items-center justify-center text-sm">💊</div>}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-gray-800 line-clamp-1">{item.product_name_snapshot}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{item.variant_name_snapshot}</p>
-                          {item.sku_snapshot && <p className="text-xs text-gray-400 font-mono">SKU: {item.sku_snapshot}</p>}
+                          <p className="text-[13px] font-bold text-gray-800 line-clamp-1">{item.product_name_snapshot}</p>
+                          <p className="text-[13px] text-gray-500 mt-0.5">{item.variant_name_snapshot}</p>
+                          {item.sku_snapshot && <p className="text-[13px] text-gray-600 font-mono">SKU: {item.sku_snapshot}</p>}
                         </div>
                         <div className="text-right flex-shrink-0 ml-2">
-                          <p className="text-xs text-gray-400">{formatPrice(item.unit_price)} × {item.quantity}</p>
+                          <p className="text-[13px] text-gray-600">{formatPrice(item.unit_price)} × {item.quantity}</p>
                           <p className="text-sm font-bold text-gray-800">{formatPrice(item.subtotal)}</p>
                         </div>
                       </div>
@@ -269,7 +269,7 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                   </div>
                 </div>
               </div>
-            ) : <div className="py-4 text-center text-gray-400">無法載入詳情</div>}
+            ) : <div className="py-4 text-center text-gray-600">無法載入詳情</div>}
           </td>
         </tr>
       )}
@@ -361,7 +361,7 @@ function OrdersContent() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">訂單管理</h1>
-          <p className="text-gray-400 text-sm mt-0.5">共 {total} 筆訂單・點擊列可展開查看詳情</p>
+          <p className="text-gray-600 text-sm mt-0.5">共 {total} 筆訂單・點擊列可展開查看詳情</p>
         </div>
         {selectedIds.length > 0 && (
           <button onClick={handleBulkDelete} disabled={bulkDeleting}
@@ -406,9 +406,9 @@ function OrdersContent() {
 
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-gray-400 text-lg">載入中...</div>
+          <div className="py-16 text-center text-gray-600 text-lg">載入中...</div>
         ) : orders.length === 0 ? (
-          <div className="py-16 text-center"><div className="text-4xl mb-3">📋</div><p className="text-gray-400 text-lg">此條件下沒有訂單</p></div>
+          <div className="py-16 text-center"><div className="text-4xl mb-3">📋</div><p className="text-gray-600 text-lg">此條件下沒有訂單</p></div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -447,5 +447,5 @@ function OrdersContent() {
 }
 
 export default function OrdersPage() {
-  return <Suspense fallback={<div className="py-16 text-center text-gray-400">載入中...</div>}><OrdersContent /></Suspense>
+  return <Suspense fallback={<div className="py-16 text-center text-gray-600">載入中...</div>}><OrdersContent /></Suspense>
 }

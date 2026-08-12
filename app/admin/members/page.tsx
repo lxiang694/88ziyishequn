@@ -36,11 +36,11 @@ export default function MembersPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">會員管理</h1>
-        <p className="text-xs text-gray-400">※ 註冊會員資料</p>
+        <p className="text-[13px] text-gray-600">※ 註冊會員資料</p>
       </div>
 
       {loading ? (
-        <div className="py-20 text-center text-gray-400 text-lg">載入中...</div>
+        <div className="py-20 text-center text-gray-600 text-lg">載入中...</div>
       ) : denied ? (
         <div className="py-20 text-center">
           <div className="text-4xl mb-4">🔒</div>
@@ -76,7 +76,7 @@ export default function MembersPage() {
               共 <span className="font-bold text-gray-800">{filtered.length}</span> 筆
             </div>
             {filtered.length === 0 ? (
-              <p className="text-gray-400 text-center py-12">{keyword ? '查無符合的會員' : '暫無註冊會員'}</p>
+              <p className="text-gray-600 text-center py-12">{keyword ? '查無符合的會員' : '暫無註冊會員'}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -93,12 +93,12 @@ export default function MembersPage() {
                         <td className="px-4 py-3">
                           {m.order_count > 0
                             ? <span className="bg-green-50 text-green-700 font-bold px-2 py-1 rounded-lg">{m.order_count}</span>
-                            : <span className="text-gray-400">0</span>}
+                            : <span className="text-gray-600">0</span>}
                         </td>
                         <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDateTime(m.created_at)}</td>
                         <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{m.last_sign_in_at ? formatDateTime(m.last_sign_in_at) : '從未登入'}</td>
                         <td className="px-4 py-3">
-                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${m.email_confirmed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          <span className={`text-[13px] font-semibold px-2 py-1 rounded-full ${m.email_confirmed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                             {m.email_confirmed ? '已驗證' : '未驗證'}
                           </span>
                         </td>

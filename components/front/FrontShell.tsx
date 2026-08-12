@@ -34,7 +34,7 @@ export default function FrontShell({ children }: { children: ReactNode }) {
             <a href="/health-quiz" className="text-gray-600 hover:text-green-700 font-semibold">🩺 健康自測</a>
           </div>
 
-          <p className="mt-4 text-xs text-gray-400">© {new Date().getFullYear()} 健康優選. All rights reserved.</p>
+          <p className="mt-4 text-[13px] text-gray-600">© {new Date().getFullYear()} 健康優選. All rights reserved.</p>
         </div>
       </footer>
       {/* 底部導覽列高度的墊片，避免內容被固定列遮住（手機，含瀏海機安全區） */}

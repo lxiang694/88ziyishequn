@@ -70,7 +70,7 @@ export default function CategoriesPage() {
       </div>
 
       <div className="card overflow-hidden">
-        {loading ? <div className="py-12 text-center text-gray-400">載入中...</div> : (
+        {loading ? <div className="py-12 text-center text-gray-600">載入中...</div> : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50"><tr>
               {['排序','名稱','識別碼','狀態','操作'].map(h => <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600">{h}</th>)}
@@ -80,8 +80,8 @@ export default function CategoriesPage() {
                 <tr key={cat.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-500">{cat.sort_order}</td>
                   <td className="px-4 py-3 font-semibold text-gray-800">{cat.name}</td>
-                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">{cat.slug}</td>
-                  <td className="px-4 py-3"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${cat.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{cat.is_active ? '啟用' : '停用'}</span></td>
+                  <td className="px-4 py-3 text-gray-500 font-mono text-[13px]">{cat.slug}</td>
+                  <td className="px-4 py-3"><span className={`text-[13px] font-semibold px-2 py-1 rounded-full ${cat.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{cat.is_active ? '啟用' : '停用'}</span></td>
                   <td className="px-4 py-3">
                     <div className="flex gap-3">
                       <button onClick={() => handleEdit(cat)} className="text-green-700 font-semibold hover:underline">編輯</button>

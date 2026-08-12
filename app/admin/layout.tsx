@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (isLoginPage) return <>{children}<Toaster position="top-center" /></>
   if (!checked) return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="text-gray-400 text-lg">載入中...</div>
+      <div className="text-gray-600 text-lg">載入中...</div>
     </div>
   )
   if (!admin) return null
@@ -114,7 +114,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="w-9 h-9 bg-green-500 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0">健</div>
           <div>
             <p className="font-bold text-sm leading-tight">健康優選後台</p>
-            <p className="text-gray-400 text-xs mt-0.5">管理系統</p>
+            <p className="text-gray-600 text-[13px] mt-0.5">管理系統</p>
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
@@ -123,7 +123,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               className={`flex items-center px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${pathname.startsWith(item.href) ? 'bg-green-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}>
               <span className="flex-1">{item.label}</span>
               {item.href === '/admin/audit' && downloadAlerts > 0 && (
-                <span className="ml-2 min-w-5 h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">
+                <span className="ml-2 min-w-5 h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-[13px] font-bold rounded-full">
                   {downloadAlerts > 99 ? '99+' : downloadAlerts}
                 </span>
               )}
@@ -132,8 +132,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
         <div className="p-4 border-t border-gray-700">
           <p className="text-white font-bold text-sm">{admin.name}</p>
-          <p className="text-gray-400 text-xs mt-0.5 mb-3">{roleLabel[admin.role_key] || admin.role_key}</p>
-          <button onClick={handleLogout} className="text-gray-400 hover:text-red-400 text-sm transition-colors flex items-center gap-1.5">
+          <p className="text-gray-600 text-[13px] mt-0.5 mb-3">{roleLabel[admin.role_key] || admin.role_key}</p>
+          <button onClick={handleLogout} className="text-gray-600 hover:text-red-400 text-sm transition-colors flex items-center gap-1.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
@@ -155,7 +155,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {visibleNav.find(n => pathname.startsWith(n.href))?.label?.replace(/^[^\s]+ /, '') || '後台'}
           </span>
           <div className="ml-auto flex items-center gap-3">
-            <span className="hidden md:flex items-center gap-1.5 text-xs text-gray-400">
+            <span className="hidden md:flex items-center gap-1.5 text-[13px] text-gray-600">
               <span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
               {admin.name}
             </span>

@@ -64,7 +64,7 @@ export default function ProfilePage() {
     setSaving(false)
   }
 
-  if (loading || loadingData) return <div className="py-20 text-center text-gray-400">載入中...</div>
+  if (loading || loadingData) return <div className="py-20 text-center text-gray-600">載入中...</div>
   if (!user) return null
 
   return (
@@ -80,12 +80,12 @@ export default function ProfilePage() {
         <h1 className="text-2xl font-bold text-gray-800 mb-5">個人資料</h1>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
-          <p className="text-xs text-gray-400 font-bold mb-3 tracking-wide">基本資料</p>
+          <p className="text-[13px] text-gray-600 font-bold mb-3 tracking-wide">基本資料</p>
           <div className="space-y-4">
             <div>
               <label className="form-label">Email</label>
               <input className="form-input bg-gray-50 text-gray-500" value={user.email || ''} disabled />
-              <p className="text-xs text-gray-400 mt-1">Email 無法修改</p>
+              <p className="text-[13px] text-gray-600 mt-1">Email 無法修改</p>
             </div>
             <div>
               <label className="form-label">姓名</label>
@@ -95,7 +95,7 @@ export default function ProfilePage() {
               <label className="form-label">手機號碼</label>
               <input type="tel" inputMode="numeric" className="form-input" value={profile?.phone || ''}
                 onChange={e => update('phone', e.target.value)} placeholder="09xxxxxxxx" />
-              <p className="text-xs text-gray-400 mt-1">用來自動關聯訂單</p>
+              <p className="text-[13px] text-gray-600 mt-1">用來自動關聯訂單</p>
             </div>
             <div>
               <label className="form-label">LINE ID（選填）</label>
@@ -106,13 +106,13 @@ export default function ProfilePage() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
-          <p className="text-xs text-gray-400 font-bold mb-3 tracking-wide">預設取貨門市</p>
-          <p className="text-xs text-gray-500 mb-3 leading-relaxed">設定後，下次結帳會自動帶入這家門市</p>
+          <p className="text-[13px] text-gray-600 font-bold mb-3 tracking-wide">預設取貨門市</p>
+          <p className="text-[13px] text-gray-500 mb-3 leading-relaxed">設定後，下次結帳會自動帶入這家門市</p>
           {profile?.default_store_id ? (
             <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
               <div className="flex justify-between items-start gap-3">
                 <div>
-                  <p className="font-bold text-green-800 leading-snug">{profile.default_store_name}</p>
+                  <p className="font-bold text-green-800 leading-relaxed">{profile.default_store_name}</p>
                   <p className="text-green-600 text-sm font-semibold mt-1">{profile.default_store_county}{profile.default_store_district}</p>
                   <p className="text-gray-600 text-sm mt-1">{profile.default_store_address}</p>
                 </div>

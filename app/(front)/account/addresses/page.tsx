@@ -97,7 +97,7 @@ export default function AddressesPage() {
     if (d.success) { load() } else { toast.error(d.error || '設定失敗') }
   }
 
-  if (loading || loadingData) return <div className="py-20 text-center text-gray-400">載入中...</div>
+  if (loading || loadingData) return <div className="py-20 text-center text-gray-600">載入中...</div>
   if (!user) return null
 
   return (
@@ -117,8 +117,8 @@ export default function AddressesPage() {
         {addresses.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
             <div className="text-4xl mb-3">⭐</div>
-            <p className="text-gray-400 mb-4">還沒有常用收件資訊</p>
-            <p className="text-gray-400 text-sm">結帳時勾選「儲存這筆收件資訊」即可自動加入，<br />也可以在這裡手動新增</p>
+            <p className="text-gray-600 mb-4">還沒有常用收件資訊</p>
+            <p className="text-gray-600 text-sm">結帳時勾選「儲存這筆收件資訊」即可自動加入，<br />也可以在這裡手動新增</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -129,9 +129,9 @@ export default function AddressesPage() {
                     <p className="font-bold text-gray-800">
                       {addr.label && <span className="text-green-700">{addr.label}・</span>}
                       {addr.recipient_name} <span className="text-gray-500 font-mono text-sm">{addr.phone}</span>
-                      {addr.is_default && <span className="ml-2 text-xs bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">預設</span>}
+                      {addr.is_default && <span className="ml-2 text-[13px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">預設</span>}
                     </p>
-                    {addr.line_id && <p className="text-gray-400 text-xs mt-0.5">LINE: {addr.line_id}</p>}
+                    {addr.line_id && <p className="text-gray-600 text-[13px] mt-0.5">LINE: {addr.line_id}</p>}
                     <p className="text-green-600 text-sm font-semibold mt-1">{addr.store_name}</p>
                     <p className="text-gray-500 text-sm">{addr.store_county}{addr.store_district}・{addr.store_address}</p>
                   </div>
@@ -139,12 +139,12 @@ export default function AddressesPage() {
                 <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
                   {!addr.is_default && (
                     <button onClick={() => handleSetDefault(addr.id)}
-                      className="text-xs font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg px-3 py-1.5">設為預設</button>
+                      className="text-[13px] font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-lg px-3 py-1.5">設為預設</button>
                   )}
                   <button onClick={() => openEdit(addr)}
-                    className="text-xs font-bold text-green-700 border border-green-200 hover:bg-green-50 rounded-lg px-3 py-1.5">編輯</button>
+                    className="text-[13px] font-bold text-green-700 border border-green-200 hover:bg-green-50 rounded-lg px-3 py-1.5">編輯</button>
                   <button onClick={() => handleDelete(addr.id)}
-                    className="text-xs font-bold text-red-600 border border-red-200 hover:bg-red-50 rounded-lg px-3 py-1.5 ml-auto">刪除</button>
+                    className="text-[13px] font-bold text-red-600 border border-red-200 hover:bg-red-50 rounded-lg px-3 py-1.5 ml-auto">刪除</button>
                 </div>
               </div>
             ))}
@@ -160,7 +160,7 @@ export default function AddressesPage() {
               <button onClick={() => setShowForm(false)} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 text-xl">✕</button>
             </div>
             <div>
-              <label className="form-label">標籤 <span className="text-gray-400 font-normal text-sm">（選填，例如「家裡」「公司」）</span></label>
+              <label className="form-label">標籤 <span className="text-gray-600 font-normal text-sm">（選填，例如「家裡」「公司」）</span></label>
               <input className="form-input" value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} />
             </div>
             <div>
@@ -173,7 +173,7 @@ export default function AddressesPage() {
                 value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
             </div>
             <div>
-              <label className="form-label">LINE ID <span className="text-gray-400 font-normal text-sm">（選填）</span></label>
+              <label className="form-label">LINE ID <span className="text-gray-600 font-normal text-sm">（選填）</span></label>
               <input className="form-input" value={form.line_id} onChange={e => setForm(f => ({ ...f, line_id: e.target.value }))} />
             </div>
             <div>
@@ -183,9 +183,9 @@ export default function AddressesPage() {
                   <div>
                     <p className="font-bold text-green-800">{store.store_name}</p>
                     <p className="text-green-600 text-sm">{store.county}{store.district}</p>
-                    <p className="text-gray-500 text-xs">{store.address}</p>
+                    <p className="text-gray-500 text-[13px]">{store.address}</p>
                   </div>
-                  <button onClick={() => setShowPicker(true)} className="text-green-700 font-bold text-xs border-2 border-green-300 px-2 py-1 rounded-lg whitespace-nowrap">更換</button>
+                  <button onClick={() => setShowPicker(true)} className="text-green-700 font-bold text-[13px] border-2 border-green-300 px-2 py-1 rounded-lg whitespace-nowrap">更換</button>
                 </div>
               ) : (
                 <button onClick={() => setShowPicker(true)} className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-green-400 hover:bg-green-50 text-gray-600 text-sm">

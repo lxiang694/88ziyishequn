@@ -189,7 +189,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
       {/* 情境化資訊（誰／何時／怎麼搭／來源） */}
       <div className="card p-5">
         <h2 className="font-bold text-gray-800 text-lg mb-1">情境化保健資訊</h2>
-        <p className="text-gray-400 text-sm mb-4">誰適合（上面「適合人群」）、何時吃、怎麼搭、什麼來源——留空的欄位前台不顯示。</p>
+        <p className="text-gray-600 text-sm mb-4">誰適合（上面「適合人群」）、何時吃、怎麼搭、什麼來源——留空的欄位前台不顯示。</p>
         <div className="space-y-4">
           <div>
             <label className="form-label">⏰ 建議服用時間（可複選）</label>
@@ -232,7 +232,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
                 {form.cover_image_url ? (
                   <Image src={form.cover_image_url} alt="主圖" fill className="object-cover" sizes="112px" />
                 ) : (
-                  <div className="text-center text-gray-400"><div className="text-2xl mb-1">📷</div><div className="text-xs">上傳主圖</div></div>
+                  <div className="text-center text-gray-600"><div className="text-2xl mb-1">📷</div><div className="text-[13px]">上傳主圖</div></div>
                 )}
                 <input type="file" className="hidden" accept="image/*" onChange={handleCoverUpload} disabled={uploading} />
               </label>
@@ -252,7 +252,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
                 </div>
               ))}
               <label className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 hover:border-green-500 cursor-pointer flex items-center justify-center bg-gray-50 transition-colors">
-                <div className="text-center text-gray-400"><div className="text-xl">+</div></div>
+                <div className="text-center text-gray-600"><div className="text-xl">+</div></div>
                 <input type="file" className="hidden" accept="image/*" multiple onChange={handleGalleryUpload} disabled={uploading} />
               </label>
             </div>
@@ -287,11 +287,11 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
                 {variants.length > 1 && <button onClick={() => removeVariant(i)} className="text-red-500 text-sm font-semibold hover:underline">刪除</button>}
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="form-label text-xs">規格名稱 *</label><input className="form-input py-2" placeholder="例：30顆/盒" value={v.variant_name} onChange={e => updateVariant(i, 'variant_name', e.target.value)} /></div>
-                <div><label className="form-label text-xs">SKU 編碼</label><input className="form-input py-2" placeholder="可留空" value={v.sku_code} onChange={e => updateVariant(i, 'sku_code', e.target.value)} /></div>
-                <div><label className="form-label text-xs">售價 * (NT$)</label><input type="number" className="form-input py-2" placeholder="0" value={v.sale_price} onChange={e => updateVariant(i, 'sale_price', e.target.value)} /></div>
-                <div><label className="form-label text-xs">原價 (NT$)</label><input type="number" className="form-input py-2" placeholder="選填" value={v.original_price} onChange={e => updateVariant(i, 'original_price', e.target.value)} /></div>
-                <div><label className="form-label text-xs">庫存數量</label><input type="number" className="form-input py-2" min="0" value={v.stock_qty} onChange={e => updateVariant(i, 'stock_qty', e.target.value)} /></div>
+                <div><label className="form-label text-[13px]">規格名稱 *</label><input className="form-input py-2" placeholder="例：30顆/盒" value={v.variant_name} onChange={e => updateVariant(i, 'variant_name', e.target.value)} /></div>
+                <div><label className="form-label text-[13px]">SKU 編碼</label><input className="form-input py-2" placeholder="可留空" value={v.sku_code} onChange={e => updateVariant(i, 'sku_code', e.target.value)} /></div>
+                <div><label className="form-label text-[13px]">售價 * (NT$)</label><input type="number" className="form-input py-2" placeholder="0" value={v.sale_price} onChange={e => updateVariant(i, 'sale_price', e.target.value)} /></div>
+                <div><label className="form-label text-[13px]">原價 (NT$)</label><input type="number" className="form-input py-2" placeholder="選填" value={v.original_price} onChange={e => updateVariant(i, 'original_price', e.target.value)} /></div>
+                <div><label className="form-label text-[13px]">庫存數量</label><input type="number" className="form-input py-2" min="0" value={v.stock_qty} onChange={e => updateVariant(i, 'stock_qty', e.target.value)} /></div>
                 <div className="flex items-end">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={v.is_active} onChange={e => updateVariant(i, 'is_active', e.target.checked)} className="w-5 h-5 accent-green-600" />
@@ -307,7 +307,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
       {/* 首頁分區 */}
       <div className="card p-5">
         <label className="form-label">首頁分區</label>
-        <p className="text-gray-400 text-sm mb-3">決定此商品在首頁顯示於哪一區</p>
+        <p className="text-gray-600 text-sm mb-3">決定此商品在首頁顯示於哪一區</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {HOME_SECTIONS.map(o => (
             <button key={o.key} type="button" onClick={() => setForm(f => ({ ...f, home_section: o.key }))}

@@ -98,14 +98,14 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-xl font-bold text-green-700">{formatPrice(selected.sale_price)}</span>
                 {selected.original_price && selected.original_price > selected.sale_price && (
-                  <span className="text-gray-400 line-through text-sm">{formatPrice(selected.original_price)}</span>
+                  <span className="text-gray-600 line-through text-base">{formatPrice(selected.original_price)}</span>
                 )}
               </div>
             )}
           </div>
           <button
             onClick={onClose}
-            className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-xl"
+            className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors text-2xl"
           >✕</button>
         </div>
 
@@ -121,7 +121,7 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
                   key={v.id}
                   onClick={() => { if (!outOfStock) { setSelected(v); setQty(1) } }}
                   disabled={outOfStock}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left
+                  className={`w-full flex items-center justify-between px-4 py-3.5 min-h-[48px] rounded-xl border-2 transition-all text-left
                     ${isSelected
                       ? 'border-green-600 bg-green-50'
                       : outOfStock
@@ -129,21 +129,21 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
                       : 'border-gray-200 hover:border-green-400 hover:bg-green-50/50'}`}
                 >
                   <div>
-                    <span className={`font-semibold text-base ${isSelected ? 'text-green-800' : outOfStock ? 'text-gray-400' : 'text-gray-800'}`}>
+                    <span className={`font-semibold text-base ${isSelected ? 'text-green-800' : outOfStock ? 'text-gray-500' : 'text-gray-800'}`}>
                       {v.variant_name}
-                      {outOfStock && <span className="ml-2 text-xs font-normal text-red-400">（已售完）</span>}
+                      {outOfStock && <span className="ml-2 text-[13px] font-semibold text-red-600">（已售完）</span>}
                     </span>
-                    {v.sku_code && <span className="block text-xs text-gray-400 mt-0.5">SKU: {v.sku_code}</span>}
+                    {v.sku_code && <span className="block text-[13px] text-gray-600 mt-0.5">SKU: {v.sku_code}</span>}
                   </div>
                   <div className="text-right flex-shrink-0 ml-4">
                     <div className={`font-bold text-base ${isSelected ? 'text-green-700' : 'text-gray-700'}`}>
                       {formatPrice(v.sale_price)}
                     </div>
                     {v.original_price && v.original_price > v.sale_price && (
-                      <div className="text-gray-400 line-through text-xs">{formatPrice(v.original_price)}</div>
+                      <div className="text-gray-600 line-through text-[13px]">{formatPrice(v.original_price)}</div>
                     )}
                     {!outOfStock && (
-                      <div className="text-gray-400 text-xs mt-0.5">庫存 {v.stock_qty}</div>
+                      <div className="text-gray-600 text-[13px] mt-0.5">庫存 {v.stock_qty}</div>
                     )}
                   </div>
                 </button>
@@ -160,12 +160,12 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setQty(q => Math.max(1, q - 1))}
-                  className="w-10 h-10 rounded-full border-2 border-gray-300 hover:border-green-500 font-bold text-xl flex items-center justify-center transition-colors"
+                  className="w-12 h-12 rounded-full border-2 border-gray-300 hover:border-green-500 font-bold text-2xl flex items-center justify-center transition-colors"
                 >−</button>
                 <span className="w-10 text-center font-bold text-xl">{qty}</span>
                 <button
                   onClick={() => setQty(q => Math.min(selected.stock_qty, q + 1))}
-                  className="w-10 h-10 rounded-full border-2 border-gray-300 hover:border-green-500 font-bold text-xl flex items-center justify-center transition-colors"
+                  className="w-12 h-12 rounded-full border-2 border-gray-300 hover:border-green-500 font-bold text-2xl flex items-center justify-center transition-colors"
                 >+</button>
               </div>
             </div>

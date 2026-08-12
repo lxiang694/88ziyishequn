@@ -54,7 +54,7 @@ export default function ReportsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">銷售報表</h1>
-        <p className="text-xs text-gray-400">※ 銷售總額不含已取消訂單</p>
+        <p className="text-[13px] text-gray-600">※ 銷售總額不含已取消訂單</p>
       </div>
 
       {/* Date filter */}
@@ -79,7 +79,7 @@ export default function ReportsPage() {
       </div>
 
       {loading ? (
-        <div className="py-20 text-center text-gray-400 text-lg">載入中...</div>
+        <div className="py-20 text-center text-gray-600 text-lg">載入中...</div>
       ) : !data ? (
         <div className="py-20 text-center">
           <div className="text-4xl mb-4">🔒</div>
@@ -129,7 +129,7 @@ export default function ReportsPage() {
                   <tbody className="divide-y divide-gray-100">
                     {data.product_stats.map((p: any, i: number) => (
                       <tr key={p.product_id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-bold text-gray-400 text-base">#{i + 1}</td>
+                        <td className="px-4 py-3 font-bold text-gray-600 text-base">#{i + 1}</td>
                         <td className="px-4 py-3 font-semibold text-gray-800">{p.product_name}</td>
                         <td className="px-4 py-3">
                           <span className="bg-blue-50 text-blue-700 font-bold px-2 py-1 rounded-lg text-sm">{p.total_qty} 件</span>
@@ -155,10 +155,10 @@ export default function ReportsPage() {
                   <tbody className="divide-y divide-gray-100">
                     {data.variant_stats.map((v: any, i: number) => (
                       <tr key={v.variant_id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-bold text-gray-400">#{i + 1}</td>
+                        <td className="px-4 py-3 font-bold text-gray-600">#{i + 1}</td>
                         <td className="px-4 py-3 text-gray-700">{v.product_name}</td>
                         <td className="px-4 py-3 font-semibold text-gray-800">{v.variant_name}</td>
-                        <td className="px-4 py-3 text-gray-400 font-mono text-xs">{v.sku_code || '—'}</td>
+                        <td className="px-4 py-3 text-gray-600 font-mono text-[13px]">{v.sku_code || '—'}</td>
                         <td className="px-4 py-3 font-bold text-gray-700">{v.total_qty}</td>
                         <td className="px-4 py-3 font-bold text-green-700">{formatPrice(v.total_revenue)}</td>
                       </tr>
@@ -174,7 +174,7 @@ export default function ReportsPage() {
             <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-gray-800 text-lg">健康分類銷量統計</h2>
-                <span className="text-xs text-gray-400">※ 一商品可同時計入多個分類</span>
+                <span className="text-[13px] text-gray-600">※ 一商品可同時計入多個分類</span>
               </div>
               <div className="space-y-3">
                 {data.category_stats.map((c: any) => {
@@ -197,7 +197,7 @@ export default function ReportsPage() {
           )}
 
           {totalOrders === 0 && (
-            <div className="card p-12 text-center text-gray-400">
+            <div className="card p-12 text-center text-gray-600">
               <div className="text-4xl mb-3">📊</div>
               <p className="text-lg">此時間範圍內沒有訂單資料</p>
             </div>
