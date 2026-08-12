@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
+import { HOME_SECTION_KEYS } from '@/lib/homeSections'
 
 function requireProductPerm(req: NextRequest) {
   const result = requireAdmin(req)
@@ -37,7 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Build update object - only include defined fields
     const updateData: any = {}
     if (product_name !== undefined) updateData.product_name = product_name
-    if (home_section !== undefined) updateData.home_section = home_section === 'xiaozhuang' ? 'xiaozhuang' : 'community'
+    if (home_section !== undefined) updateData.home_section = HOME_SECTION_KEYS.includes(home_section) ? home_section : 'community'
     if (intake_timing !== undefined) updateData.intake_timing = intake_timing || null
     if (pairing_tips !== undefined) updateData.pairing_tips = pairing_tips || null
     if (source_notes !== undefined) updateData.source_notes = source_notes || null
