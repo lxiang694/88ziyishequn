@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from './CartContext'
 import VariantPicker from './VariantPicker'
 import { formatPrice } from '@/lib/utils'
+import { HOME_SECTIONS, productSection } from '@/lib/homeSections'
 import type { HealthCategory } from '@/lib/types'
 
 interface Variant {
@@ -92,12 +93,20 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
     fetchProducts(next, search, selectedCat, true)
   }
 
-  // 依「首頁分區」欄位分區（未設定時退回以名稱是否含「小莊代購」判斷）；僅預設瀏覽狀態分區
-  const isXiaozhuang = (p: Product) =>
-    p.home_section ? p.home_section === 'xiaozhuang' : (p.product_name || '').includes('小莊代購')
   const isDefaultView = !search && !selectedCat
-  const xiaozhuangProducts = isDefaultView ? products.filter(isXiaozhuang) : []
-  const mainProducts = isDefaultView ? products.filter(p => !isXiaozhuang(p)) : products
+  // 搜尋 / 分類篩選時用單一網格；預設瀏覽時依「首頁分區」分組（前 N 件預覽 + 查看全部）
+  const mainProducts = isDefaultView ? [] : products
+  const SECTION_PREVIEW = 8
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+  // 依 HOME_SECTIONS 順序分組，只保留有商品的分區
+  const sectionGroups = isDefaultView
+    ? HOME_SECTIONS.map(sec => ({ sec, items: products.filter(p => productSection(p) === sec.key) }))
+        .filter(g => g.items.length > 0)
+    : []
+
+  const scrollToId = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   // 換搜尋 / 分類時，重置可見數量回一屏
   useEffect(() => { setVisibleCount(INITIAL_VISIBLE) }, [search, selectedCat])
@@ -327,6 +336,23 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
               </button>
             ))}
           </div>
+          {/* 分類快速導覽（吸頂）：一鍵跳到各賣場分區，平衡每個分類的曝光 */}
+          {isDefaultView && sectionGroups.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar">
+              {hotProducts.length > 0 && (
+                <button onClick={() => scrollToId('sec-hot')}
+                  className="flex-shrink-0 text-sm font-bold px-3 py-1.5 rounded-full border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors">
+                  🔥 本週熱銷
+                </button>
+              )}
+              {sectionGroups.map(({ sec }) => (
+                <button key={sec.key} onClick={() => scrollToId('sec-' + sec.key)}
+                  className="flex-shrink-0 text-sm font-bold px-3 py-1.5 rounded-full border border-green-200 bg-white text-green-800 hover:bg-green-50 transition-colors">
+                  {sec.emoji} {sec.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ─── CATEGORY GRID ─── */}
@@ -358,7 +384,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
         <>
         {/* ─── 本週熱銷 RAIL ─── */}
         {hotProducts.length > 0 && (
-          <section className="pt-6 pb-2">
+          <section id="sec-hot" className="pt-6 pb-2 scroll-mt-56">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold text-gray-800">🔥 本週熱銷</h2>
               <button onClick={scrollToProducts} className="text-green-700 text-sm font-bold hover:underline">看全部 →</button>
@@ -502,10 +528,39 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             </div>
           </div>
         </section>
+
+        {/* ─── 各賣場分區預覽（每類前 N 件 + 查看全部），平衡各分類曝光 ─── */}
+        {sectionGroups.map(({ sec, items }) => {
+          const expanded = !!expandedSections[sec.key]
+          const shown = expanded ? items : items.slice(0, SECTION_PREVIEW)
+          return (
+            <section key={sec.key} id={'sec-' + sec.key} className="pt-8 pb-2 scroll-mt-56">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{sec.emoji} {sec.label}</h2>
+                <span className="text-gray-500 text-sm font-medium bg-gray-100 px-3 py-1 rounded-full">共 {items.length} 件</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {shown.map(renderProductCard)}
+              </div>
+              {items.length > SECTION_PREVIEW && (
+                <div className="text-center mt-5">
+                  <button onClick={() => setExpandedSections(s => ({ ...s, [sec.key]: !expanded }))}
+                    className="inline-flex items-center gap-1.5 border-2 border-green-600 text-green-700 font-bold px-6 py-2.5 rounded-xl hover:bg-green-50 transition-colors">
+                    {expanded ? '收合' : `查看全部 ${items.length} 件`}
+                    <svg className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </section>
+          )
+        })}
         </>
         )}
 
-        {/* ─── PRODUCTS（88自醫社群團購商品 / 搜尋 / 分類）─── */}
+        {/* ─── PRODUCTS（搜尋 / 分類篩選結果）─── */}
+        {!isDefaultView && (
         <section ref={productsRef} className="pt-6 pb-12 scroll-mt-32">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
@@ -646,18 +701,6 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
             </>
           )}
         </section>
-
-        {/* ─── 小莊優選（放最後）─── */}
-        {isDefaultView && xiaozhuangProducts.length > 0 && (
-          <section className="pt-2 pb-12">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-800">⭐ 小莊優選</h2>
-              <span className="text-gray-500 text-sm sm:text-base font-medium bg-gray-100 px-3 py-1 rounded-full">共 {xiaozhuangProducts.length} 件</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {xiaozhuangProducts.map(renderProductCard)}
-            </div>
-          </section>
         )}
       </div>
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
 import { generateSlug } from '@/lib/utils'
+import { HOME_SECTION_KEYS } from '@/lib/homeSections'
 
 export async function GET(req: NextRequest) {
   const auth = requireAdmin(req)
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
     const slug = generateSlug(product_name)
     const { data: product, error: pe } = await supabaseAdmin
       .from('products')
-      .insert({ product_name, slug, short_intro: short_intro || null, suitable_people: suitable_people || null, usage_method: usage_method || null, ingredients: ingredients || null, precautions: precautions || null, storage_method: storage_method || null, is_published: !!is_published, cover_image_url: cover_image_url || null, home_section: home_section === 'xiaozhuang' ? 'xiaozhuang' : 'community', intake_timing: intake_timing || null, pairing_tips: pairing_tips || null, source_notes: source_notes || null })
+      .insert({ product_name, slug, short_intro: short_intro || null, suitable_people: suitable_people || null, usage_method: usage_method || null, ingredients: ingredients || null, precautions: precautions || null, storage_method: storage_method || null, is_published: !!is_published, cover_image_url: cover_image_url || null, home_section: HOME_SECTION_KEYS.includes(home_section) ? home_section : 'community', intake_timing: intake_timing || null, pairing_tips: pairing_tips || null, source_notes: source_notes || null })
       .select().single()
     if (pe) return NextResponse.json({ success: false, error: pe.message }, { status: 500 })
     if (category_ids?.length > 0) {
