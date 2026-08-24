@@ -22,6 +22,7 @@ const NAV = [
   { href: '/admin/events', label: '📅 社群活動', perms: ['all', 'events.view'] },
   { href: '/admin/care', label: '🩺 陪診預約', perms: ['all', 'care.view'] },
   { href: '/admin/companions', label: '👥 陪診員管理', perms: ['all'] },
+  { href: '/admin/settlement', label: '💰 陪診結算報表', perms: ['all'] },
   { href: '/admin/members', label: '👤 會員管理', perms: ['all'] },
   { href: '/admin/traffic', label: '📡 流量監控', perms: ['all'] },
   { href: '/admin/audit', label: '🛡️ 稽核日誌', perms: ['all'] },
