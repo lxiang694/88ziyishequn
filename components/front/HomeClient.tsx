@@ -425,6 +425,27 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
           </section>
         )}
 
+        {/* ─── 陪診服務入口 ─── */}
+        <section className="py-2 mb-2">
+          <a href="/care" className="block">
+            <div className="rounded-2xl bg-gradient-to-r from-teal-700 to-cyan-700 p-5 shadow-md hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-bold text-lg leading-relaxed mb-1">
+                    🩺 陪診服務・一個人跑醫院不用怕
+                  </p>
+                  <p className="text-cyan-50 text-[15px] leading-relaxed">
+                    專業陪診員全程陪同掛號、看診、領藥，並回報家屬。全台主要縣市可預約
+                  </p>
+                </div>
+                <div className="flex-shrink-0 bg-white/20 text-white font-bold text-base px-4 py-3 rounded-xl min-h-[48px] flex items-center">
+                  →
+                </div>
+              </div>
+            </div>
+          </a>
+        </section>
+
         {/* ─── QUIZ + ARTICLES + SLEEP ENTRY ─── */}
         <section className="py-2 mb-2 grid grid-cols-1 md:grid-cols-3 gap-3">
           <a href="/health-quiz" className="block">
