@@ -27,6 +27,8 @@ export default function FrontShell({ children }: { children: ReactNode }) {
           <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2 mt-4 text-sm">
             <a href="/orders" className="text-gray-600 hover:text-green-700 font-semibold">📦 訂單查詢</a>
             <span className="text-gray-300">·</span>
+            <a href="/care" className="text-gray-600 hover:text-green-700 font-semibold">🩺 陪診服務</a>
+            <span className="text-gray-300">·</span>
             <a href="/health-articles" className="text-gray-600 hover:text-green-700 font-semibold">📚 健康知識</a>
             <span className="text-gray-300">·</span>
             <a href="/sleep-quiz" className="text-gray-600 hover:text-green-700 font-semibold">🌙 睡眠自測</a>

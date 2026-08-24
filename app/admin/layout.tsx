@@ -20,6 +20,8 @@ const NAV = [
   { href: '/admin/funnel', label: '🔻 下單漏斗', perms: ['all', 'orders.view'] },
   { href: '/admin/customers', label: '🔁 復購分析', perms: ['all', 'orders.view'] },
   { href: '/admin/events', label: '📅 社群活動', perms: ['all', 'events.view'] },
+  { href: '/admin/care', label: '🩺 陪診預約', perms: ['all', 'care.view'] },
+  { href: '/admin/companions', label: '👥 陪診員管理', perms: ['all'] },
   { href: '/admin/members', label: '👤 會員管理', perms: ['all'] },
   { href: '/admin/traffic', label: '📡 流量監控', perms: ['all'] },
   { href: '/admin/audit', label: '🛡️ 稽核日誌', perms: ['all'] },
@@ -104,6 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     shipper: '出貨人員',
     product_manager: '商品管理',
     event_staff: '社群活動人員',
+    care_staff: '陪診客服',
   }
 
   return (
