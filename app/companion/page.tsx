@@ -7,6 +7,11 @@ import { TIME_SLOTS, MOBILITY_OPTIONS, ADDON_OPTIONS, labelOf, statusColor } fro
 
 interface Me { id: number; name: string; phone: string; employment_type: string; completed_count: number; service_areas: string[] }
 interface Avail { id: number; date: string; time_slot: string }
+interface Earnings {
+  jobs: number; total: number; settled: number; unsettled: number
+  by_month: { month: string; jobs: number; fee: number; unsettled: number }[]
+  list: { id: number; booking_no: string; service_name: string; service_date: string; hospital: string; fee: number; settled: boolean }[]
+}
 interface Job {
   id: number; booking_no: string; service_name: string; service_date: string; time_slot: string
   county: string; hospital: string; department: string; patient_name: string; patient_gender: string
@@ -32,9 +37,10 @@ export default function CompanionDashboard() {
   const router = useRouter()
   const [me, setMe] = useState<Me | null>(null)
   const [checked, setChecked] = useState(false)
-  const [tab, setTab] = useState<'jobs' | 'schedule'>('jobs')
+  const [tab, setTab] = useState<'jobs' | 'schedule' | 'income'>('jobs')
   const [avail, setAvail] = useState<Avail[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
+  const [earn, setEarn] = useState<Earnings | null>(null)
   const days = next14Days()
 
   useEffect(() => {
@@ -54,8 +60,11 @@ export default function CompanionDashboard() {
   const loadJobs = useCallback(() => {
     fetch('/api/companion/assignments').then(r => r.json()).then(d => { if (d.success) setJobs(d.data) })
   }, [])
+  const loadEarn = useCallback(() => {
+    fetch('/api/companion/earnings').then(r => r.json()).then(d => { if (d.success) setEarn(d.data) })
+  }, [])
 
-  useEffect(() => { if (me) { loadAvail(); loadJobs() } }, [me, loadAvail, loadJobs])
+  useEffect(() => { if (me) { loadAvail(); loadJobs(); loadEarn() } }, [me, loadAvail, loadJobs, loadEarn])
 
   const has = (date: string, slot: string) => avail.some(a => a.date === date && a.time_slot === slot)
 
@@ -79,7 +88,7 @@ export default function CompanionDashboard() {
       body: JSON.stringify({ id, action }),
     })
     const d = await res.json()
-    if (d.success) { toast.success(action === 'start' ? '已開始服務' : '服務已完成，辛苦了！'); loadJobs() }
+    if (d.success) { toast.success(action === 'start' ? '已開始服務' : '服務已完成，辛苦了！'); loadJobs(); loadEarn() }
     else toast.error(d.error || '更新失敗')
   }
 
@@ -113,8 +122,8 @@ export default function CompanionDashboard() {
 
       {/* Tabs */}
       <div className="max-w-3xl mx-auto px-4 pt-4">
-        <div className="grid grid-cols-2 gap-2 mb-5">
-          {([['jobs', '📋 我的工作'], ['schedule', '📅 我的班表']] as const).map(([k, label]) => (
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {([['jobs', '📋 工作'], ['schedule', '📅 班表'], ['income', '💰 收入']] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)}
               className={`min-h-[48px] rounded-xl font-bold text-base border-2 transition-colors ${tab === k ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-700 border-gray-200'}`}>
               {label}
@@ -229,6 +238,79 @@ export default function CompanionDashboard() {
                 </div>
               ))}
             </div>
+          </>
+        )}
+
+        {/* 收入 */}
+        {tab === 'income' && (
+          <>
+            {!earn ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center t-body">載入中…</div>
+            ) : (
+              <>
+                <div className="rounded-2xl bg-gradient-to-br from-green-700 to-emerald-600 text-white p-5 mb-4">
+                  <p className="text-green-50 text-[15px] font-semibold">累計收入（已完成 {earn.jobs} 場）</p>
+                  <p className="text-4xl font-bold mt-1">{formatPrice(earn.total)}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4">
+                    <p className="t-meta">已入帳</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-0.5">{formatPrice(earn.settled)}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                    <p className="t-meta text-orange-800">待結算</p>
+                    <p className="text-2xl font-bold text-orange-700 mt-0.5">{formatPrice(earn.unsettled)}</p>
+                  </div>
+                </div>
+
+                {earn.by_month.length > 0 && (
+                  <>
+                    <h2 className="t-section-title mb-3">每月收入</h2>
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-5">
+                      {earn.by_month.map(m => (
+                        <div key={m.month} className="flex items-center justify-between gap-3 p-4 border-b border-gray-100 last:border-0">
+                          <div>
+                            <p className="font-bold text-gray-800 text-base">{m.month.replace('-', ' 年 ')} 月</p>
+                            <p className="t-meta">{m.jobs} 場</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-gray-900 text-lg">{formatPrice(m.fee)}</p>
+                            {m.unsettled > 0 && (
+                              <p className="t-meta text-orange-700">待結算 {formatPrice(m.unsettled)}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <h2 className="t-section-title mb-3">收入明細</h2>
+                {earn.list.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center t-body">
+                    完成服務後，收入會顯示在這裡
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {earn.list.map(r => (
+                      <div key={r.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-800 text-[15px]">{r.service_date}・{r.hospital}</p>
+                          <p className="t-meta">{r.service_name}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-bold text-gray-900 text-lg">{formatPrice(r.fee)}</p>
+                          <span className={`text-[13px] font-semibold px-2 py-0.5 rounded-md ${r.settled ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+                            {r.settled ? '已入帳' : '待結算'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </>
         )}
       </div>

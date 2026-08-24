@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     // 以伺服器端的方案定價為準，避免前端被竄改價格
     const { data: svc } = await supabaseAdmin
       .from('care_services')
-      .select('code, name, price')
+      .select('code, name, price, companion_fee')
       .eq('code', b.service_code)
       .eq('is_active', true)
       .single()
@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
         service_code: svc.code,
         service_name: svc.name,
         price: svc.price,
+        companion_fee: (svc as any).companion_fee ?? null,
         patient_name: String(b.patient_name).trim(),
         patient_age: b.patient_age || null,
         patient_gender: b.patient_gender || null,
