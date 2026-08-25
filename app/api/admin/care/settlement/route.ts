@@ -20,18 +20,20 @@ export async function GET(req: NextRequest) {
   const dateRange = searchParams.get('dateRange') || '30days'
   const startDate = searchParams.get('startDate') || ''
   const endDate = searchParams.get('endDate') || ''
-  const { start, end } = getTWDateRange(dateRange, startDate, endDate)
+  const isAll = dateRange === 'all'
+  const { start, end } = getTWDateRange(isAll ? '30days' : dateRange, startDate, endDate)
 
   // 以「服務日期」為基準統計（比建立時間更貼近實際營運）
-  const startDay = toTWDate(start)
-  const endDay = toTWDate(end)
+  const startDay = isAll ? '' : toTWDate(start)
+  const endDay = isAll ? '' : toTWDate(end)
 
-  const { data: rows, error } = await supabaseAdmin
+  let q = supabaseAdmin
     .from('care_bookings')
-    .select('id, booking_no, service_code, service_name, price, extra_fee, addon_fee, companion_fee, addon_companion_fee, status, service_date, county, hospital, companion_id, settled_at, patient_name, companions(id, name, phone)')
-    .gte('service_date', startDay)
-    .lte('service_date', endDay)
+    .select('*, companions(id, name, phone)')
     .order('service_date', { ascending: false })
+  if (!isAll) q = q.gte('service_date', startDay).lte('service_date', endDay)
+
+  const { data: rows, error } = await q
 
   if (error) {
     if (error.code === '42P01') {
@@ -121,7 +123,7 @@ export async function GET(req: NextRequest) {
       by_county: [...byCountyMap.entries()].map(([county, count]) => ({ county, count })).sort((a, b) => b.count - a.count),
       by_companion: [...byCompanionMap.values()].sort((a, b) => b.jobs - a.jobs),
       unsettled,
-      range: { start: startDay, end: endDay },
+      range: { start: startDay || '不限', end: endDay || '不限' },
     },
   })
 }
