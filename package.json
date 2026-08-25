@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run check:zh && next build",
+    "build": "npm run check:zh && npm run check:care && next build",
     "start": "next start",
     "lint": "next lint",
     "check:zh": "node scripts/check-simplified.mjs",
+    "check:care": "node scripts/check-care-brand.mjs",
     "check:zh:db": "node scripts/check-simplified.mjs --db"
   },
   "dependencies": {
