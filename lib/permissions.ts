@@ -13,6 +13,11 @@ export const PERMISSION_CATALOG: { key: string; label: string; hint?: string }[]
   { key: 'care_intake.manage', label: '陪診營運：初評審查', hint: '可看到補充需求與聯絡方式' },
   { key: 'care_quote.manage', label: '陪診營運：報價草稿與確認' },
   { key: 'care_case.manage', label: '陪診營運：案件狀態與人工收款確認' },
+  // ── 陪診履約（Sprint D）──────────────────────────────────
+  { key: 'care_record.review', label: '陪診履約：服務紀錄核對', hint: '可看到陪診員的內部客觀紀錄' },
+  { key: 'care_summary.review', label: '陪診履約：家屬小結審核與發布', hint: '唯一能對家屬發布內容的權限' },
+  { key: 'care_incident.manage', label: '陪診履約：異常事件處理與通知決策' },
+  { key: 'care_settlement.manage', label: '陪診履約：結算明細與批次', hint: '唯一能看到報酬金額的權限' },
 ]
 
 export const ALL_PERMISSION = 'all'
@@ -37,6 +42,28 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'care_quote.confirm': '陪診報價：確認',
   'care_quote.expire': '陪診報價：設為過期',
   'care_quote.cancel': '陪診報價：作廢',
+  // 陪診履約（Sprint D）
+  'care_event.visibility': '陪診事件：調整家屬可見性',
+  'care_record.review': '陪診紀錄：核可',
+  'care_record.return': '陪診紀錄：退回補正',
+  'care_summary.draft_create': '家屬小結：建立草稿',
+  'care_summary.update_draft': '家屬小結：修改草稿',
+  'care_summary.submit': '家屬小結：送審',
+  'care_summary.publish': '家屬小結：發布',
+  'care_summary.withdraw': '家屬小結：撤回',
+  'care_incident.acknowledge': '異常事件：受理',
+  'care_incident.resolve': '異常事件：處理完成',
+  'care_incident.close': '異常事件：結案',
+  'care_incident.notification': '異常事件：通知狀態',
+  'care_authorization.grant': '家屬授權：開通',
+  'care_authorization.revoke': '家屬授權：撤回',
+  'care_settlement.line_generate': '結算明細：產生',
+  'care_settlement.line_manual': '結算明細：人工新增',
+  'care_settlement.line_review': '結算明細：審核',
+  'care_settlement.batch_create': '結算批次：建立',
+  'care_settlement.batch_approve': '結算批次：核准',
+  'care_settlement.batch_publish': '結算批次：發布',
+  'care_settlement.batch_close': '結算批次：關閉',
 }
 
 // 屬於「資料下載」的動作（需提示超級管理員）

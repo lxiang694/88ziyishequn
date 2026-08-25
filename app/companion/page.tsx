@@ -236,6 +236,12 @@ export default function CompanionDashboard() {
                       )}
                     </div>
 
+                    {/* Sprint D：服務履約頁入口 */}
+                    <a href={`/companion/work/${j.id}`}
+                      className="block text-center bg-emerald-700 text-white font-bold rounded-xl min-h-[48px] flex items-center justify-center mb-3">
+                      📋 服務紀錄與流程回報
+                    </a>
+
                     <div className="border-t border-gray-100 pt-3 mb-3">
                       <p className="t-meta">家屬聯絡人</p>
                       <div className="flex items-center justify-between gap-2 mt-1">

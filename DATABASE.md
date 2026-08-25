@@ -109,3 +109,59 @@ authenticated 身分），不是後台路徑的授權強制點。實際強制點
 
 唯一需要留意的是：`care_intakes.converted_booking_id` 對 `care_bookings(id)`
 建立 FK，因此執行本檔案前必須先執行 `migrations/companion_care_schema.sql`。
+
+## 陪診履約（Sprint D）
+
+Migration：`migrations/care_fulfilment_schema.sql`
+
+### 服務主體
+
+**`care_bookings` 就是服務 root。** 本專案沒有 ServiceOrder / Assignment / ServiceTask
+三層模型（Sprint D 的規格書假設有，實際沒有）。Sprint D 的所有資料表一律 FK 到
+`care_bookings`，刻意不另建平行的服務關係。
+
+### 與既有 care_booking_events 的分工
+
+| 資料表 | 責任 |
+|---|---|
+| `care_booking_events` | 既有的陪診員工單時間軸，自由文字＋照片，仍由既有 `/companion` 工單頁使用。本輪不修改 |
+| `care_service_events` | Sprint D 的**受控**事件：型別白名單、append-only、伺服器寫入時間、家屬可見性分層、更正留痕 |
+
+兩者 FK 到同一個 booking，不是兩套服務關係。後續 Sprint 應把工單頁遷移到受控事件後淘汰舊表。
+
+### 資料表責任
+
+| 資料表 | 責任 | 不是什麼 |
+|---|---|---|
+| `care_service_events` | 結構化客觀節點 | 不是聊天記錄、不是病歷 |
+| `care_service_records` | 陪診員的內部客觀紀錄草稿與審核 | 不是病歷，不對家屬公開 |
+| `care_family_summaries` | 已審核、可發布／撤回的版本化小結 | 不是原始紀錄的直接曝光 |
+| `care_incidents` | 非診療的營運異常與升級 | 不是醫療風險分級，不是急救系統 |
+| `care_service_authorizations` | 單筆服務的家屬授權 | 不是服務條款、不是付款、不是長期家庭授權 |
+| `care_settlement_lines` / `care_settlement_batches` | 兼職結算基礎與審核軌跡 | 不是付款、不是薪資、不存銀行資料 |
+
+### 關鍵約束
+
+- `care_service_events`：`occurred_at` 由資料庫 `default now()` 寫入；trigger 擋下 DELETE 與內容改寫，只允許標記作廢
+- `care_service_records`：`uniq_care_rec_active_per_booking` 保證一筆服務只有一份進行中的紀錄；`reviewed` 的內容不可改寫
+- `care_family_summaries`：`uniq_care_sum_published_per_booking` 保證同時只有一份已發布；已發布內容不可改寫
+- `care_incidents`：trigger **直接擋下** `notification_status = 'sent_or_confirmed'`，因為沒有任何通知 provider
+- `care_service_authorizations`：trigger 擋下 `view_service_photo`（本輪停用）
+- `care_settlement_lines`：`unique (booking_id, line_type)` 防止重試／並發重複計算；trigger 擋下 `fulltime`
+
+### 與既有結算的關係
+
+本檔案**不修改** `care_bookings` 上既有的結算欄位，也不動 `/admin/settlement`。
+那套仍是目前實際在用的系統。lines/batches 是附加的可稽核基礎，兩套是否整併是後續的營運決定。
+兩套都不會自動付款。
+
+### RLS
+
+七張表全部 `enable` + `force` RLS，對 `anon` / `authenticated` `revoke all`，不建立任何 policy。
+與 Sprint B 同樣是縱深防禦——後台與陪診員端走 service_role 會繞過 RLS。詳見 `SECURITY.md`。
+
+### 資料移轉風險
+
+只新增，不修改也不刪除既有欄位或資料。依賴 `care_bookings` 與 `companions` 已存在
+（`companion_care_schema.sql`），以及 `care_touch_updated_at()`（`care_operations_schema.sql`），
+因此必須在那兩份之後執行。

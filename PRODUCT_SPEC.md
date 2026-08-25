@@ -126,3 +126,78 @@ cancelled → （終態）
 
 `ready_to_match` 之後的媒合與派工需由客服在既有的「陪診預約」與
 「陪診員管理」中另行處理。
+
+## Sprint D（服務履約與家屬資訊交接）
+
+流程：`派工 → 服務中記錄節點 → 服務紀錄送審 → 督導核對 → 家屬小結發布 → 結算`
+
+### 服務事件 care_service_event
+
+八種受控類型：`staff_arrived`、`beneficiary_met`、
+`registration_or_checkin_completed`、`waiting_or_process_in_progress`、
+`process_transition`、`return_arrangement_confirmed`、`service_handover_ready`、
+`requires_supervisor_attention`。
+
+事件是 **append-only**，時間由伺服器寫入，預設 `internal`。
+只有督導能逐筆開放給家屬，且 `service_handover_ready` 與
+`requires_supervisor_attention` **永遠不對家屬顯示**。
+
+### 內部服務紀錄 care_service_record
+
+```
+draft                 → submitted | superseded
+submitted             → reviewed | returned_for_revision
+returned_for_revision → submitted | superseded
+reviewed              → superseded
+```
+
+陪診員只能在 `draft` / `returned_for_revision` 編輯。送審後不可改寫；
+`reviewed` 內容凍結，要改只能建立新版本。原始紀錄**不對家屬、付款人、客服或財務開放**。
+
+### 家屬小結 care_family_summary
+
+```
+draft     → in_review | superseded
+in_review → published | draft | superseded
+published → withdrawn | superseded
+withdrawn → superseded
+```
+
+只有 `care_summary.review` 能建立、修改、發布、撤回。**陪診員不能自行發布。**
+已發布內容不可悄悄修改；發布新版本時舊版自動 `superseded`，家屬永遠只看到一份。
+內容只寫客觀流程與需家屬處理的事項——需向院方確認的事寫成
+「請家屬向醫療人員確認…」，不替家屬下決策。
+
+### 異常事件 care_incident
+
+```
+open         → acknowledged | resolved
+acknowledged → resolved
+resolved     → closed
+```
+
+四種類型皆為營運性質。`severity` 只是處理優先級，**不是醫療嚴重度**。
+UI 明確標示：現場緊急狀況請依院方流程與服務 SOP 立即處理，這裡只做事後記錄與升級。
+
+通知狀態 `not_required → pending → prepared`。**永遠不會到 `sent_or_confirmed`**，
+因為沒有任何通知管道。
+
+### 結算 care_settlement_line / batch
+
+```
+line:  pending_review → approved | rejected
+       approved       → batched | published_to_staff | pending_review
+       batched        → published_to_staff
+batch: draft → approved → published → closed
+```
+
+只有兼職產生報酬明細，**全職只有服務統計**（Service 與資料庫 trigger 都擋）。
+`unique (booking_id, line_type)` 防止重複計算。陪診員只看得到 `published_to_staff` 的自己的明細。
+
+`closed` 只代表平台內部批次關閉，**不代表銀行已匯款**。
+
+### 刻意延後
+
+醫療診斷與病歷、代簽同意、緊急救援調度、照片／附件上傳、
+實際外部通知、實際付款與銀行資料、薪資／勞健保／稅務／發票／退款、
+自動派工、AI 摘要與圖片辨識、per-case 資料範圍。

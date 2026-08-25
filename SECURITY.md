@@ -84,3 +84,51 @@ salt 取自 `CARE_INTAKE_IP_SALT`，未設定時退回 `JWT_SECRET`。
 陪診員的證件與服務照片存放於**私有** bucket（`companion-docs`、`care-records`），
 一律以 5 分鐘簽名網址讀取，不產生公開連結。身分證字號與金融帳號僅超級管理員可見。
 （此為 Sprint B 之前既有的機制，本輪未修改。）
+
+## Sprint D 履約的安全設計
+
+### 醫療內容守門
+
+所有自由文字（事件說明、服務紀錄、小結、異常描述）都經過
+`assertNoMedicalContent()`：命中診斷、處方、劑量、判讀、停藥／換藥等詞就擋下並提示。
+
+這**不是萬無一失的過濾器，也不假裝是**。它擋的是最常見的誤填，讓填寫者當場看到提示；
+真正的防線是 UI 說明、欄位設計（刻意不叫 `note` 或 `diagnosis`）與督導審核。
+
+### 資料分層：內部紀錄 ≠ 家屬小結
+
+原始服務紀錄（`care_service_records`）**永遠不會**自動變成家屬看得到的內容。
+家屬只讀得到 `care_family_summaries` 中狀態為 `published` 的那一份，
+且必須另有單筆授權。這是兩個獨立資源，中間隔著督導的人工審核。
+
+### 家屬授權：預設全部拒絕
+
+- 必須是已登入的 Supabase Auth 會員
+- 必須有一列對應 `(booking_id, user_id, scope)` 且 `revoked_at is null` 的授權
+- **下單會員、付款人、預約人、聯絡人都不會自動取得授權**
+- 無授權回 404，不透露服務是否存在
+- `view_service_photo` 本輪停用：domain 與資料庫 trigger 都擋
+
+### 事件 append-only
+
+`care_service_events` 的資料庫 trigger 擋下 DELETE 與內容改寫，只允許標記作廢。
+更正會留下 `invalidated_at` / `invalidate_reason_code`，原始內容仍在，稽核軌跡不會被抹除。
+
+### 通知：不假裝已送出
+
+沒有任何外部通知 provider。`NOTIFICATION_PROVIDER_CONFIGURED = false`，
+Service 與資料庫 trigger 都會拒絕 `sent_or_confirmed`。
+未來接上 connector 時，必須由該 connector 的受控函式寫入，並帶最小內容與可撤銷授權。
+
+### 金額隔離
+
+只有 `care_settlement.manage` 讀得到金額。督導、客服、HR 即使都在 Admin portal 也讀不到。
+陪診員只讀得到**自己的**、**已發布**的明細——未審核金額、他人金額、家屬支付金額、
+批次資料、銀行與稅務資料一律不在任何回應中。
+
+### 本輪未實作（不是已完成）
+
+- 檔案上傳：本輪完全沒做。若日後要做，必須私有 Storage + 短效 signed URL + 明確同意
+- 外部通知：沒有 connector，只有 in-app 狀態
+- 實際付款、銀行資料、薪資、勞健保、稅務、發票、退款：全部在系統外
+- per-case 資料範圍：具履約權限的管理員可看到所有個案

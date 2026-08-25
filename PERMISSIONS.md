@@ -79,3 +79,41 @@ seed 語句（可撤回）。
 
 本輪保證的是：匿名、無 care 權限的管理員、僅有零售權限的使用者、
 陪診員與家屬，預設一律拒絕。
+
+## Sprint D 新增的履約權限
+
+定義於 `lib/care/fulfilment/domain.ts` 的 `FULFILMENT_PERMISSION_KEYS`。
+
+| 權限 | 可做什麼 | 可看到什麼 |
+|---|---|---|
+| `care_record.review` | 核可／退回內部服務紀錄 | 陪診員的客觀紀錄全文 |
+| `care_summary.review` | 建立、修改、送審、發布、撤回家屬小結；調整事件家屬可見性；開通／撤回家屬授權 | 小結內容 |
+| `care_incident.manage` | 受理、處理、結案異常；推進通知狀態 | 異常內容 |
+| `care_settlement.manage` | 結算明細與批次的全部操作 | **唯一**能看到報酬金額的權限 |
+
+讀取類清單（服務控制台、紀錄、小結、異常）接受任一履約權限或 `care_operations.view`；
+**結算端點只接受 `care_settlement.manage`**，不接受任一 care 權限。
+
+### 三個 realm 的資料範圍
+
+| 角色 | 可讀 | 不可讀 |
+|---|---|---|
+| 陪診員（companion realm） | 只有指派給自己的服務：自己的事件、自己的紀錄草稿、自己建立的異常、自己**已發布**的結算明細、小結的**狀態**（不含內容） | 他人的任何資料、家屬支付金額、未審核金額、批次、小結內容 |
+| 督導（`care_record.review` / `care_summary.review`） | 內部紀錄、小結、事件、異常、授權 | 結算金額 |
+| 財務（`care_settlement.manage`） | 結算明細與批次 | 內部紀錄全文、未授權的小結 |
+| 家屬（Supabase Auth 會員） | 單筆服務**已發布**的小結與**已開放**的事件 | 內部紀錄、未發布小結、異常詳情、陪診員身分、金額、其他訂單 |
+| 未登入／無授權 | 無 | 全部（後端回 404，不透露服務是否存在） |
+
+### 家屬授權 ≠ 身分
+
+`care_bookings.user_id`（下單會員）**不會**自動取得閱覽權。
+必須在 `/admin/care/services/[id]` 對特定會員逐一開通 `care_service_authorizations`。
+付款人、預約人、聯絡人同理。有測試鎖住這個行為。
+
+### role mapping
+
+Migration 不自動賦予任何角色。`super_admin`（`'all'`）涵蓋全部。
+其他角色需由超級管理員在「帳號管理」逐一勾選。
+
+**建議的職責分離**：`care_quote.manage`（開價）、`care_case.manage`（確認收款）、
+`care_settlement.manage`（發放報酬）三者不要給同一個人。
