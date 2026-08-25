@@ -6,6 +6,7 @@ import { formatPrice } from '@/lib/utils'
 import { TIME_SLOTS, MOBILITY_OPTIONS, ADDON_OPTIONS, labelOf, statusColor } from '@/lib/careMeta'
 import ProfileForm from '@/components/companion/ProfileForm'
 import JobFlow from '@/components/companion/JobFlow'
+import { AvailabilityTab, ProposalsTab, TimeOffTab } from '@/components/companion/StaffingTabs'
 
 interface Me { id: number; name: string; phone: string; employment_type: string; completed_count: number; service_areas: string[]; status: string; profile_submitted_at: string | null; reject_reason: string | null }
 interface Avail { id: number; date: string; time_slot: string }
@@ -29,6 +30,25 @@ interface Job {
   extra_companion_fee: number | null
 }
 
+type Tab = 'jobs' | 'invites' | 'schedule' | 'timeoff' | 'income' | 'profile'
+
+/**
+ * Sprint C：分頁依僱用型態不同。
+ * 兼職才有「服務邀請」（要先接受才會變成正式派工）；
+ * 全職以公司班表為準，請假分頁改叫「請假」。
+ */
+function tabsFor(employmentType: string): [Tab, string][] {
+  const partTime = employmentType !== 'fulltime'
+  return [
+    ['jobs', '📋 工作'],
+    ...(partTime ? ([['invites', '📨 服務邀請']] as [Tab, string][]) : []),
+    ['schedule', '📅 班表'],
+    ['timeoff', partTime ? '🚫 暫停接案' : '🗓 請假'],
+    ['income', '💰 收入'],
+    ['profile', '👤 我的資料'],
+  ]
+}
+
 // 產生未來 14 天
 function next14Days() {
   const out: { date: string; label: string; weekday: string }[] = []
@@ -47,7 +67,7 @@ export default function CompanionDashboard() {
   const router = useRouter()
   const [me, setMe] = useState<Me | null>(null)
   const [checked, setChecked] = useState(false)
-  const [tab, setTab] = useState<'jobs' | 'schedule' | 'income' | 'profile'>('jobs')
+  const [tab, setTab] = useState<Tab>('jobs')
   const [avail, setAvail] = useState<Avail[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
   const [earn, setEarn] = useState<Earnings | null>(null)
@@ -148,8 +168,8 @@ export default function CompanionDashboard() {
 
       {/* Tabs */}
       <div className="max-w-3xl mx-auto px-4 pt-4">
-        <div className="grid grid-cols-4 gap-2 mb-5">
-          {([['jobs', '📋 工作'], ['schedule', '📅 班表'], ['income', '💰 收入'], ['profile', '👤 我的資料']] as const).map(([k, label]) => (
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {tabsFor(me.employment_type).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)}
               className={`min-h-[48px] rounded-xl font-bold text-[15px] border-2 transition-colors px-1 ${tab === k ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-700 border-gray-200'}`}>
               {label}
@@ -163,7 +183,9 @@ export default function CompanionDashboard() {
             <h2 className="t-section-title mb-3">待服務 / 進行中（{upcoming.length}）</h2>
             {upcoming.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center t-body">
-                目前沒有派工。請到「我的班表」設定可服務時段，客服會依此安排。
+                {me.employment_type === 'fulltime'
+                  ? '目前沒有派工。請到「班表」設定可服務時段，客服會依此安排。'
+                  : '目前沒有派工。收到服務邀請時會出現在「📨 服務邀請」，接受之後才會變成正式工作。'}
               </div>
             ) : (
               <div className="space-y-3">
@@ -285,10 +307,23 @@ export default function CompanionDashboard() {
           </>
         )}
 
+        {/* 服務邀請（兼職） */}
+        {tab === 'invites' && <ProposalsTab />}
+
+        {/* 請假／暫停接案 */}
+        {tab === 'timeoff' && <TimeOffTab employmentType={me.employment_type} />}
+
         {/* 班表 */}
         {tab === 'schedule' && (
           <>
-            <h2 className="t-section-title mb-1">設定可服務時段</h2>
+            {/* Sprint C：兼職才需要設定每週固定的可服務時段；全職以公司班表為準 */}
+            {me.employment_type !== 'fulltime' && (
+              <div className="mb-8">
+                <AvailabilityTab />
+              </div>
+            )}
+
+            <h2 className="t-section-title mb-1">指定日期的可服務時段</h2>
             <p className="t-meta mb-4">
               點選您有空的時段，客服派工時只會安排在您勾選的時間。可隨時調整。
             </p>

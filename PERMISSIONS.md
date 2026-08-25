@@ -117,3 +117,48 @@ Migration 不自動賦予任何角色。`super_admin`（`'all'`）涵蓋全部�
 
 **建議的職責分離**：`care_quote.manage`（開價）、`care_case.manage`（確認收款）、
 `care_settlement.manage`（發放報酬）三者不要給同一個人。
+
+---
+
+## Sprint C 新增的人力與媒合權限
+
+定義於 `lib/care/staffing/domain.ts` 的 `STAFFING_PERMISSION_KEYS`。
+
+| 權限 | 可做什麼 | 可看到什麼 |
+|---|---|---|
+| `care_staff.manage` | 建立／暫停／恢復／結束僱用條件，增刪服務區域 | 陪診員名冊、僱用狀態、服務區域 |
+| `care_schedule.manage` | 檢視全體班表與可服務時段，代為停用不合理的時段規則 | 誰在哪天有空、當天已排了什麼 |
+| `care_dispatch.manage` | 把案件開成正式工單、指派全職、對兼職發出邀請、取消或逾期邀請 | 候選人清單與每個人不符合的原因 |
+| `care_staff_credential.manage` | 驗證／到期／停權能力項目 | 能力驗證紀錄與有效期限 |
+| `care_staff_time_off.review` | 核准或駁回請假／暫停接案 | 請假申請與衝突的服務 |
+
+讀取類清單（名冊、班表、請假、派工、邀請）接受**任一**上述權限；
+寫入動作各自要求對應的那一個。
+
+### 陪診員本人的兩項能力
+
+不是後台權限，而是 companion realm 的固定能力，登入即有，
+無法透過後台角色調整：
+
+| 能力 | 對應端點 |
+|---|---|
+| `care_staff_availability.manage_own` | `/api/companion/availability-rules` |
+| `care_dispatch.proposal.respond_own` | `/api/companion/proposals/[id]`（accept／decline） |
+
+### 陪診員**不能**做的事（刻意）
+
+- 變更自己的僱用型態（全職／兼職）
+- 自行驗證或延長自己的能力項目
+- 讀取或修改其他陪診員的任何資料
+- 在**接受邀請前**看到就診人姓名、聯絡電話、醫院名稱、地址、備註或金額
+- 直接把自己指派到某筆服務（只能回覆後台發出的邀請）
+
+前三項在 API 層根本沒有本人可呼叫的寫入路徑；
+第四項由 `toProposalSummary()` 白名單保證；
+第五項由「建立邀請不寫 `companion_id`」保證。
+
+### role mapping
+
+Migration 不自動賦予任何角色。建議的職責分離：
+`care_staff_credential.manage`（驗證能力）與 `care_dispatch.manage`（派工）
+不要給同一個人——否則派工者可以自己補一張能力驗證來繞過媒合檢查。

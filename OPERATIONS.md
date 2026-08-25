@@ -192,3 +192,110 @@ Migration 不自動賦予任何角色。超級管理員本來就能用。
 | 服務責任與保險 | 網站未聲稱任何保險，取得後才可加上 |
 | 結算規則與報酬模型 | 明細金額取自既有 `care_bookings` 欄位；統一費率規則未定 |
 | 兩套結算是否整併 | 既有 `/admin/settlement` 仍是操作系統，lines/batches 為附加基礎 |
+
+---
+
+## Sprint C 上線步驟
+
+### 1. 執行 migration
+
+**Sprint C 的正確位置在 Sprint D 之前**（Sprint D 先被交付，是順序錯誤）。
+兩份沒有外鍵互相依賴，先跑哪一份都能成功，但兩份都要跑。
+
+在 Supabase → SQL Editor 貼上並執行：
+
+```
+migrations/companion_care_schema.sql       （若已跑過可略）
+migrations/care_operations_schema.sql      （若已跑過可略）
+migrations/care_staffing_schema.sql        ← Sprint C
+migrations/care_fulfilment_schema.sql      ← Sprint D
+```
+
+`care_staffing_schema.sql` 依賴 `companions`、`care_bookings`、`care_cases`
+與 `care_touch_updated_at()`。整份冪等，重複執行不會出錯。
+
+驗證：
+
+```sql
+select count(*) from information_schema.tables
+where table_name in ('staff_employment_terms','staff_service_regions',
+  'staff_capabilities','staff_capability_verifications',
+  'staff_availability_rules','staff_time_off_requests','care_dispatch_proposals');
+-- 應回傳 7
+
+select count(*) from staff_capabilities;
+-- 應回傳 4（能力字典種子資料）
+
+select count(*) from staff_employment_terms;
+-- 應等於既有 companions 的筆數（backfill 從 companions.employment_type 帶入）
+
+select proname from pg_proc where proname = 'care_accept_dispatch_proposal';
+-- 應回傳 1 筆
+```
+
+**執行後請務必檢查 backfill 結果**：
+
+```sql
+select c.id, c.name, c.employment_type, t.employment_type, t.status
+from companions c left join staff_employment_terms t
+  on t.companion_id = c.id and t.status <> 'ended'
+where t.id is null;
+```
+
+有回傳資料，代表那些人沒有僱用條件，媒合時會一律不合格。
+請在「陪診人力」逐一補上。
+
+### 2. 開通權限
+
+Migration 不自動賦予任何角色。超級管理員（`all`）本來就能用。
+
+到「系統管理 → 帳號管理」勾選：
+
+| 角色 | 權限 |
+|---|---|
+| 人資／管理 | `care_staff.manage`、`care_staff_credential.manage` |
+| 排班客服 | `care_schedule.manage`、`care_staff_time_off.review` |
+| 派工客服 | `care_dispatch.manage` |
+
+**建議不要把 `care_staff_credential.manage` 與 `care_dispatch.manage`
+給同一個人**——否則派工者可以自己補一張能力驗證來繞過媒合檢查。
+
+### 3. 日常流程
+
+```
+案件談成（Sprint B：/admin/care/cases 狀態 confirmed）
+  → /admin/care/dispatch 按「開立正式工單」（materialize_case）
+  → 系統列出候選人，每個人附上不合格原因
+
+  全職 → 按「直接指派」，立即成立，陪診員在 /companion 就看得到
+  兼職 → 按「發出邀請」，可同時發給多人，設定回覆期限（1～168 小時）
+          → 兼職在 /companion → 「📨 服務邀請」看到去敏感化摘要
+          → 接受 → 正式成立，其他人的邀請自動轉「已取消」
+          → 婉拒 → 要選原因，後台可以再發給別人
+
+請假／暫停接案
+  陪診員在 /companion → 「🗓 請假」或「🚫 暫停接案」送出
+  → /admin/care/time-off 審核
+  → 若期間內已有指派的服務，系統會擋下核准並列出那些服務
+```
+
+### 4. 重要提醒
+
+- **邀請不是指派**。發出邀請後那筆服務仍是未指派狀態，
+  不要因為「已經發出去了」就當作排好了。回覆期限到了要記得追。
+- **同時發給多人是刻意設計**。誰先接受誰拿到，資料庫保證只有一個成功，
+  不必擔心兩個人同時按下去會撞在一起。
+- **能力驗證會過期**。過期等同沒有，那個人就不會出現在候選人裡。
+  到期前請在「陪診人力 → 能力驗證」重新驗證。
+- **兼職的「可服務時段」不是班表**。那只代表願意接受邀請，
+  不代表那天一定會有服務，也不代表已經排了人。
+- **兼職接受前看不到就診人與醫院**。若客服在電話裡先講了細節，
+  等於繞過了這個設計，請避免。
+
+### Sprint C 待營運／法務確認
+
+- 兼職婉拒的原因代碼要不要影響後續派工優先順序（目前完全不影響）
+- 邀請預設回覆期限（目前 24 小時，每次可自行調整 1～168）
+- 能力驗證的實際認定標準與有效期限（目前由後台人員自行填寫）
+- 請假是否需要區分事假／病假／特休等假別（目前只有 5 個原因代碼，不與薪資連動）
+- 全職的公司班表目前沿用既有 14 天可服務時段表，是否要改為正式輪班表

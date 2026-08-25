@@ -165,3 +165,109 @@ Migration：`migrations/care_fulfilment_schema.sql`
 只新增，不修改也不刪除既有欄位或資料。依賴 `care_bookings` 與 `companions` 已存在
 （`companion_care_schema.sql`），以及 `care_touch_updated_at()`（`care_operations_schema.sql`），
 因此必須在那兩份之後執行。
+
+---
+
+## 陪診人力與媒合（Sprint C）
+
+Migration：`migrations/care_staffing_schema.sql`（冪等，可重複執行）。
+
+> 執行順序說明：Sprint D 的 migration 先寫出來，但 Sprint C 是它的前置。
+> 兩份互不衝突、也不互相依賴外鍵，先執行哪一份都可以，但**兩份都要執行**。
+
+### 責任邊界
+
+這一輪處理的是「誰能做這筆服務、什麼時候有空、要不要接」。
+**不處理**薪資、銀行帳戶、付款、發票、金流，也不處理自動或 AI 派工——
+所有指派都由後台人員按下按鈕，系統只負責擋掉不該成立的組合。
+
+### 與既有資料表的關係
+
+沿用既有的 `companions`（陪診員帳號）與 `care_bookings`（正式服務工單），
+不另建 StaffProfile 或 Assignment 表：
+
+| 規格書名詞 | 這個 codebase 的實體 |
+| --- | --- |
+| StaffProfile | `companions` |
+| Assignment | `care_bookings.companion_id` 有值 |
+| ServiceOrder | `care_bookings` |
+
+### 新增的橋接欄位
+
+Sprint B 的 `care_cases` 原本沒有任何欄位連到 `care_bookings`，
+所以「案件談成了要開始排人」這一步在資料上是斷的。本輪補上：
+
+```sql
+alter table care_cases add column if not exists booking_id bigint references care_bookings(id);
+create unique index uniq_care_case_booking on care_cases(booking_id) where booking_id is not null;
+```
+
+由 `materializeCareCaseBooking()` 建立，且是冪等的——重複呼叫回傳同一筆 booking，
+不會產生兩張工單。
+
+### 資料表責任
+
+| 表 | 負責什麼 | 誰能寫 |
+| --- | --- | --- |
+| `staff_employment_terms` | 全職／兼職、生效期間、暫停或結束 | 只有後台 |
+| `staff_service_regions` | 這個人服務哪些縣市 | 只有後台 |
+| `staff_capabilities` | 能力代碼字典（4 筆種子資料） | 只有 migration |
+| `staff_capability_verifications` | 誰驗證了哪項能力、何時到期 | 只有後台 |
+| `staff_availability_rules` | 兼職每週固定願意接案的時段 | 陪診員本人 |
+| `staff_time_off_requests` | 請假／暫停接案的申請與審核 | 本人送出、後台審核 |
+| `care_dispatch_proposals` | 給兼職的服務邀請 | 後台建立、本人回覆 |
+
+陪診員**不能**改自己的僱用型態，也不能自行驗證能力——那兩張表在
+API 層完全沒有本人可呼叫的寫入路徑。
+
+### 關鍵約束
+
+```sql
+-- 一個人同時只能有一筆未結束的僱用條件
+create unique index uniq_set_open_per_companion
+  on staff_employment_terms(companion_id) where status <> 'ended';
+
+-- 一筆服務只能有一筆被接受的邀請
+create unique index uniq_cdp_accepted_per_booking
+  on care_dispatch_proposals(booking_id) where status = 'accepted';
+
+-- 同一人對同一筆服務不會收到兩張待回覆邀請
+create unique index uniq_cdp_open_per_pair
+  on care_dispatch_proposals(booking_id, companion_id) where status = 'proposed';
+```
+
+### 併發保護：`care_accept_dispatch_proposal()`
+
+兩個兼職同時按下「接受」時，**只有一個會成功**。這不是靠前端把按鈕變灰，
+而是資料庫函式在同一個交易裡：
+
+1. `select ... for update` 鎖住邀請列
+2. 檢查狀態、期限、僱用資格
+3. `select companion_id ... for update` 鎖住 `care_bookings` 該列
+4. 若已有人被指派 → 把這張邀請改成 `cancelled`，回傳 `already_assigned`
+5. 否則寫入 `care_bookings.companion_id`、把邀請改成 `accepted`，
+   並把同一筆服務的其他待回覆邀請改成 `cancelled`
+
+回傳 `(ok, reason, out_booking_id)`，reason 是穩定的代碼，由 Service 層翻成中文。
+
+### 狀態機（資料庫層 trigger）
+
+- `staff_time_off_requests`：`submitted → approved / rejected / cancelled`，終態不可再改
+- `care_dispatch_proposals`：`proposed → accepted / declined / expired / cancelled`，終態不可再改
+
+### Backfill
+
+從既有欄位帶入，不是猜測：
+
+- `companions.employment_type`：舊值只有 `fulltime` / `parttime`，對應到 `full_time` / `part_time`
+- `companions.service_areas`（jsonb 陣列）→ `staff_service_regions`
+
+若日後出現無法對應的值，`normalizeLegacyEmploymentType()` 回傳 `null` 而不是猜一個，
+該筆會需要人工補。
+
+### RLS
+
+同 Sprint B/D：7 張表全部 `enable` + `force` row level security，
+並 `revoke all from anon, authenticated`。伺服器端走 service_role，
+所以 RLS 是縱深防禦，**不是**授權的實際強制點——真正的強制點在
+Route Handler 與 Service 層。
