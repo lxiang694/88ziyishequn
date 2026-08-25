@@ -88,25 +88,28 @@ export const CARE_FOOTER_GROUPS = [
  * 需求分流情境。
  * value 會以 query 參數 ?scenario= 帶到 /care/assessment，
  * 讀取端必須用 isCareScenario() 白名單驗證，不可直接信任網址內容。
+ *
+ * value 必須與 lib/care/domain.ts 的 SERVICE_SCENARIOS 完全一致 ——
+ * 表單會直接把它送到 POST /api/care/intake，多一層對應表只會製造錯誤。
  */
 export const CARE_SCENARIOS = [
   {
-    value: 'clinic',
+    value: 'routine_visit',
     label: '一般門診／拿慢箋',
     desc: '固定回診、領慢性處方箋，時間較短、流程單純',
   },
   {
-    value: 'exam',
+    value: 'visit_with_tests',
     label: '門診加檢查',
     desc: '看診當天還要抽血、影像或其他檢查，需要跨樓層移動',
   },
   {
-    value: 'fullday',
+    value: 'multi_department_or_full_day',
     label: '多科別或全日',
     desc: '同一天看多科、健檢，或整天都在院內等待',
   },
   {
-    value: 'postop',
+    value: 'post_procedure_discharge',
     label: '術後／麻醉離院',
     desc: '無痛檢查或日間手術後，依院方規定需有人陪同離院',
   },
