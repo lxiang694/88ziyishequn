@@ -19,9 +19,11 @@ interface UnsettledRow {
   id: number; booking_no: string; service_date: string; service_name: string
   patient_name: string; hospital: string; county: string
   price: number; extra_fee: number; addon_fee: number
-  companion_fee: number; addon_companion_fee: number
+  companion_fee: number; addon_companion_fee: number; extra_companion_fee: number
   companion_id: number; companion_name: string
+  settled_at: string | null; settled_by: string; settlement_note: string
 }
+interface SettledSummary { count: number; paid: number; revenue: number; truncated: boolean }
 
 const RANGES = [
   { key: 'today', label: '今日' },
@@ -32,7 +34,7 @@ const RANGES = [
 ]
 
 export default function CareSettlementPage() {
-  const [tab, setTab] = useState<'report' | 'payout'>('report')
+  const [tab, setTab] = useState<'report' | 'payout' | 'settled'>('report')
   const [dateRange, setDateRange] = useState('30days')
   const [loading, setLoading] = useState(true)
   const [tableMissing, setTableMissing] = useState(false)
@@ -42,6 +44,8 @@ export default function CareSettlementPage() {
   const [byCounty, setByCounty] = useState<CountyRow[]>([])
   const [byCompanion, setByCompanion] = useState<CompanionRow[]>([])
   const [unsettled, setUnsettled] = useState<UnsettledRow[]>([])
+  const [settledList, setSettledList] = useState<UnsettledRow[]>([])
+  const [settledSum, setSettledSum] = useState<SettledSummary>({ count: 0, paid: 0, revenue: 0, truncated: false })
   const [picked, setPicked] = useState<number[]>([])
   const [filterCompanion, setFilterCompanion] = useState<number | ''>('')
 
@@ -57,6 +61,8 @@ export default function CareSettlementPage() {
           setByCounty(d.data.by_county)
           setByCompanion(d.data.by_companion)
           setUnsettled(d.data.unsettled)
+          setSettledList(d.data.settled || [])
+          setSettledSum(d.data.settled_summary || { count: 0, paid: 0, revenue: 0, truncated: false })
           setTableMissing(!!d.table_missing)
           setPicked([])
         } else { setError(d.error || '載入失敗'); toast.error(d.error || '載入失敗') }
@@ -71,12 +77,13 @@ export default function CareSettlementPage() {
   // 否則服務日期落在期間外的陪診員會選不到
   const payoutCompanions = [...unsettled.reduce((m, u) => {
     const cur = m.get(u.companion_id) || { id: u.companion_id, name: u.companion_name || `#${u.companion_id}`, fee: 0 }
-    cur.fee += u.companion_fee + u.addon_companion_fee
+    cur.fee += payOf(u)
     m.set(u.companion_id, cur)
     return m
   }, new Map<number, { id: number; name: string; fee: number }>()).values()]
   const pickedRows = unsettled.filter(u => picked.includes(u.id))
-  const pickedTotal = pickedRows.reduce((s, r) => s + r.companion_fee + r.addon_companion_fee, 0)
+  const payOf = (r: UnsettledRow) => r.companion_fee + r.addon_companion_fee + r.extra_companion_fee
+  const pickedTotal = pickedRows.reduce((s, r) => s + payOf(r), 0)
 
   const toggle = (id: number) =>
     setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : [...p, id]))
@@ -91,10 +98,25 @@ export default function CareSettlementPage() {
       body: JSON.stringify({ action: 'settle', ids: picked }),
     })
     const d = await res.json()
-    if (d.success) { toast.success(`已結算 ${d.count} 筆`); load() } else toast.error(d.error || '結算失敗')
+    if (d.success) {
+      toast.success(`已結算 ${d.count} 筆，記錄在「✅ 已結算」`)
+      setTab('settled')
+      load()
+    } else toast.error(d.error || '結算失敗')
   }
 
-  const updateFee = async (id: number, field: 'companion_fee' | 'extra_fee', value: string) => {
+  // 結算按錯要救得回來，否則只能直接改資料庫
+  const unsettle = async (row: UnsettledRow) => {
+    if (!confirm(`確定要將 ${row.booking_no} 退回「待結算」？\n退回後會重新出現在待結算清單。`)) return
+    const res = await fetch('/api/admin/care/settlement', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'unsettle', ids: [row.id] }),
+    })
+    const d = await res.json()
+    if (d.success) { toast.success('已退回待結算'); load() } else toast.error(d.error || '操作失敗')
+  }
+
+  const updateFee = async (id: number, field: 'companion_fee' | 'extra_fee' | 'extra_companion_fee', value: string) => {
     const res = await fetch('/api/admin/care/settlement', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, [field]: Number(value) || 0 }),
@@ -127,11 +149,15 @@ export default function CareSettlementPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 mb-5">
-        {([['report', '📊 服務報表'], ['payout', '💵 收入結算']] as const).map(([k, label]) => (
+      <div className="grid grid-cols-3 gap-2 mb-5">
+        {([
+          ['report', '📊 服務報表', 0],
+          ['payout', '💵 待結算', unsettled.length],
+          ['settled', '✅ 已結算', settledSum.count],
+        ] as const).map(([k, label, n]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`min-h-[48px] rounded-xl font-bold text-base border-2 transition-colors ${tab === k ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-700 border-gray-200'}`}>
-            {label}
+            className={`min-h-[48px] rounded-xl font-bold text-[15px] border-2 transition-colors px-2 ${tab === k ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-700 border-gray-200'}`}>
+            {label}{n > 0 && <span className={`ml-1 ${tab === k ? 'text-green-100' : 'text-gray-500'}`}>({n})</span>}
           </button>
         ))}
       </div>
@@ -298,6 +324,105 @@ export default function CareSettlementPage() {
             )}
           </div>
         </>
+      ) : tab === 'settled' ? (
+        <>
+          {/* 已結算記錄 */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className="bg-gradient-to-br from-gray-700 to-gray-800 rounded-2xl p-5 text-white">
+              <p className="text-gray-200 text-sm font-semibold">累計已付陪診員</p>
+              <p className="text-3xl font-bold mt-1">{formatPrice(settledSum.paid)}</p>
+              <p className="text-gray-200 text-[13px] mt-1">{settledSum.count} 筆已結算</p>
+            </div>
+            <div className="card p-5">
+              <p className="text-gray-600 text-sm font-semibold">這些單的營收</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{formatPrice(settledSum.revenue)}</p>
+            </div>
+            <div className="card p-5">
+              <p className="text-gray-600 text-sm font-semibold">這些單的毛利</p>
+              <p className="text-3xl font-bold text-green-700 mt-1">
+                {formatPrice(settledSum.revenue - settledSum.paid)}
+              </p>
+            </div>
+          </div>
+
+          {settledList.length === 0 ? (
+            <div className="card p-10 text-center text-gray-600">
+              <p className="text-lg font-semibold text-gray-800 mb-2">還沒有已結算的記錄</p>
+              <p className="text-[15px]">到「💵 待結算」勾選並標記結算後，記錄會保留在這裡。</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-gray-600 text-[13px] mb-2">
+                依結算時間排序，涵蓋所有期間
+                {settledSum.truncated && '（僅顯示最近 500 筆）'}
+              </p>
+              <div className="space-y-2">
+                {settledList.map(r => (
+                  <div key={r.id} className="card p-4">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="font-mono font-bold text-gray-800 text-[13px]">{r.booking_no}</span>
+                      <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md text-[13px] font-semibold">
+                        {r.companion_name}
+                      </span>
+                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-md text-[13px] font-semibold">
+                        已結算
+                      </span>
+                    </div>
+                    <p className="font-semibold text-gray-900 text-[15px]">
+                      {r.service_date}・{r.service_name}
+                    </p>
+                    <p className="text-gray-600 text-sm mt-0.5">
+                      {r.county} {r.hospital}｜就診人：{r.patient_name}
+                    </p>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 pt-3 border-t border-gray-100">
+                      <div>
+                        <p className="text-gray-600 text-[13px]">營收</p>
+                        <p className="font-bold text-gray-900">{formatPrice(r.price + r.addon_fee + r.extra_fee)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-[13px]">已付報酬</p>
+                        <p className="font-bold text-orange-800">{formatPrice(payOf(r))}</p>
+                        {(r.addon_companion_fee > 0 || r.extra_companion_fee > 0) && (
+                          <p className="text-gray-600 text-[13px]">
+                            {[
+                              r.addon_companion_fee > 0 ? `加購 ${formatPrice(r.addon_companion_fee)}` : '',
+                              r.extra_companion_fee > 0 ? `額外 ${formatPrice(r.extra_companion_fee)}` : '',
+                            ].filter(Boolean).join('、')}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-[13px]">毛利</p>
+                        <p className="font-bold text-green-700">
+                          {formatPrice(r.price + r.addon_fee + r.extra_fee - payOf(r))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-[13px]">結算時間</p>
+                        <p className="font-semibold text-gray-800 text-[15px]">
+                          {r.settled_at ? r.settled_at.slice(0, 10) : '—'}
+                        </p>
+                        {r.settled_by && <p className="text-gray-600 text-[13px]">由 {r.settled_by}</p>}
+                      </div>
+                    </div>
+
+                    {r.settlement_note && (
+                      <p className="text-gray-700 text-[13px] mt-2 bg-gray-50 rounded-lg px-3 py-2">
+                        📝 {r.settlement_note}
+                      </p>
+                    )}
+
+                    <button onClick={() => unsettle(r)}
+                      className="mt-3 text-[13px] font-semibold text-gray-600 underline min-h-[48px]">
+                      結算錯了？退回待結算
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
       ) : (
         <>
           {/* 收入結算 */}
@@ -378,32 +503,47 @@ export default function CareSettlementPage() {
                           {u.county} {u.hospital}｜就診人：{u.patient_name}
                         </p>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 pt-3 border-t border-gray-100">
-                          <div>
-                            <p className="text-gray-600 text-[13px]">方案收入</p>
-                            <p className="font-bold text-gray-900">{formatPrice(u.price)}</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-100">
+                          <div className="col-span-2 sm:col-span-1">
+                            <p className="text-gray-600 text-[13px]">向客戶收（方案＋加購）</p>
+                            <p className="font-bold text-gray-900">{formatPrice(u.price + u.addon_fee)}</p>
                           </div>
                           <div>
-                            <label className="text-gray-600 text-[13px] block">額外收費</label>
+                            <label className="text-gray-600 text-[13px] block">額外收費<span className="text-blue-700">（跟客戶收）</span></label>
                             <input type="number" defaultValue={u.extra_fee}
                               onBlur={e => { if (Number(e.target.value) !== u.extra_fee) updateFee(u.id, 'extra_fee', e.target.value) }}
                               className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 text-base focus:border-green-500 focus:outline-none" />
                           </div>
                           <div>
-                            <label className="text-gray-600 text-[13px] block">陪診員報酬</label>
-                            <input type="number" defaultValue={u.companion_fee}
-                              onBlur={e => { if (Number(e.target.value) !== u.companion_fee) updateFee(u.id, 'companion_fee', e.target.value) }}
-                              className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 text-base font-bold focus:border-green-500 focus:outline-none" />
+                            <p className="text-gray-600 text-[13px]">本筆毛利</p>
+                            <p className="font-bold text-green-700 text-lg">
+                              {formatPrice(u.price + u.addon_fee + u.extra_fee - payOf(u))}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* 付給陪診員的部分獨立一區，避免與「跟客戶收」混淆 */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-100 bg-orange-50/60 -mx-4 px-4 pb-3 rounded-b-xl">
+                          <div className="col-span-2 sm:col-span-3">
+                            <p className="font-bold text-orange-900 text-[13px]">💰 付給 {u.companion_name}</p>
                           </div>
                           <div>
-                            <p className="text-gray-600 text-[13px]">本筆毛利</p>
-                            <p className="font-bold text-green-700">
-                              {formatPrice(u.price + u.addon_fee + u.extra_fee - u.companion_fee - u.addon_companion_fee)}
-                            </p>
-                            {(u.addon_fee > 0 || u.addon_companion_fee > 0) && (
-                              <p className="text-gray-600 text-[13px] mt-0.5">
-                                含加購 收 {formatPrice(u.addon_fee)} / 付 {formatPrice(u.addon_companion_fee)}
-                              </p>
+                            <label className="text-gray-700 text-[13px] block">方案報酬</label>
+                            <input type="number" defaultValue={u.companion_fee}
+                              onBlur={e => { if (Number(e.target.value) !== u.companion_fee) updateFee(u.id, 'companion_fee', e.target.value) }}
+                              className="w-full border-2 border-gray-200 rounded-lg px-2 py-1 text-base font-bold bg-white focus:border-orange-500 focus:outline-none" />
+                          </div>
+                          <div>
+                            <label className="text-gray-700 text-[13px] block">額外報酬<span className="text-orange-700">（給陪診員）</span></label>
+                            <input type="number" defaultValue={u.extra_companion_fee}
+                              onBlur={e => { if (Number(e.target.value) !== u.extra_companion_fee) updateFee(u.id, 'extra_companion_fee', e.target.value) }}
+                              className="w-full border-2 border-orange-200 rounded-lg px-2 py-1 text-base font-bold bg-white focus:border-orange-500 focus:outline-none" />
+                          </div>
+                          <div>
+                            <p className="text-gray-700 text-[13px]">實付合計</p>
+                            <p className="font-bold text-orange-800 text-lg">{formatPrice(payOf(u))}</p>
+                            {u.addon_companion_fee > 0 && (
+                              <p className="text-gray-600 text-[13px]">含加購 {formatPrice(u.addon_companion_fee)}</p>
                             )}
                           </div>
                         </div>
