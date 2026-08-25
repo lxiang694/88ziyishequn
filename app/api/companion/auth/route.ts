@@ -26,17 +26,15 @@ export async function POST(req: NextRequest) {
     if (!valid) {
       return NextResponse.json({ success: false, error: '手機號碼或密碼錯誤' }, { status: 401 })
     }
-    if (c.status === 'pending') {
-      return NextResponse.json({ success: false, error: '您的帳號尚在審核中，請聯絡客服' }, { status: 403 })
-    }
-    if (c.status !== 'active') {
+    // pending（審核中）仍可登入以完成資料填寫，但不會有派工；僅停用帳號擋下
+    if (c.status === 'suspended') {
       return NextResponse.json({ success: false, error: '此帳號已停用，請聯絡客服' }, { status: 403 })
     }
 
     const token = signCompanionToken({ id: c.id, name: c.name, phone: c.phone })
     const res = NextResponse.json({
       success: true,
-      data: { id: c.id, name: c.name, phone: c.phone, employment_type: c.employment_type },
+      data: { id: c.id, name: c.name, phone: c.phone, employment_type: c.employment_type, status: c.status },
     })
     res.cookies.set(COMPANION_COOKIE, token, {
       httpOnly: true,

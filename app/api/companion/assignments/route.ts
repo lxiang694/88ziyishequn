@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('care_bookings')
-    .select('id, booking_no, service_name, service_date, time_slot, county, hospital, department, patient_name, patient_gender, patient_age, mobility, addons, notes, status, contact_name, contact_phone, price')
+    .select('id, booking_no, service_name, service_date, time_slot, county, hospital, department, patient_name, patient_gender, patient_age, mobility, addons, notes, status, contact_name, contact_phone, price, accepted_at, contact_confirmed_at, met_at')
     .eq('companion_id', auth.companion.id)
     .in('status', ['已派工', '服務中', '已完成'])
     .order('service_date', { ascending: false })

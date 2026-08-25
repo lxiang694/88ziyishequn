@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { TW_COUNTIES } from '@/lib/careMeta'
+import CompanionDetail from '@/components/admin/CompanionDetail'
 
 interface Companion {
   id: number; name: string; phone: string; email: string | null; gender: string | null
@@ -28,6 +29,7 @@ export default function AdminCompanionsPage() {
   const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
   const [tableMissing, setTableMissing] = useState(false)
+  const [expanded, setExpanded] = useState<number | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -162,6 +164,9 @@ export default function AdminCompanionsPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-bold text-gray-900 text-lg">{c.name}</p>
                     <span className={'status-badge ' + (STATUS_COLOR[c.status] || '')}>{STATUS_LABEL[c.status] || c.status}</span>
+                    {c.status !== 'active' && c.profile_submitted_at && (
+                      <span className="status-badge bg-amber-500 text-white">待審核</span>
+                    )}
                     <span className="text-[13px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md font-semibold">
                       {c.employment_type === 'fulltime' ? '全職' : '兼職'}
                     </span>
@@ -179,6 +184,10 @@ export default function AdminCompanionsPage() {
               </div>
 
               <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+                <button onClick={() => setExpanded(expanded === c.id ? null : c.id)}
+                  className="px-4 py-2 min-h-[48px] rounded-xl border-2 border-green-600 bg-green-50 text-green-800 font-semibold text-[15px] hover:bg-green-100">
+                  {expanded === c.id ? '收起詳細資料' : '查看詳細資料 / 證件 / 班表'}
+                </button>
                 {c.status !== 'active' && (
                   <button onClick={() => patch(c.id, { status: 'active' })}
                     className="px-4 py-2 min-h-[48px] rounded-xl border-2 border-green-600 text-green-700 font-semibold text-[15px] hover:bg-green-50">
@@ -196,6 +205,12 @@ export default function AdminCompanionsPage() {
                   重設密碼
                 </button>
               </div>
+
+              {expanded === c.id && (
+                <div className="-mx-5 -mb-5 mt-4">
+                  <CompanionDetail id={c.id} onChanged={load} />
+                </div>
+              )}
             </div>
           ))}
         </div>

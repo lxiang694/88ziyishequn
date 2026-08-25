@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { formatPrice, formatDateTime } from '@/lib/utils'
-import { BOOKING_STATUSES, TIME_SLOTS, MOBILITY_OPTIONS, ADDON_OPTIONS, labelOf, statusColor } from '@/lib/careMeta'
+import { BOOKING_STATUSES, TIME_SLOTS, MOBILITY_OPTIONS, ADDON_OPTIONS, labelOf, statusColor, eventMeta } from '@/lib/careMeta'
 
 interface Booking {
   id: number; booking_no: string; service_name: string; price: number
@@ -14,6 +14,62 @@ interface Booking {
   companions?: { id: number; name: string; phone: string } | null
 }
 interface Companion { id: number; name: string; phone: string; status: string; available?: boolean }
+
+interface CareEvent {
+  id: number; event_type: string; note: string | null
+  created_at: string; companion_name: string; photo_urls: string[]
+}
+
+/** 服務過程記錄時間軸（含現場照片） */
+function EventTimeline({ bookingId }: { bookingId: number }) {
+  const [events, setEvents] = useState<CareEvent[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/admin/care/events?booking_id=${bookingId}`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setEvents(d.data); setLoaded(true) })
+      .catch(() => setLoaded(true))
+  }, [bookingId])
+
+  if (!loaded) return <p className="text-gray-600 text-sm">載入服務記錄…</p>
+  if (events.length === 0) {
+    return <p className="text-gray-600 text-sm">陪診員尚未回報任何服務記錄</p>
+  }
+
+  return (
+    <div className="space-y-3">
+      {events.map(ev => {
+        const m = eventMeta(ev.event_type)
+        return (
+          <div key={ev.id} className="flex items-start gap-3">
+            <span className="text-xl flex-shrink-0">{m.icon}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={'status-badge ' + m.color}>{m.label}</span>
+                <span className="text-gray-500 text-[13px]">
+                  {new Date(ev.created_at).toLocaleString('zh-TW')}
+                </span>
+                {ev.companion_name && <span className="text-gray-600 text-[13px]">by {ev.companion_name}</span>}
+              </div>
+              {ev.note && <p className="text-gray-800 text-[15px] mt-1 whitespace-pre-wrap">{ev.note}</p>}
+              {ev.photo_urls.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                  {ev.photo_urls.map((u, i) => (
+                    <a key={i} href={u} target="_blank" rel="noopener noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={u} alt={`現場照片 ${i + 1}`} className="w-full h-20 object-cover rounded-lg border border-gray-200" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function AdminCarePage() {
   const [rows, setRows] = useState<Booking[]>([])
@@ -147,6 +203,12 @@ export default function AdminCarePage() {
                         {b.contact_line && <p className="text-gray-600 text-sm mt-1">LINE：{b.contact_line}</p>}
                         <p className="text-gray-500 text-[13px] mt-2">預約於 {formatDateTime(b.created_at)}</p>
                       </div>
+                    </div>
+
+                    {/* 服務過程記錄 */}
+                    <div className="bg-white rounded-xl p-4 border border-gray-100">
+                      <p className="font-bold text-gray-700 text-[13px] uppercase tracking-wider mb-3">服務過程記錄</p>
+                      <EventTimeline bookingId={b.id} />
                     </div>
 
                     {/* 派工 */}

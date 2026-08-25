@@ -11,12 +11,12 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('companions')
-    .select('id, name, phone, email, gender, employment_type, service_areas, certifications, bio, status, completed_count')
+    .select('id, name, phone, email, gender, employment_type, service_areas, certifications, bio, status, completed_count, profile_submitted_at, reject_reason')
     .eq('id', auth.companion.id)
     .single()
 
   if (error || !data) return NextResponse.json({ success: false, error: '找不到帳號' }, { status: 404 })
-  if (data.status !== 'active') return NextResponse.json({ success: false, error: '帳號未啟用' }, { status: 403 })
+  if (data.status === 'suspended') return NextResponse.json({ success: false, error: '帳號已停用' }, { status: 403 })
   return NextResponse.json({ success: true, data })
 }
 

@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Toaster } from 'react-hot-toast'
@@ -57,7 +58,7 @@ export default function CompanionLoginPage() {
             {submitting ? '登入中…' : '登入'}
           </button>
           <p className="t-meta text-center">
-            尚未有帳號？請聯絡客服申請成為陪診員
+            尚未有帳號？<Link href="/companion/register" className="text-green-700 font-bold underline">申請成為陪診員</Link>
           </p>
         </form>
       </div>
