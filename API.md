@@ -178,3 +178,90 @@ UI 上有明確警語。
 沿用 Sprint B 的 `buildAuditDetail()` 白名單（`resource` / `resource_id` /
 `from_status` / `to_status` / `reason_code` / `quote_version`），每個值限長 60 字。
 服務紀錄全文、家屬備註、電話、地址、`user_id`、金額 payload 都不會進稽核。
+
+---
+
+## 陪診人力與媒合端點（Sprint C）
+
+同樣沒有通用 PATCH。所有寫入都是 `POST { action, ... }`，
+`action` 走 `switch` 白名單，未知 action 一律 400。
+
+### 後台
+
+| 端點 | Method | action | 需要權限 |
+|---|---|---|---|
+| `/api/admin/care/staff` | GET | — | 任一人力權限 |
+| `/api/admin/care/staff/[id]` | GET | — | 任一人力權限 |
+| `/api/admin/care/staff/[id]` | POST | `create_employment_term` / `end_employment_term` / `pause_employment_term` / `resume_employment_term` | `care_staff.manage` |
+| | | `add_region` / `remove_region` | `care_staff.manage` |
+| | | `verify_capability` / `expire_capability` / `suspend_capability` | `care_staff_credential.manage` |
+| `/api/admin/care/schedule` | GET | — | 任一人力權限 |
+| `/api/admin/care/time-off` | GET | — | 任一人力權限 |
+| `/api/admin/care/time-off` | POST | `review` | `care_staff_time_off.review` |
+| `/api/admin/care/dispatch` | GET | — | 任一人力權限 |
+| `/api/admin/care/dispatch` | POST | `materialize_case` / `assign_full_time` / `create_proposal` | `care_dispatch.manage` |
+| `/api/admin/care/dispatch/proposals` | GET | — | 任一人力權限 |
+| `/api/admin/care/dispatch/proposals/[id]` | POST | `cancel` / `expire` | `care_dispatch.manage` |
+
+### 陪診員端
+
+身分一律取自 `companion_token` cookie，**不接受**請求內容裡的 `companion_id`。
+
+| 端點 | Method | action |
+|---|---|---|
+| `/api/companion/availability-rules` | GET / POST | `create` / `update` / `disable` |
+| `/api/companion/time-off` | GET / POST | `submit` / `cancel` |
+| `/api/companion/proposals` | GET | —（回傳去敏感化摘要） |
+| `/api/companion/proposals/[id]` | POST | `accept` / `decline` |
+
+### 邀請 ≠ 指派
+
+`create_proposal` **不會**寫入 `care_bookings.companion_id`，只建立一筆
+`status = 'proposed'` 的邀請。只有陪診員按下 accept、且資料庫函式
+`care_accept_dispatch_proposal()` 回傳 `ok = true` 時，才會產生正式指派。
+
+### `GET /api/companion/proposals` 的回傳欄位
+
+這是白名單，來自 `toProposalSummary()`：
+
+```json
+{
+  "proposal_id": 12,
+  "service_date": "2026-09-03",
+  "time_slot": "morning",
+  "county": "台北市",
+  "service_name": "一般門診陪診",
+  "mobility": "wheelchair",
+  "required_capabilities": ["general_outpatient_flow", "wheelchair_route_support"],
+  "expires_at": "2026-08-27T02:00:00.000Z"
+}
+```
+
+**沒有**就診人姓名、聯絡人、電話、醫院名稱、科別、樓層、到府地址、
+特殊需求備註、報價或報酬。這些要接受之後，從 `/api/companion/assignments`
+的正式工單才拿得到。
+
+### accept 的失敗代碼
+
+資料庫函式回傳穩定代碼，Service 層翻成中文訊息：
+
+| reason | 使用者看到 |
+|---|---|
+| `proposal_not_found` | 找不到這筆邀請 |
+| `not_your_proposal` | 這不是給您的邀請 |
+| `proposal_not_open` | 這筆邀請已經回覆過了 |
+| `proposal_expired` | 這筆邀請已經逾時 |
+| `employment_inactive` | 您目前沒有有效的接案資格，請聯絡客服 |
+| `already_assigned` | 這筆服務剛剛已經由其他陪診員接下了 |
+
+`already_assigned` 是正常結果，不是錯誤——兩人同搶時本來就會有一個看到它。
+
+### 媒合檢查回傳**所有**不符原因
+
+`GET /api/admin/care/dispatch` 的候選人清單，每個人附上 `failures: string[]`，
+不是只回第一個。派工人員一次看到全部問題，不用修一個才發現下一個。
+
+### 稽核
+
+所有寫入動作寫入 `admin_audit_logs`，記錄操作者、對象 id、狀態轉換與原因代碼，
+**不記錄**申請理由自由文字或邀請內容。

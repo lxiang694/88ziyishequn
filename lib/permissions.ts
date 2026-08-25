@@ -18,6 +18,12 @@ export const PERMISSION_CATALOG: { key: string; label: string; hint?: string }[]
   { key: 'care_summary.review', label: '陪診履約：家屬小結審核與發布', hint: '唯一能對家屬發布內容的權限' },
   { key: 'care_incident.manage', label: '陪診履約：異常事件處理與通知決策' },
   { key: 'care_settlement.manage', label: '陪診履約：結算明細與批次', hint: '唯一能看到報酬金額的權限' },
+  // ── 陪診人力與媒合（Sprint C）────────────────────────────
+  { key: 'care_staff.manage', label: '陪診人力：名冊、僱用型態、服務區域' },
+  { key: 'care_staff_credential.manage', label: '陪診人力：能力驗證', hint: '陪診員不能自行標記為已驗證' },
+  { key: 'care_schedule.manage', label: '陪診人力：班表與可服務時段檢視' },
+  { key: 'care_staff_time_off.review', label: '陪診人力：請假／暫停接案審核' },
+  { key: 'care_dispatch.manage', label: '陪診人力：人工媒合與兼職邀請' },
 ]
 
 export const ALL_PERMISSION = 'all'
@@ -64,6 +70,22 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'care_settlement.batch_approve': '結算批次：核准',
   'care_settlement.batch_publish': '結算批次：發布',
   'care_settlement.batch_close': '結算批次：關閉',
+  // 陪診人力與媒合（Sprint C）
+  'care_staff.employment_create': '陪診人力：建立僱用條件',
+  'care_staff.employment_end': '陪診人力：結束僱用條件',
+  'care_staff.employment_pause': '陪診人力：暫停接案',
+  'care_staff.employment_resume': '陪診人力：恢復接案',
+  'care_staff.region_add': '陪診人力：新增服務區域',
+  'care_staff.region_remove': '陪診人力：移除服務區域',
+  'care_staff.capability_verify': '陪診人力：能力驗證通過',
+  'care_staff.capability_expire': '陪診人力：能力驗證過期',
+  'care_staff.capability_suspend': '陪診人力：能力驗證暫停',
+  'care_time_off.review': '陪診人力：請假審核',
+  'care_dispatch.materialize': '媒合：案件轉為正式服務',
+  'care_dispatch.assign_full_time': '媒合：全職正式指派',
+  'care_dispatch.proposal_create': '媒合：建立兼職邀請',
+  'care_dispatch.proposal_cancel': '媒合：撤回邀請',
+  'care_dispatch.proposal_expire': '媒合：邀請逾時',
 }
 
 // 屬於「資料下載」的動作（需提示超級管理員）

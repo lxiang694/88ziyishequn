@@ -333,6 +333,165 @@ console.log('\n11. 履約分層')
   else fail('資料庫層未擋下已送出狀態')
 }
 
+// ══ Sprint C：人力、班表與人工媒合 ═══════════════════════════
+const STAFFING_LIB = 'lib/care/staffing'
+
+const SPRINT_C_ADMIN_ROUTES = [
+  'app/api/admin/care/staff/route.ts',
+  'app/api/admin/care/staff/[id]/route.ts',
+  'app/api/admin/care/schedule/route.ts',
+  'app/api/admin/care/time-off/route.ts',
+  'app/api/admin/care/dispatch/route.ts',
+  'app/api/admin/care/dispatch/proposals/route.ts',
+  'app/api/admin/care/dispatch/proposals/[id]/route.ts',
+]
+const SPRINT_C_STAFF_ROUTES = [
+  'app/api/companion/availability-rules/route.ts',
+  'app/api/companion/time-off/route.ts',
+  'app/api/companion/proposals/route.ts',
+  'app/api/companion/proposals/[id]/route.ts',
+]
+
+console.log('\n12. 人力與媒合 API 的授權')
+{
+  for (const r of SPRINT_C_ADMIN_ROUTES) {
+    const s = strip(read(r) || '')
+    if (!s) { fail(`找不到 ${r}`); continue }
+    if (/requireStaffingPermission\(/.test(s)) ok(`${r} 檢查陪診人力權限`)
+    else fail(`${r} 未檢查陪診人力權限`)
+  }
+  for (const r of SPRINT_C_STAFF_ROUTES) {
+    const s = strip(read(r) || '')
+    if (!s) { fail(`找不到 ${r}`); continue }
+    if (/requireOwnStaff\(/.test(s)) ok(`${r} 只允許本人操作`)
+    else fail(`${r} 未限制為本人`)
+  }
+
+  const generic = [...SPRINT_C_ADMIN_ROUTES, ...SPRINT_C_STAFF_ROUTES]
+    .filter(r => /export async function (PATCH|PUT)\b/.test(strip(read(r) || '')))
+  if (generic.length === 0) ok('沒有任意欄位覆寫的 PATCH／PUT 端點')
+  else fail('出現通用更新端點', generic.join(', '))
+}
+
+console.log('\n13. 邀請不等於指派')
+{
+  const svc = strip(read(`${STAFFING_LIB}/service.ts`) || '')
+  const create = (svc.match(/export async function createPartTimeDispatchProposal[\s\S]*?\n\}/) || [''])[0]
+  if (!create) {
+    fail('找不到 createPartTimeDispatchProposal')
+  } else {
+    const assigns = ['assignBooking', 'updateBooking', 'setBookingCompanion', 'callAcceptProposal']
+      .filter(k => create.includes(k))
+    if (/insertProposal\(/.test(create) && /status:\s*'proposed'/.test(create) && assigns.length === 0) {
+      ok('建立邀請只寫入 proposed 邀請，不會指派 care_bookings.companion_id')
+    } else fail('建立邀請時就指派了陪診員', assigns.join(', '))
+  }
+
+  const accept = (svc.match(/export async function acceptOwnDispatchProposal[\s\S]*?\n\}/) || [''])[0]
+  if (/repo\.callAcceptProposal\(/.test(accept)) ok('接受邀請一律走資料庫函式（單一交易）')
+  else fail('接受邀請沒有走資料庫函式')
+
+  const sql = read('migrations/care_staffing_schema.sql') || ''
+  if (/create or replace function care_accept_dispatch_proposal/.test(sql)) {
+    ok('資料庫函式 care_accept_dispatch_proposal 已定義')
+  } else fail('缺少 care_accept_dispatch_proposal')
+  const flat = sql.replace(/\s+/g, ' ')
+  if (/from care_dispatch_proposals where id = p_proposal_id for update/.test(flat)
+      && /from care_bookings where id = v_p\.booking_id for update/.test(flat)) {
+    ok('接受流程對邀請與服務都先鎖列，兩人同搶只會有一個成功')
+  } else fail('接受流程缺少列鎖，無法防止同時接受')
+  if (/uniq_cdp_accepted_per_booking/.test(sql)) ok('同一筆服務只允許一筆 accepted 邀請（唯一索引）')
+  else fail('缺少「一筆服務只能被接受一次」的唯一索引')
+  if (/already_assigned/.test(sql)) ok('資料庫層會回報 already_assigned，不靠前端擋')
+  else fail('資料庫層未處理已被指派的情況')
+}
+
+console.log('\n14. 兼職接受前只看得到去敏感化摘要')
+{
+  const dom = strip(read(`${STAFFING_LIB}/domain.ts`) || '')
+  const fn = (dom.match(/export function toProposalSummary[\s\S]*?\n\}/) || [''])[0]
+  if (!fn) {
+    fail('找不到 toProposalSummary')
+  } else {
+    const leaks = ['patient_name', 'contact_name', 'contact_phone', 'contact_line',
+                   'hospital', 'department', 'pickup_address', 'notes', 'price', 'companion_fee']
+      .filter(k => new RegExp(`${k}\\s*:`).test(fn))
+    if (leaks.length === 0) ok('邀請摘要不含就診人、聯絡方式、醫院、地址、備註或金額')
+    else fail('邀請摘要夾帶敏感欄位', leaks.join(', '))
+    if (/county/.test(fn)) ok('邀請摘要只給到縣市層級')
+    else fail('邀請摘要缺少縣市欄位')
+  }
+
+  const svc = strip(read(`${STAFFING_LIB}/service.ts`) || '')
+  const list = (svc.match(/export async function listOwnProposalSummaries[\s\S]*?\n\}/) || [''])[0]
+  if (/toProposalSummary\(/.test(list)) ok('陪診員端邀請列表一律經過去敏感化函式')
+  else fail('陪診員端邀請列表未經過去敏感化函式')
+
+  const route = strip(read('app/api/companion/proposals/route.ts') || '')
+  if (/listOwnProposalSummaries\(/.test(route) && !/supabaseAdmin/.test(route)) {
+    ok('陪診員邀請端點只回傳 Service 的摘要')
+  } else fail('陪診員邀請端點可能繞過 Service')
+}
+
+console.log('\n15. 陪診員不得自行變更僱用型態與能力驗證')
+{
+  const banned = ['employment_type', 'employment_term', 'capability_code', 'verify_capability', 'companion_id']
+  const bad = []
+  for (const r of SPRINT_C_STAFF_ROUTES) {
+    const s = strip(read(r) || '')
+    // companion_id 只允許出現在「從 token 取自己 id」的情境，故一併檢查賦值形式
+    const hits = banned.filter(k => new RegExp(`${k}\\s*[:=]`).test(s))
+    if (hits.length) bad.push(`${r}（${hits.join('、')}）`)
+  }
+  if (bad.length === 0) ok('陪診員端點無法寫入僱用型態、能力驗證或他人身分')
+  else fail('陪診員端點可寫入不該由本人決定的欄位', bad.join(' / '))
+
+  const val = strip(read(`${STAFFING_LIB}/validation.ts`) || '')
+  const term = (val.match(/interface EmploymentTermInput \{([\s\S]*?)\}/) || [])[1] || ''
+  if (term && !/\b(status|actor|companion_id|verified_by)\b/.test(term)) {
+    ok('EmploymentTermInput 不含 status 或身分欄位（由伺服器決定）')
+  } else fail('僱用條件輸入含有不該由 client 控制的欄位')
+
+  const http = strip(read(`${STAFFING_LIB}/http.ts`) || '')
+  const own = (http.match(/export function requireOwnStaff[\s\S]*?\n\}/) || [''])[0]
+  if (/requireCompanion\(req\)/.test(own) && /auth\.companion\.id/.test(own)) {
+    ok('本人身分取自 cookie／token，不是請求內容')
+  } else fail('requireOwnStaff 未從 token 取得身分')
+}
+
+console.log('\n16. 人力模組分層')
+{
+  const comps = [...walk('app/companion'), ...walk('components/companion'), ...walk('app/admin/care')]
+    .filter(f => f.endsWith('.tsx'))
+  const bad = comps.filter(f => {
+    const s = strip(read(f) || '')
+    return s.includes('staffing/repository') || s.includes('staffing/service') || s.includes('supabaseAdmin')
+  })
+  if (bad.length === 0) ok(`${comps.length} 個 component 未直接呼叫 repository／service_role`)
+  else fail('有 component 直接碰資料庫或 Service', bad.join(', '))
+
+  const sql = read('migrations/care_staffing_schema.sql') || ''
+  // RLS 用 do $$ 迴圈一次套用，所以檢查表名有沒有在那份清單裡
+  // 檔案裡有多個 foreach 迴圈，挑出真正做 RLS 的那一個
+  const loops = [...sql.matchAll(/foreach t in array array\[([\s\S]*?)\] loop([\s\S]*?)end loop/g)]
+  const rlsBlock = loops.find(m => /enable row level security/.test(m[2])) || ['', '', '']
+  const rlsList = rlsBlock[1]
+  const rlsBody = rlsBlock[2]
+  const rlsOn = /enable row level security/.test(rlsBody)
+    && /force row level security/.test(rlsBody)
+    && /revoke all on/.test(rlsBody)
+  for (const t of ['staff_employment_terms', 'staff_service_regions', 'staff_capabilities',
+                   'staff_capability_verifications', 'staff_availability_rules',
+                   'staff_time_off_requests', 'care_dispatch_proposals']) {
+    if (rlsOn && rlsList.includes(`'${t}'`)) ok(`${t} 已啟用並強制 RLS，且撤銷 anon／authenticated`)
+    else fail(`${t} 未啟用 RLS`)
+  }
+  if (/uniq_set_open_per_companion/.test(sql)) ok('同一人同時只能有一筆未結束的僱用條件')
+  else fail('缺少僱用條件唯一性保護')
+  if (/uniq_cdp_open_per_pair/.test(sql)) ok('同一人對同一筆服務不會有重複的待回覆邀請')
+  else fail('缺少重複邀請保護')
+}
+
 console.log(`\n── 結果 ──\n  通過 ${passes}\n  失敗 ${failures}\n`)
 if (failures > 0) { console.log('✗ 陪診營運檢查未通過\n'); process.exit(1) }
 console.log('✓ 陪診營運檢查全部通過\n')
