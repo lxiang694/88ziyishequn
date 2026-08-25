@@ -204,6 +204,135 @@ console.log('\n7. 狀態機在資料庫端也有防護')
   }
 }
 
+// ══════════ Sprint D：履約 ══════════
+const SPRINT_D_ADMIN = [
+  'app/api/admin/care/service-control/route.ts',
+  'app/api/admin/care/services/[id]/route.ts',
+  'app/api/admin/care/records/route.ts',
+  'app/api/admin/care/records/[id]/route.ts',
+  'app/api/admin/care/summaries/route.ts',
+  'app/api/admin/care/summaries/[id]/route.ts',
+  'app/api/admin/care/incidents/route.ts',
+  'app/api/admin/care/incidents/[id]/route.ts',
+  'app/api/admin/care/settlements/route.ts',
+]
+const FULFIL_LIB = 'lib/care/fulfilment'
+
+console.log('\n8. 履約 API 的授權（Sprint D）')
+{
+  const files = SPRINT_D_ADMIN.filter(f => existsSync(join(ROOT, f)))
+  if (files.length !== SPRINT_D_ADMIN.length) {
+    fail('部分 Sprint D 端點不存在',
+      SPRINT_D_ADMIN.filter(f => !existsSync(join(ROOT, f))).join(', '))
+  }
+  let bad = 0
+  for (const f of files) {
+    const src = strip(read(f) || '')
+    const handlers = [...src.matchAll(/export async function (GET|POST|PATCH|PUT|DELETE)\b/g)].map(m => m[1])
+    const count = (src.match(/requireFulfilmentPermission\(/g) || []).length
+    if (count < handlers.length) { fail(`${f}: ${handlers.length} 個 handler 只檢查 ${count} 次權限`); bad++ }
+    if (/export async function (PATCH|PUT)\b/.test(src)) { fail(`${f} 出現泛用更新端點`); bad++ }
+  }
+  if (bad === 0) ok(`${files.length} 支履約 API 每個 handler 都檢查權限，且無泛用 PATCH/PUT`)
+
+  // 金額只給財務權限
+  const settle = strip(read('app/api/admin/care/settlements/route.ts') || '')
+  if (/FULFILMENT_PERMISSIONS\.settlement/.test(settle)
+      && !/FULFILMENT_ANY_PERMISSION/.test(settle)) {
+    ok('結算端點只接受 care_settlement.manage，不接受任一 care 權限')
+  } else fail('結算端點的權限過寬')
+
+  // 陪診員端與家屬端不得用後台守門
+  const staff = strip(read('app/api/companion/service/[bookingId]/route.ts') || '')
+  if (staff.includes('requireStaff') && !staff.includes('requireFulfilmentPermission')) {
+    ok('陪診員端使用 requireStaff，未誤用後台權限')
+  } else fail('陪診員端守門不正確')
+
+  const fam = strip(read('app/api/family/service/[bookingId]/route.ts') || '')
+  if (fam.includes('requireFamilyUser') && !/export async function POST\b/.test(fam)) {
+    ok('家屬端只有 GET，且要求登入會員')
+  } else fail('家屬端守門或方法不正確')
+}
+
+console.log('\n9. 履約的內容與通知限制')
+{
+  const domain = strip(read(`${FULFIL_LIB}/domain.ts`) || '')
+
+  if (/NOTIFICATION_PROVIDER_CONFIGURED\s*=\s*false/.test(domain)) {
+    ok('沒有設定任何外部通知 provider，系統不會假裝已送出')
+  } else fail('通知 provider 旗標不是 false，可能會產生假的已送出狀態')
+
+  if (/DISABLED_SCOPES[^=]*=\s*\[[^\]]*view_service_photo/.test(domain)) {
+    ok('照片檢視授權本輪停用')
+  } else fail('view_service_photo 未被停用')
+
+  if (/MEDICAL_TERMS/.test(domain) && /assertNoMedicalContent/.test(domain)) {
+    ok('自由文字有醫療內容守門')
+  } else fail('缺少醫療內容守門')
+
+  // 驗證所有自由文字都過守門
+  const validation = strip(read(`${FULFIL_LIB}/validation.ts`) || '')
+  if (/function safeText/.test(validation) && /assertNoMedicalContent/.test(validation)) {
+    ok('validation 以 safeText 統一套用守門')
+  } else fail('validation 未統一套用醫療內容守門')
+
+  // 陪診員不得自行決定可見性或時間
+  const svc = strip(read(`${FULFIL_LIB}/service.ts`) || '')
+  if (/visibility:\s*'internal'/.test(svc)) ok('陪診員建立的事件一律先進內部，無法自行公開')
+  else fail('事件預設可見性不正確')
+
+  const evtIface = (validation.match(/interface AppendEventInput \{([\s\S]*?)\}/) || [])[1] || ''
+  const leaked = ['occurred_at', 'visibility', 'companion_id', 'booking_id']
+    .filter(k => new RegExp(`\\b${k}\\b`).test(evtIface))
+  if (evtIface && leaked.length === 0) ok('AppendEventInput 不含時間、可見性或身分欄位')
+  else fail('事件輸入含有不該由 client 控制的欄位', leaked.join(', '))
+}
+
+console.log('\n10. 家屬端資料範圍')
+{
+  const svc = strip(read(`${FULFIL_LIB}/service.ts`) || '')
+  const fam = (svc.match(/export async function getAuthorizedFamilyView[\s\S]*?\n\}/) || [''])[0]
+  if (!fam) {
+    fail('找不到 getAuthorizedFamilyView')
+  } else {
+    if (/hasServiceAuthorization/.test(fam)) ok('家屬讀取一律先檢查單筆授權')
+    else fail('家屬讀取未檢查授權')
+
+    const leaks = ['companion_id', 'companion_fee', 'objective_summary', 'contact_phone']
+      .filter(k => new RegExp(`${k}:`).test(fam))
+    if (leaks.length === 0) ok('家屬視圖不含陪診員身分、金額或內部紀錄')
+    else fail('家屬視圖夾帶敏感欄位', leaks.join(', '))
+
+    if (/status === 'published'/.test(svc) || /getPublishedSummary/.test(fam)) {
+      ok('家屬只讀得到已發布的小結')
+    } else fail('家屬可能讀到未發布的小結')
+  }
+}
+
+console.log('\n11. 履約分層')
+{
+  const comps = [...walk('app/admin/care'), ...walk('app/companion'), ...walk('components/care')]
+    .filter(f => f.endsWith('.tsx'))
+  const bad = comps.filter(f => {
+    const s = strip(read(f) || '')
+    return s.includes('fulfilment/repository') || s.includes('supabaseAdmin')
+  })
+  if (bad.length === 0) ok(`${comps.length} 個 component 未直接存取 repository 或 service_role`)
+  else fail('有 component 直接碰資料庫', bad.join(', '))
+
+  const sql = read('migrations/care_fulfilment_schema.sql') || ''
+  for (const fn of ['care_guard_service_event', 'care_guard_service_record',
+                    'care_guard_family_summary', 'care_guard_incident',
+                    'care_guard_settlement_line', 'care_guard_authorization']) {
+    if (sql.includes(fn)) ok(`資料庫 trigger ${fn} 已定義`)
+    else fail(`缺少資料庫 trigger ${fn}`)
+  }
+  if (/append-only/.test(sql) && /不可刪除/.test(sql)) ok('服務事件在資料庫層為 append-only')
+  else fail('服務事件缺少 append-only 保護')
+  if (/沒有正式通知管道，不可標記為已送出/.test(sql)) ok('資料庫層也擋下假的「已送出」')
+  else fail('資料庫層未擋下已送出狀態')
+}
+
 console.log(`\n── 結果 ──\n  通過 ${passes}\n  失敗 ${failures}\n`)
 if (failures > 0) { console.log('✗ 陪診營運檢查未通過\n'); process.exit(1) }
 console.log('✓ 陪診營運檢查全部通過\n')

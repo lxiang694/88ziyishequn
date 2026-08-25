@@ -114,3 +114,81 @@ npm run check:zh       # 簡體字／中國用語檢查
 | 風險服務承接標準 | 婉拒原因有 `requires_medical_staff` / `beyond_service_scope`，但判斷標準未文件化 |
 | 正式品牌名稱與營運主體 | `lib/careBrand.ts` 的 `name` 為暫定值，`legalEntity` 為空 |
 | 家屬線上入口 | `/care/account` 只有入口頁，未實作驗證後查詢 |
+
+## Sprint D 上線步驟
+
+### 1. 執行 migration
+
+依序（前兩份若已跑過可略）：
+
+```
+migrations/companion_care_schema.sql
+migrations/care_operations_schema.sql
+migrations/care_fulfilment_schema.sql   ← Sprint D
+```
+
+`care_fulfilment_schema.sql` 依賴 `care_bookings`、`companions` 與
+`care_touch_updated_at()`，順序不可顛倒。
+
+驗證：
+
+```sql
+select count(*) from information_schema.tables
+where table_name in ('care_service_events','care_service_records',
+  'care_family_summaries','care_incidents','care_service_authorizations',
+  'care_settlement_lines','care_settlement_batches');
+```
+
+應回傳 7。
+
+### 2. 開通權限
+
+Migration 不自動賦予任何角色。超級管理員本來就能用。
+
+建議分工（**不要給同一個人**）：
+
+| 角色 | 權限 |
+|---|---|
+| 督導 | `care_record.review`、`care_summary.review`、`care_incident.manage` |
+| 財務 | `care_settlement.manage` |
+| 客服 | `care_operations.view` |
+
+### 3. 日常流程
+
+```
+派工後，陪診員在 /companion → 工單 → 「服務紀錄與流程回報」
+  → 服務當天逐一按流程節點（時間自動記錄）
+  → 服務結束填服務紀錄 → 送出核對
+督導在 /admin/care/records
+  → 核可，或退回補正（必須選原因）
+督導在 /admin/care/services/[id]
+  → 逐筆決定哪些事件開放給家屬
+  → 建立家屬小結草稿 → 送審 → 發布
+  → 對特定家屬會員開通授權（付款人不會自動有）
+財務在 /admin/care/settlements
+  → 產生明細 → 審核 → 建批次 → 核准 → 發布
+```
+
+### 4. 重要提醒
+
+**異常事件不是急救系統。** 現場緊急狀況請依院方流程與服務 SOP 立即處理。
+
+**系統不會自動通知家屬。** 通知狀態最多到「已備妥，待人工聯繫」，
+實際聯繫一律由人工以電話或 LINE 進行。
+
+**發布批次不代表已付款。** 系統沒有任何金流，實際轉帳在系統外。
+
+**家屬看不到任何東西，直到小結發布且授權開通。** 這是刻意的預設拒絕。
+
+### Sprint D 待營運／法務／照護專業確認
+
+| 項目 | 現況 |
+|---|---|
+| 事件與小結文案 | 已有預設，需照護專業複核用字是否會被誤解為醫療判斷 |
+| incident SOP | 系統只有 code，實際處理標準與升級路徑未文件化 |
+| 通知策略 | 無 connector。要接 LINE／SMS 需先決定內容範圍、授權與撤銷機制 |
+| 資料保留與刪除 | 未定義。事件為 append-only，刪除政策需另行決定 |
+| authorization／consent 文案 | 目前只有技術授權列，沒有給家屬看的同意書文字 |
+| 服務責任與保險 | 網站未聲稱任何保險，取得後才可加上 |
+| 結算規則與報酬模型 | 明細金額取自既有 `care_bookings` 欄位；統一費率規則未定 |
+| 兩套結算是否整併 | 既有 `/admin/settlement` 仍是操作系統，lines/batches 為附加基礎 |

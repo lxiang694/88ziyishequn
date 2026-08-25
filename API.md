@@ -118,3 +118,63 @@ UI 上有明確警語。
 
 白名單欄位仍限長 60 字。任何電話、姓名、備註自由文字、完整表單、
 金額明細與 token 都不會進入稽核紀錄。
+
+## 陪診履約端點（Sprint D）
+
+三個 realm 各有各的守門：`requireFulfilmentPermission`（後台）、
+`requireStaff`（陪診員 cookie）、`requireFamilyUser`（Supabase Auth Bearer）。
+一樣沒有泛用 PATCH／PUT，全部是 `POST` + 白名單 `action`。
+
+### 陪診員端
+
+| 端點 | 方法 | 說明 |
+|---|---|---|
+| `/api/companion/service/[bookingId]` | GET | 自己的服務履約工作區 |
+| `/api/companion/service/[bookingId]` | POST | `append_event` / `invalidate_event` / `save_record_draft` / `submit_record` / `create_incident` |
+| `/api/companion/settlement` | GET | **自己的已發布**結算明細 |
+
+歸屬檢查在 Service 層（`loadOwnBooking`），不靠前端隱藏按鈕。
+`append_event` 的輸入**不含** `occurred_at` / `visibility` / `companion_id` / `booking_id` ——
+時間由資料庫寫、可見性由督導決定、身分取自 cookie。
+
+### 家屬端
+
+| 端點 | 方法 | 說明 |
+|---|---|---|
+| `/api/family/service/[bookingId]` | GET | 已授權才回內容 |
+
+**沒有 POST。** 沒有有效授權一律回 **404**（不是 403）——避免用 id 探測服務是否存在。
+回應只含已發布小結、已開放事件與最小的預約欄位；不含 `companion_id`、金額或內部紀錄。
+
+### 後台
+
+| 端點 | 方法 | 權限 |
+|---|---|---|
+| `/api/admin/care/service-control` | GET | 任一履約權限 |
+| `/api/admin/care/services/[id]` | GET | 任一履約權限 |
+| `/api/admin/care/services/[id]` | POST | `care_summary.review`：`set_event_visibility` / `grant_authorization` / `revoke_authorization` |
+| `/api/admin/care/records` | GET | 任一履約權限 |
+| `/api/admin/care/records/[id]` | GET / POST | POST 需 `care_record.review`：`review` / `return_for_revision` |
+| `/api/admin/care/summaries` | GET / POST | POST 需 `care_summary.review`：建立草稿 |
+| `/api/admin/care/summaries/[id]` | GET / POST | POST 需 `care_summary.review`：`update_draft` / `submit_for_review` / `publish` / `withdraw` |
+| `/api/admin/care/incidents` | GET | 任一履約權限 |
+| `/api/admin/care/incidents/[id]` | POST | `care_incident.manage`：`acknowledge` / `resolve` / `close` / `prepare_notification` |
+| `/api/admin/care/settlements` | GET / POST | **`care_settlement.manage`**：`generate_line` / `create_manual_line` / `review_line` / `create_batch` / `approve_batch` / `publish_batch` / `close_batch` |
+
+### 通知：沒有 mark_sent
+
+`/api/admin/care/incidents/[id]` **刻意沒有** `mark_sent` action。
+系統沒有串接任何 LINE／SMS／Email connector，最多只能推進到 `prepared`，
+由人工實際聯繫。domain、Service 與資料庫 trigger 三處都擋下 `sent_or_confirmed`。
+
+### 冪等
+
+- `generate_line`：已存在就回既有那筆（`created: false`），不重複建立也不報錯；
+  資料庫的 `unique (booking_id, line_type)` 是最終保證
+- `prepare_notification`：已是 `prepared` 就直接回，重複點擊不會變成錯誤
+
+### 稽核
+
+沿用 Sprint B 的 `buildAuditDetail()` 白名單（`resource` / `resource_id` /
+`from_status` / `to_status` / `reason_code` / `quote_version`），每個值限長 60 字。
+服務紀錄全文、家屬備註、電話、地址、`user_id`、金額 payload 都不會進稽核。
