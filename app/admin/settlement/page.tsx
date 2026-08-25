@@ -18,7 +18,8 @@ interface CompanionRow {
 interface UnsettledRow {
   id: number; booking_no: string; service_date: string; service_name: string
   patient_name: string; hospital: string; county: string
-  price: number; extra_fee: number; companion_fee: number
+  price: number; extra_fee: number; addon_fee: number
+  companion_fee: number; addon_companion_fee: number
   companion_id: number; companion_name: string
 }
 
@@ -64,7 +65,7 @@ export default function CareSettlementPage() {
 
   const shown = filterCompanion ? unsettled.filter(u => u.companion_id === filterCompanion) : unsettled
   const pickedRows = unsettled.filter(u => picked.includes(u.id))
-  const pickedTotal = pickedRows.reduce((s, r) => s + r.companion_fee, 0)
+  const pickedTotal = pickedRows.reduce((s, r) => s + r.companion_fee + r.addon_companion_fee, 0)
 
   const toggle = (id: number) =>
     setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : [...p, id]))
@@ -339,8 +340,13 @@ export default function CareSettlementPage() {
                           <div>
                             <p className="text-gray-600 text-[13px]">本筆毛利</p>
                             <p className="font-bold text-green-700">
-                              {formatPrice(u.price + u.extra_fee - u.companion_fee)}
+                              {formatPrice(u.price + u.addon_fee + u.extra_fee - u.companion_fee - u.addon_companion_fee)}
                             </p>
+                            {(u.addon_fee > 0 || u.addon_companion_fee > 0) && (
+                              <p className="text-gray-600 text-[13px] mt-0.5">
+                                含加購 收 {formatPrice(u.addon_fee)} / 付 {formatPrice(u.addon_companion_fee)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>

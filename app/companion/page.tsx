@@ -20,6 +20,8 @@ interface Job {
   patient_age: string; mobility: string; addons: string[]; notes: string; status: string
   contact_name: string; contact_phone: string; price: number
   accepted_at: string | null; contact_confirmed_at: string | null; met_at: string | null
+  pickup_address: string | null; pickup_time: string | null; pickup_note: string | null
+  addon_fee: number | null; addon_companion_fee: number | null; companion_fee: number | null
 }
 
 // 產生未來 14 天
@@ -186,6 +188,43 @@ export default function CompanionDashboard() {
                         <p className="t-body bg-amber-50 border border-amber-200 rounded-xl p-3 mt-2">
                           <strong>⚠️ 特殊需求：</strong>{j.notes}
                         </p>
+                      )}
+
+                      {/* 到府接送：醒目顯示，避免漏看 */}
+                      {j.pickup_address && (
+                        <div className="bg-cyan-50 border-2 border-cyan-300 rounded-xl p-3 mt-2">
+                          <p className="font-bold text-cyan-900 text-base mb-1">🚗 這筆需要到府接送</p>
+                          <p className="t-body text-cyan-900">
+                            <strong>地址：</strong>{j.pickup_address}
+                          </p>
+                          {j.pickup_time && (
+                            <p className="t-body text-cyan-900"><strong>到府時間：</strong>{j.pickup_time}</p>
+                          )}
+                          {j.pickup_note && (
+                            <p className="t-body text-cyan-900"><strong>備註：</strong>{j.pickup_note}</p>
+                          )}
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.pickup_address)}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center mt-2 text-cyan-800 font-bold text-[15px] underline min-h-[48px]">
+                            📍 用 Google 地圖導航
+                          </a>
+                        </div>
+                      )}
+
+                      {/* 本趟可領報酬 */}
+                      {(j.companion_fee || j.addon_companion_fee) && (
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-3 mt-2">
+                          <p className="t-body text-green-900">
+                            <strong>💰 本趟報酬：</strong>
+                            {formatPrice((j.companion_fee || 0) + (j.addon_companion_fee || 0))}
+                            {j.addon_companion_fee ? (
+                              <span className="t-meta text-green-800 ml-1">
+                                （含加購 {formatPrice(j.addon_companion_fee)}）
+                              </span>
+                            ) : null}
+                          </p>
+                        </div>
                       )}
                     </div>
 
