@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { supabaseAdmin } from '@/lib/supabase'
+import { getPublicCareServices } from '@/lib/care/service'
 import { formatPrice } from '@/lib/utils'
 import { careBrand } from '@/lib/careBrand'
 import { CarePageHero, CareSection, CareCard, CareNotice, CareList, CareBottomCTA } from '@/components/care/CareUI'
@@ -23,14 +23,9 @@ interface Service {
 
 export default async function CareServicesPage() {
   // 唯讀取用既有的公開方案資料，本輪不新增也不修改任何欄位。
+  // 走 Service 而非直接查 Supabase：component 不直接讀寫核心資料。
   // 刻意不顯示 member_price：會員價屬於商城語言，不應出現在陪診品牌前台。
-  const { data } = await supabaseAdmin
-    .from('care_services')
-    .select('code, name, hours_label, price, summary, suitable, features')
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true })
-
-  const services = (data || []) as Service[]
+  const services = (await getPublicCareServices()) as unknown as Service[]
 
   return (
     <>

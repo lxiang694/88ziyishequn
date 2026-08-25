@@ -5,20 +5,22 @@ import { TW_COUNTIES } from '@/lib/careMeta'
 import { CARE_SCENARIOS, CARE_CTA, isCareScenario, careScenarioLabel } from '@/lib/careBrand'
 
 /**
- * 需求初步評估表單（Sprint A）。
+ * 需求初步評估表單。
  *
- * ⚠️ 尚未串接後端：本輪不建立也不修改任何資料表。
- * 送出後只切換為前端完成狀態，不會呼叫 /api/care/bookings，
- * 因為那支 API 會直接建立正式預約單，與「這只是初步評估、尚未成立預約」的
- * 告知不符。後續 Sprint 需要接上專用的 service request endpoint 後，
- * 才把 submit() 內的 TODO 換成真正的送出。
+ * Sprint B 起送到 POST /api/care/intake（陪診初評專用端點）。
+ * 刻意不呼叫 /api/care/bookings —— 那支會直接建立正式預約單，
+ * 與畫面上「尚未成立預約」的告知不符。
+ *
+ * 送出的欄位由伺服器端 parsePublicIntake() 白名單過濾；
+ * 回應只有 { success: true }，不含任何 internal id。
  */
 
+// value 直接使用 API 的 code，避免多一層對應表出錯
 const MOBILITY = [
-  { value: 'walk', label: '可自行行走' },
-  { value: 'walker', label: '使用助行器' },
+  { value: 'independent', label: '可自行行走' },
+  { value: 'assistive_device', label: '使用助行器' },
   { value: 'wheelchair', label: '需輪椅' },
-  { value: 'unsure', label: '需先由專人確認' },
+  { value: 'manual_review_required', label: '需先由專人確認' },
 ]
 
 const TRANSPORT = [
@@ -46,7 +48,7 @@ interface FormState {
 
 const EMPTY: FormState = {
   scenario: '', serviceDate: '', county: '', hospital: '',
-  mobility: 'walk', transport: 'no',
+  mobility: 'independent', transport: 'no',
   contactName: '', contactPhone: '', contactLine: '', relation: '', note: '',
 }
 
@@ -55,6 +57,8 @@ export default function AssessmentForm() {
   const [form, setForm] = useState<FormState>(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [done, setDone] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const uid = useId()
 
   // 首頁分流卡片帶進來的情境；一律用白名單驗證，不直接信任網址參數
@@ -99,16 +103,48 @@ export default function AssessmentForm() {
     setStep(s => Math.min(s + 1, STEPS.length - 1))
   }
 
-  const submit = () => {
+  const submit = async () => {
     const e = validateStep(2)
     setErrors(e)
     if (Object.keys(e).length > 0) {
       document.getElementById(fieldId(Object.keys(e)[0]))?.focus()
       return
     }
-    // TODO(Sprint B)：接上專用的 service request endpoint 後改為實際送出。
-    // 目前刻意不呼叫任何 API，避免產生「看起來像已成立預約」的資料。
-    setDone(true)
+
+    setSubmitting(true)
+    setSubmitError('')
+    try {
+      const res = await fetch('/api/care/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // 只送必要欄位；不送任何識別碼、狀態或裝置資訊
+        body: JSON.stringify({
+          service_scenario: form.scenario,
+          mobility_support_level: form.mobility,
+          transport_support_requested: form.transport === 'yes',
+          hospital_name: form.hospital.trim(),
+          county: form.county,
+          scheduled_service_date: form.serviceDate,
+          time_preference: 'unspecified',
+          contact_name: form.contactName.trim(),
+          contact_phone: form.contactPhone.trim(),
+          contact_line_id: form.contactLine.trim() || undefined,
+          contact_preference: form.contactLine.trim() ? 'line' : 'phone',
+          relationship_to_beneficiary: form.relation.trim(),
+          limited_support_note: form.note.trim() || undefined,
+        }),
+      })
+      const d = await res.json()
+      if (!d.success) {
+        setSubmitError(d.error || '送出失敗，請稍後再試')
+        return
+      }
+      setDone(true)
+    } catch {
+      setSubmitError('網路連線有問題，請稍後再試，或直接以 LINE 與我們聯繫')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const Err = ({ k }: { k: string }) =>
@@ -360,6 +396,12 @@ export default function AssessmentForm() {
         </p>
       </div>
 
+      {submitError && (
+        <p role="alert" className="mt-4 bg-red-50 border border-red-200 rounded-xl p-3 text-red-800 text-[15px] font-semibold">
+          {submitError}
+        </p>
+      )}
+
       {/* 步驟操作 */}
       <div className="flex gap-3 mt-5">
         {step > 0 && (
@@ -374,9 +416,9 @@ export default function AssessmentForm() {
             下一步
           </button>
         ) : (
-          <button type="button" onClick={submit}
-            className="flex-1 min-h-[48px] rounded-xl bg-emerald-700 text-white font-bold text-base hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2">
-            送出需求評估
+          <button type="button" onClick={submit} disabled={submitting}
+            className="flex-1 min-h-[48px] rounded-xl bg-emerald-700 text-white font-bold text-base hover:bg-emerald-800 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2">
+            {submitting ? '送出中…' : '送出需求評估'}
           </button>
         )}
       </div>

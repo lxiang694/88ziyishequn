@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run check:zh && npm run check:care && next build",
+    "build": "npm run check:zh && npm run check:care && npm run check:care-ops && next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "NEXT_PUBLIC_SUPABASE_URL=http://localhost NEXT_PUBLIC_SUPABASE_ANON_KEY=test node --experimental-strip-types --experimental-test-module-mocks --import ./tests/register.mjs --test tests/**/*.test.ts",
     "check:zh": "node scripts/check-simplified.mjs",
     "check:care": "node scripts/check-care-brand.mjs",
+    "check:care-ops": "node scripts/check-care-ops.mjs",
     "check:zh:db": "node scripts/check-simplified.mjs --db"
   },
   "dependencies": {
