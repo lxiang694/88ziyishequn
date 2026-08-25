@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  requireFulfilmentPermission, FULFILMENT_ANY_PERMISSION, FULFILMENT_PERMISSIONS,
+  requireFulfilmentPermission, FULFILMENT_READ_PERMISSION, FULFILMENT_PERMISSIONS,
   auditFulfilment, fulfilmentErrorResponse, parseId,
 } from '@/lib/care/fulfilment/http'
 import { parseGrantAuthorization } from '@/lib/care/fulfilment/validation'
@@ -13,7 +13,7 @@ import { CareInputError } from '@/lib/care/fulfilment/domain'
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = requireFulfilmentPermission(req, FULFILMENT_ANY_PERMISSION)
+  const auth = requireFulfilmentPermission(req, FULFILMENT_READ_PERMISSION)
   if (auth instanceof NextResponse) return auth
   try {
     return NextResponse.json({ success: true, data: await getCareServiceDetail(parseId(params.id)) })

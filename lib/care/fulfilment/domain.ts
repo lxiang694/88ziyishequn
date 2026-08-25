@@ -285,5 +285,20 @@ export const ALL_FULFILMENT_PERMISSIONS: string[] = Object.values(FULFILMENT_PER
 /** 只有這個權限看得到金額；其他角色即使在 Admin portal 也不行 */
 export const FINANCE_ONLY_PERMISSION = FULFILMENT_PERMISSION_KEYS.settlement
 
+/**
+ * 督導類讀取（服務控制台、單筆詳情、內部紀錄、小結、異常）接受的權限。
+ *
+ * 刻意**排除** care_settlement.manage：財務該看得到的是金額，
+ * 不該因為同樣在 Admin portal 就讀得到陪診員的內部客觀紀錄、
+ * 未發布的家屬小結或異常事件內容。隔離是雙向的——
+ * 督導也讀不到結算金額（結算端點只收 FINANCE_ONLY_PERMISSION）。
+ */
+export const SUPERVISORY_READ_PERMISSIONS: string[] = [
+  FULFILMENT_PERMISSION_KEYS.record,
+  FULFILMENT_PERMISSION_KEYS.summary,
+  FULFILMENT_PERMISSION_KEYS.incident,
+  FULFILMENT_PERMISSION_KEYS.view,
+]
+
 // ── 共用轉換工具（轉出，讓呼叫端不必兩處 import）────────────
 export { canTransition, assertTransition }

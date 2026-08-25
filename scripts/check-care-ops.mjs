@@ -492,6 +492,47 @@ console.log('\n16. 人力模組分層')
   else fail('缺少重複邀請保護')
 }
 
+console.log('\n17. 財務與督導的雙向隔離')
+{
+  const dom = strip(read(`${FULFIL_LIB}/domain.ts`) || '')
+  const list = (dom.match(/export const SUPERVISORY_READ_PERMISSIONS[\s\S]*?\]/) || [''])[0]
+  if (!list) {
+    fail('找不到 SUPERVISORY_READ_PERMISSIONS')
+  } else if (/settlement/.test(list)) {
+    fail('督導類讀取清單含有結算權限，財務會讀到內部服務紀錄')
+  } else ok('督導類讀取清單排除結算權限')
+
+  const http = strip(read(`${FULFIL_LIB}/http.ts`) || '')
+  if (/ALL_FULFILMENT_PERMISSIONS/.test(http)) {
+    fail('http 層仍在用含結算權限的全集當讀取守門')
+  } else ok('http 層讀取守門不使用權限全集')
+
+  // 督導類讀取端點：不可用權限全集
+  const READ_ROUTES = [
+    'app/api/admin/care/records/route.ts',
+    'app/api/admin/care/records/[id]/route.ts',
+    'app/api/admin/care/services/[id]/route.ts',
+    'app/api/admin/care/incidents/route.ts',
+    'app/api/admin/care/service-control/route.ts',
+    'app/api/admin/care/summaries/route.ts',
+    'app/api/admin/care/summaries/[id]/route.ts',
+  ]
+  const wrong = READ_ROUTES.filter(r => {
+    const s = strip(read(r) || '')
+    return !s || /FULFILMENT_ANY_PERMISSION/.test(s) || !/FULFILMENT_READ_PERMISSION/.test(s)
+  })
+  if (wrong.length === 0) ok(`${READ_ROUTES.length} 個督導類端點使用排除財務的讀取權限`)
+  else fail('有督導類端點仍對財務開放', wrong.join(', '))
+
+  // 結算端點：只收財務權限
+  for (const r of ['app/api/admin/care/settlements/route.ts']) {
+    const s = strip(read(r) || '')
+    if (/FULFILMENT_PERMISSIONS\.settlement/.test(s) && !/FULFILMENT_READ_PERMISSION/.test(s)) {
+      ok(`${r} 只接受結算權限`)
+    } else fail(`${r} 的結算守門不正確`)
+  }
+}
+
 console.log(`\n── 結果 ──\n  通過 ${passes}\n  失敗 ${failures}\n`)
 if (failures > 0) { console.log('✗ 陪診營運檢查未通過\n'); process.exit(1) }
 console.log('✓ 陪診營運檢查全部通過\n')

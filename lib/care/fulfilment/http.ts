@@ -8,12 +8,13 @@ import { requireCompanion } from '@/lib/companionAuth'
 import { requireUser } from '@/lib/userAuth'
 import { writeAuditLog } from '@/lib/audit'
 import { hasCarePermission, buildAuditDetail } from '../domain'
-import { CareInputError, CareRuleError, FULFILMENT_PERMISSION_KEYS, ALL_FULFILMENT_PERMISSIONS } from './domain'
+import { CareInputError, CareRuleError, FULFILMENT_PERMISSION_KEYS, SUPERVISORY_READ_PERMISSIONS } from './domain'
 import { CareTableMissingError } from './repository'
 import type { ActorAdmin, ActorCompanion } from './service'
 
 export const FULFILMENT_PERMISSIONS = FULFILMENT_PERMISSION_KEYS
-export const FULFILMENT_ANY_PERMISSION = ALL_FULFILMENT_PERMISSIONS
+/** 督導類讀取用；不含 care_settlement.manage，財務讀不到內部紀錄與未發布小結 */
+export const FULFILMENT_READ_PERMISSION = SUPERVISORY_READ_PERMISSIONS
 
 /** 後台：要求明確的履約業務權限 */
 export function requireFulfilmentPermission(

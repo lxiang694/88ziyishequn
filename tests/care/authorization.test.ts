@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import {
   hasCarePermission, CARE_PERMISSION_KEYS, ALL_CARE_PERMISSIONS,
 } from '../../lib/care/domain.ts'
+import {
+  FULFILMENT_PERMISSION_KEYS, SUPERVISORY_READ_PERMISSIONS, FINANCE_ONLY_PERMISSION,
+} from '../../lib/care/fulfilment/domain.ts'
 
 /**
  * 授權：能進 /admin 不代表能看陪診個案。
@@ -61,5 +64,47 @@ describe('陪診業務權限', () => {
   test('舊的陪診預約權限 care.view 不等於陪診營運權限', () => {
     // care.view 是既有「陪診預約」頁的權限，責任不同，不得互相沿用
     assert.equal(hasCarePermission(['care.view'], ALL_CARE_PERMISSIONS), false)
+  })
+})
+
+/**
+ * Sprint D §7.8：財務與督導的隔離是雙向的。
+ *
+ * 兩邊都在 Admin portal 裡，但責任不同：
+ * 財務要看的是金額，督導要看的是服務內容。
+ * 任一邊因為「反正都是管理員」而讀到對方的資料，都是隱私事故。
+ */
+describe('履約：財務與督導的雙向隔離', () => {
+  const FINANCE = [FULFILMENT_PERMISSION_KEYS.settlement]
+  const SUPERVISOR = [FULFILMENT_PERMISSION_KEYS.record]
+  const SUMMARY_REVIEWER = [FULFILMENT_PERMISSION_KEYS.summary]
+  const OPS_VIEW = [FULFILMENT_PERMISSION_KEYS.view]
+
+  test('財務讀不到內部服務紀錄、小結與異常（督導類讀取）', () => {
+    assert.equal(hasCarePermission(FINANCE, SUPERVISORY_READ_PERMISSIONS), false)
+  })
+
+  test('督導、小結審核者與一般營運讀得到督導類清單', () => {
+    for (const p of [SUPERVISOR, SUMMARY_REVIEWER, OPS_VIEW]) {
+      assert.ok(hasCarePermission(p, SUPERVISORY_READ_PERMISSIONS))
+    }
+  })
+
+  test('督導讀不到結算金額', () => {
+    assert.equal(hasCarePermission(SUPERVISOR, FINANCE_ONLY_PERMISSION), false)
+    assert.equal(hasCarePermission(SUMMARY_REVIEWER, FINANCE_ONLY_PERMISSION), false)
+  })
+
+  test('一般營運（care_operations.view）讀不到結算金額', () => {
+    assert.equal(hasCarePermission(OPS_VIEW, FINANCE_ONLY_PERMISSION), false)
+  })
+
+  test('督導類讀取清單本身不得含結算權限', () => {
+    assert.equal(SUPERVISORY_READ_PERMISSIONS.includes(FINANCE_ONLY_PERMISSION), false)
+  })
+
+  test('超級管理員兩邊都通過', () => {
+    assert.ok(hasCarePermission(['all'], SUPERVISORY_READ_PERMISSIONS))
+    assert.ok(hasCarePermission(['all'], FINANCE_ONLY_PERMISSION))
   })
 })
