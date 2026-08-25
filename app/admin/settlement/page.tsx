@@ -67,6 +67,14 @@ export default function CareSettlementPage() {
   useEffect(() => { load() }, [load])
 
   const shown = filterCompanion ? unsettled.filter(u => u.companion_id === filterCompanion) : unsettled
+  // 待結算清單不受期間篩選，篩選選項也要從清單本身產生，
+  // 否則服務日期落在期間外的陪診員會選不到
+  const payoutCompanions = [...unsettled.reduce((m, u) => {
+    const cur = m.get(u.companion_id) || { id: u.companion_id, name: u.companion_name || `#${u.companion_id}`, fee: 0 }
+    cur.fee += u.companion_fee + u.addon_companion_fee
+    m.set(u.companion_id, cur)
+    return m
+  }, new Map<number, { id: number; name: string; fee: number }>()).values()]
   const pickedRows = unsettled.filter(u => picked.includes(u.id))
   const pickedTotal = pickedRows.reduce((s, r) => s + r.companion_fee + r.addon_companion_fee, 0)
 
@@ -179,7 +187,7 @@ export default function CareSettlementPage() {
             <div className="card p-5">
               <p className="text-gray-600 text-sm font-semibold">陪診員報酬（成本）</p>
               <p className="text-3xl font-bold text-gray-900 mt-1">{formatPrice(summary.cost)}</p>
-              <p className="text-gray-600 text-[13px] mt-1">未結算 {formatPrice(summary.unsettled_total)}</p>
+              <p className="text-gray-600 text-[13px] mt-1">未結算（全部期間）{formatPrice(summary.unsettled_total)}</p>
             </div>
             <div className="card p-5">
               <p className="text-gray-600 text-sm font-semibold">毛利</p>
@@ -248,7 +256,7 @@ export default function CareSettlementPage() {
                       <th className="text-center px-3 py-2 font-bold text-gray-700">場次</th>
                       <th className="text-right px-3 py-2 font-bold text-gray-700">帶來營收</th>
                       <th className="text-right px-3 py-2 font-bold text-gray-700">應付報酬</th>
-                      <th className="text-right px-3 py-2 font-bold text-gray-700">未結算</th>
+                      <th className="text-right px-3 py-2 font-bold text-gray-700">本期未結算</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -298,13 +306,15 @@ export default function CareSettlementPage() {
               <div>
                 <p className="text-gray-600 text-sm font-semibold">待結算總額</p>
                 <p className="text-3xl font-bold text-orange-700 mt-1">{formatPrice(summary.unsettled_total)}</p>
-                <p className="text-gray-600 text-[13px] mt-1">{unsettled.length} 筆已完成但尚未結算</p>
+                <p className="text-gray-600 text-[13px] mt-1">
+                  {unsettled.length} 筆已完成但尚未結算・<strong>不受上方期間篩選影響</strong>
+                </p>
               </div>
               <select className="form-input max-w-xs" value={filterCompanion}
                 onChange={e => { setFilterCompanion(e.target.value ? Number(e.target.value) : ''); setPicked([]) }}>
                 <option value="">全部陪診員</option>
-                {byCompanion.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}（未結算 {formatPrice(c.unsettled_fee)}）</option>
+                {payoutCompanions.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}（未結算 {formatPrice(c.fee)}）</option>
                 ))}
               </select>
             </div>
@@ -318,8 +328,9 @@ export default function CareSettlementPage() {
                 ① 狀態為「<strong>已完成</strong>」　② 已<strong>指派陪診員</strong>　③ 尚未標記結算
               </p>
               <p className="text-[13px] mt-2">
-                目前期間共 {summary.total_bookings} 筆預約、已完成 {summary.completed} 筆。
-                若服務日期排在未來，請改選「全部期間」。
+                此清單已涵蓋<strong>所有期間</strong>，與上方的日期篩選無關。
+                若陪診員端顯示「待結算」但這裡沒有，多半是該筆狀態還不是「已完成」，
+                或尚未指派陪診員。
               </p>
             </div>
           ) : (

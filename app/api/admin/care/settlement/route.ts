@@ -42,6 +42,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 
+  // 待結算清單「不受期間篩選」——這是待辦清單，不是報表。
+  // 服務日期若排在未來或更早之前，仍必須看得到，否則會漏付陪診員報酬。
+  const { data: doneRows, error: doneErr } = await supabaseAdmin
+    .from('care_bookings')
+    .select('*, companions(id, name, phone)')
+    .eq('status', '已完成')
+    .order('service_date', { ascending: false })
+  if (doneErr && doneErr.code !== '42P01') {
+    return NextResponse.json({ success: false, error: doneErr.message }, { status: 500 })
+  }
+
   const all = rows || []
   const done = all.filter((r: any) => r.status === '已完成')
   const cancelled = all.filter((r: any) => r.status === '已取消')
@@ -92,8 +103,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // 未結算明細（供逐筆核對與批次結算）
-  const unsettled = done
+  // 未結算明細（供逐筆核對與批次結算）——來源為「全部已完成」，不套用期間
+  const unsettled = (doneRows || [])
     .filter((r: any) => !r.settled_at && r.companion_id)
     .map((r: any) => ({
       id: r.id, booking_no: r.booking_no, service_date: r.service_date,
