@@ -11,6 +11,8 @@ interface Booking {
   service_date: string; time_slot: string; county: string; hospital: string; department: string
   addons: string[]; notes: string; status: string; admin_note: string; created_at: string
   companion_id: number | null
+  pickup_address: string | null; pickup_time: string | null; pickup_note: string | null
+  addon_fee: number | null; addon_companion_fee: number | null
   companions?: { id: number; name: string; phone: string } | null
 }
 interface Companion { id: number; name: string; phone: string; status: string; available?: boolean }
@@ -204,6 +206,59 @@ export default function AdminCarePage() {
                         <p className="text-gray-500 text-[13px] mt-2">預約於 {formatDateTime(b.created_at)}</p>
                       </div>
                     </div>
+
+                    {/* 接送與加購（客戶有勾選加購時顯示） */}
+                    {Array.isArray(b.addons) && b.addons.length > 0 && (
+                      <div className="bg-white rounded-xl p-4 border-2 border-amber-200">
+                        <p className="font-bold text-amber-800 text-[13px] uppercase tracking-wider mb-1">
+                          加購項目・與客戶確認後填寫
+                        </p>
+                        <p className="text-gray-700 text-sm mb-3">
+                          客戶勾選：{b.addons.map(a => labelOf(ADDON_OPTIONS, a)).join('、')}
+                        </p>
+
+                        {b.addons.includes('pickup') && (
+                          <div className="space-y-3 mb-3">
+                            <div>
+                              <label className="form-label">🚗 接送詳細地址</label>
+                              <input className="form-input" defaultValue={b.pickup_address || ''}
+                                placeholder="例：新北市板橋區文化路一段 100 號 5 樓"
+                                onBlur={e => { if (e.target.value !== (b.pickup_address || '')) patch(b.id, { pickup_address: e.target.value }) }} />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="form-label">到府時間</label>
+                                <input className="form-input" defaultValue={b.pickup_time || ''}
+                                  placeholder="例：08:00"
+                                  onBlur={e => { if (e.target.value !== (b.pickup_time || '')) patch(b.id, { pickup_time: e.target.value }) }} />
+                              </div>
+                              <div>
+                                <label className="form-label">接送備註</label>
+                                <input className="form-input" defaultValue={b.pickup_note || ''}
+                                  placeholder="例：需上樓攙扶、大樓需換證"
+                                  onBlur={e => { if (e.target.value !== (b.pickup_note || '')) patch(b.id, { pickup_note: e.target.value }) }} />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                          <div>
+                            <label className="form-label">加購費用（客戶加付）</label>
+                            <input type="number" className="form-input" defaultValue={b.addon_fee || 0}
+                              onBlur={e => { if (Number(e.target.value) !== (b.addon_fee || 0)) patch(b.id, { addon_fee: e.target.value }) }} />
+                          </div>
+                          <div>
+                            <label className="form-label">其中給陪診員的報酬</label>
+                            <input type="number" className="form-input" defaultValue={b.addon_companion_fee || 0}
+                              onBlur={e => { if (Number(e.target.value) !== (b.addon_companion_fee || 0)) patch(b.id, { addon_companion_fee: e.target.value }) }} />
+                          </div>
+                        </div>
+                        <p className="text-gray-500 text-[13px] mt-2">
+                          陪診員會在工單上看到接送地址與可領到的加購報酬；車資等實支費用請另行與客戶結算。
+                        </p>
+                      </div>
+                    )}
 
                     {/* 服務過程記錄 */}
                     <div className="bg-white rounded-xl p-4 border border-gray-100">

@@ -46,13 +46,22 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    const { id, status, companion_id, admin_note } = await req.json()
+    const body = await req.json()
+    const { id, status, companion_id, admin_note } = body
     if (!id) return NextResponse.json({ success: false, error: '缺少預約 id' }, { status: 400 })
 
     const update: any = { updated_at: new Date().toISOString() }
     if (status !== undefined) update.status = status
     if (companion_id !== undefined) update.companion_id = companion_id || null
     if (admin_note !== undefined) update.admin_note = admin_note
+
+    // 接送資訊與加購費用（客服與客戶確認後填寫）
+    for (const f of ['pickup_address', 'pickup_time', 'pickup_note']) {
+      if (body[f] !== undefined) update[f] = body[f] || null
+    }
+    for (const f of ['addon_fee', 'addon_companion_fee']) {
+      if (body[f] !== undefined) update[f] = Number(body[f]) || 0
+    }
 
     // 指派陪診員時，若仍在前段流程，自動推進為「已派工」
     if (companion_id && status === undefined) update.status = '已派工'

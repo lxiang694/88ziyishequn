@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('care_bookings')
-    .select('id, booking_no, service_name, service_date, hospital, companion_fee, settled_at, status')
+    .select('id, booking_no, service_name, service_date, hospital, companion_fee, addon_companion_fee, settled_at, status')
     .eq('companion_id', auth.companion.id)
     .eq('status', '已完成')
     .order('service_date', { ascending: false })
@@ -25,8 +25,9 @@ export async function GET(req: NextRequest) {
   }
 
   const rows = data || []
-  const total = rows.reduce((s: number, r: any) => s + (r.companion_fee || 0), 0)
-  const settled = rows.filter((r: any) => r.settled_at).reduce((s: number, r: any) => s + (r.companion_fee || 0), 0)
+  const feeOf = (r: any) => (r.companion_fee || 0) + (r.addon_companion_fee || 0)
+  const total = rows.reduce((s: number, r: any) => s + feeOf(r), 0)
+  const settled = rows.filter((r: any) => r.settled_at).reduce((s: number, r: any) => s + feeOf(r), 0)
 
   // 依月份彙總
   const monthMap = new Map<string, { month: string; jobs: number; fee: number; unsettled: number }>()
@@ -36,8 +37,8 @@ export async function GET(req: NextRequest) {
     if (!monthMap.has(m)) monthMap.set(m, { month: m, jobs: 0, fee: 0, unsettled: 0 })
     const item = monthMap.get(m)!
     item.jobs++
-    item.fee += r.companion_fee || 0
-    if (!r.settled_at) item.unsettled += r.companion_fee || 0
+    item.fee += feeOf(r)
+    if (!r.settled_at) item.unsettled += feeOf(r)
   }
 
   return NextResponse.json({
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
       list: rows.map((r: any) => ({
         id: r.id, booking_no: r.booking_no, service_name: r.service_name,
         service_date: r.service_date, hospital: r.hospital,
-        fee: r.companion_fee || 0, settled: !!r.settled_at,
+        fee: feeOf(r), settled: !!r.settled_at,
       })),
     },
   })

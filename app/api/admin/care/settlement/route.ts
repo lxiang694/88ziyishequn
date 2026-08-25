@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   const { data: rows, error } = await supabaseAdmin
     .from('care_bookings')
-    .select('id, booking_no, service_code, service_name, price, extra_fee, companion_fee, status, service_date, county, hospital, companion_id, settled_at, patient_name, companions(id, name, phone)')
+    .select('id, booking_no, service_code, service_name, price, extra_fee, addon_fee, companion_fee, addon_companion_fee, status, service_date, county, hospital, companion_id, settled_at, patient_name, companions(id, name, phone)')
     .gte('service_date', startDay)
     .lte('service_date', endDay)
     .order('service_date', { ascending: false })
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
   const done = all.filter((r: any) => r.status === '已完成')
   const cancelled = all.filter((r: any) => r.status === '已取消')
 
-  const revenue = done.reduce((s: number, r: any) => s + (r.price || 0) + (r.extra_fee || 0), 0)
-  const cost = done.reduce((s: number, r: any) => s + (r.companion_fee || 0), 0)
+  const revenue = done.reduce((s: number, r: any) => s + (r.price || 0) + (r.addon_fee || 0) + (r.extra_fee || 0), 0)
+  const cost = done.reduce((s: number, r: any) => s + (r.companion_fee || 0) + (r.addon_companion_fee || 0), 0)
   const profit = revenue - cost
 
   // 方案分佈
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     if (!byPlanMap.has(k)) byPlanMap.set(k, { name: r.service_name || k, count: 0, revenue: 0 })
     const p = byPlanMap.get(k)!
     p.count++
-    p.revenue += (r.price || 0) + (r.extra_fee || 0)
+    p.revenue += (r.price || 0) + (r.addon_fee || 0) + (r.extra_fee || 0)
   }
 
   // 縣市分佈
@@ -82,11 +82,11 @@ export async function GET(req: NextRequest) {
     }
     const item = byCompanionMap.get(r.companion_id)!
     item.jobs++
-    item.revenue += (r.price || 0) + (r.extra_fee || 0)
-    item.fee += r.companion_fee || 0
+    item.revenue += (r.price || 0) + (r.addon_fee || 0) + (r.extra_fee || 0)
+    item.fee += (r.companion_fee || 0) + (r.addon_companion_fee || 0)
     if (!r.settled_at) {
       item.unsettled_jobs++
-      item.unsettled_fee += r.companion_fee || 0
+      item.unsettled_fee += (r.companion_fee || 0) + (r.addon_companion_fee || 0)
     }
   }
 
@@ -97,7 +97,8 @@ export async function GET(req: NextRequest) {
       id: r.id, booking_no: r.booking_no, service_date: r.service_date,
       service_name: r.service_name, patient_name: r.patient_name,
       hospital: r.hospital, county: r.county,
-      price: r.price, extra_fee: r.extra_fee || 0, companion_fee: r.companion_fee || 0,
+      price: r.price, extra_fee: r.extra_fee || 0, addon_fee: r.addon_fee || 0,
+      companion_fee: r.companion_fee || 0, addon_companion_fee: r.addon_companion_fee || 0,
       companion_id: r.companion_id,
       companion_name: (r.companions as any)?.name || '',
     }))
@@ -114,7 +115,7 @@ export async function GET(req: NextRequest) {
         revenue, cost, profit,
         margin: revenue > 0 ? Math.round((profit / revenue) * 1000) / 10 : 0,
         avg_order: done.length > 0 ? Math.round(revenue / done.length) : 0,
-        unsettled_total: unsettled.reduce((s, r) => s + r.companion_fee, 0),
+        unsettled_total: unsettled.reduce((s, r) => s + r.companion_fee + r.addon_companion_fee, 0),
       },
       by_plan: [...byPlanMap.values()].sort((a, b) => b.count - a.count),
       by_county: [...byCountyMap.entries()].map(([county, count]) => ({ county, count })).sort((a, b) => b.count - a.count),
