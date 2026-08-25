@@ -4,8 +4,10 @@ import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
 import { formatPrice } from '@/lib/utils'
 import { TIME_SLOTS, MOBILITY_OPTIONS, ADDON_OPTIONS, labelOf, statusColor } from '@/lib/careMeta'
+import ProfileForm from '@/components/companion/ProfileForm'
+import JobFlow from '@/components/companion/JobFlow'
 
-interface Me { id: number; name: string; phone: string; employment_type: string; completed_count: number; service_areas: string[] }
+interface Me { id: number; name: string; phone: string; employment_type: string; completed_count: number; service_areas: string[]; status: string; profile_submitted_at: string | null; reject_reason: string | null }
 interface Avail { id: number; date: string; time_slot: string }
 interface Earnings {
   jobs: number; total: number; settled: number; unsettled: number
@@ -17,6 +19,7 @@ interface Job {
   county: string; hospital: string; department: string; patient_name: string; patient_gender: string
   patient_age: string; mobility: string; addons: string[]; notes: string; status: string
   contact_name: string; contact_phone: string; price: number
+  accepted_at: string | null; contact_confirmed_at: string | null; met_at: string | null
 }
 
 // 產生未來 14 天
@@ -37,11 +40,19 @@ export default function CompanionDashboard() {
   const router = useRouter()
   const [me, setMe] = useState<Me | null>(null)
   const [checked, setChecked] = useState(false)
-  const [tab, setTab] = useState<'jobs' | 'schedule' | 'income'>('jobs')
+  const [tab, setTab] = useState<'jobs' | 'schedule' | 'income' | 'profile'>('jobs')
   const [avail, setAvail] = useState<Avail[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
   const [earn, setEarn] = useState<Earnings | null>(null)
   const days = next14Days()
+
+  useEffect(() => {
+    // 註冊後導向 ?tab=profile；直接讀網址避免 useSearchParams 的 Suspense 限制
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'profile') {
+      setTab('profile')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     fetch('/api/companion/auth/me')
@@ -82,16 +93,6 @@ export default function CompanionDashboard() {
     if (!d.success) { toast.error(d.error || '設定失敗'); loadAvail() }
   }
 
-  const updateJob = async (id: number, action: 'start' | 'finish') => {
-    const res = await fetch('/api/companion/assignments', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, action }),
-    })
-    const d = await res.json()
-    if (d.success) { toast.success(action === 'start' ? '已開始服務' : '服務已完成，辛苦了！'); loadJobs(); loadEarn() }
-    else toast.error(d.error || '更新失敗')
-  }
-
   const logout = async () => {
     await fetch('/api/companion/auth/me', { method: 'DELETE' })
     router.push('/companion/login')
@@ -120,12 +121,30 @@ export default function CompanionDashboard() {
         </div>
       </header>
 
+      {/* 審核狀態提示 */}
+      {me.status !== 'active' && (
+        <div className="max-w-3xl mx-auto px-4 pt-4">
+          <div className={`rounded-2xl border-2 p-4 ${me.reject_reason ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+            <p className={`font-bold text-base mb-1 ${me.reject_reason ? 'text-red-800' : 'text-amber-900'}`}>
+              {me.reject_reason ? '⚠️ 審核未通過，請補正資料' : me.profile_submitted_at ? '⏳ 資料審核中' : '📝 請先完成資料填寫'}
+            </p>
+            <p className={`t-body ${me.reject_reason ? 'text-red-900' : 'text-amber-900'}`}>
+              {me.reject_reason
+                ? me.reject_reason
+                : me.profile_submitted_at
+                  ? '我們會盡快完成審核，通過後就會開始派工給您。'
+                  : '請到「👤 我的資料」完成基本資料與證件上傳並送出審核，通過後才會開始派工。'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="max-w-3xl mx-auto px-4 pt-4">
-        <div className="grid grid-cols-3 gap-2 mb-5">
-          {([['jobs', '📋 工作'], ['schedule', '📅 班表'], ['income', '💰 收入']] as const).map(([k, label]) => (
+        <div className="grid grid-cols-4 gap-2 mb-5">
+          {([['jobs', '📋 工作'], ['schedule', '📅 班表'], ['income', '💰 收入'], ['profile', '👤 我的資料']] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)}
-              className={`min-h-[48px] rounded-xl font-bold text-base border-2 transition-colors ${tab === k ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-700 border-gray-200'}`}>
+              className={`min-h-[48px] rounded-xl font-bold text-[15px] border-2 transition-colors px-1 ${tab === k ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-700 border-gray-200'}`}>
               {label}
             </button>
           ))}
@@ -181,12 +200,14 @@ export default function CompanionDashboard() {
                       </div>
                     </div>
 
-                    {j.status === '已派工' && (
-                      <button onClick={() => updateJob(j.id, 'start')} className="btn-card">開始服務</button>
-                    )}
-                    {j.status === '服務中' && (
-                      <button onClick={() => updateJob(j.id, 'finish')} className="btn-card">完成服務</button>
-                    )}
+                    <JobFlow
+                      bookingId={j.id}
+                      status={j.status}
+                      acceptedAt={j.accepted_at}
+                      contactConfirmedAt={j.contact_confirmed_at}
+                      metAt={j.met_at}
+                      onChanged={() => { loadJobs(); loadEarn() }}
+                    />
                   </div>
                 ))}
               </div>
@@ -312,6 +333,12 @@ export default function CompanionDashboard() {
               </>
             )}
           </>
+        )}
+        {/* 我的資料 */}
+        {tab === 'profile' && (
+          <ProfileForm onSubmitted={() => {
+            fetch('/api/companion/auth/me').then(r => r.json()).then(d => { if (d.success) setMe(d.data) })
+          }} />
         )}
       </div>
       <Toaster position="top-center" toastOptions={{ duration: 3000, style: { fontSize: '16px', fontWeight: '600' } }} />

@@ -46,3 +46,22 @@ export function labelOf(list: { value: string; label: string }[], value?: string
   if (!value) return ''
   return list.find(o => o.value === value)?.label || value
 }
+
+// ── 服務過程事件 ────────────────────────────────────────────
+export const EVENT_TYPES = [
+  { value: 'accepted',    label: '接受派工',     icon: '✅', color: 'bg-blue-100 text-blue-800' },
+  { value: 'declined',    label: '婉拒派工',     icon: '🚫', color: 'bg-gray-200 text-gray-700' },
+  { value: 'contacted',   label: '行前電話確認', icon: '📞', color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'met',         label: '已與就診人會合', icon: '🤝', color: 'bg-purple-100 text-purple-800' },
+  { value: 'progress',    label: '服務進度',     icon: '📸', color: 'bg-cyan-100 text-cyan-800' },
+  { value: 'doctor_note', label: '醫師重要提醒', icon: '🩺', color: 'bg-amber-100 text-amber-800' },
+  { value: 'completed',   label: '服務完成',     icon: '🏁', color: 'bg-green-100 text-green-800' },
+]
+
+export function eventMeta(type: string) {
+  return EVENT_TYPES.find(e => e.value === type) || { value: type, label: type, icon: '•', color: 'bg-gray-100 text-gray-700' }
+}
+
+export const EDUCATION_OPTIONS = [
+  '國中', '高中職', '專科', '大學', '碩士以上',
+]
