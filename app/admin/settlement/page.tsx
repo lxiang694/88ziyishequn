@@ -28,6 +28,7 @@ const RANGES = [
   { key: '7days', label: '近 7 天' },
   { key: '30days', label: '近 30 天' },
   { key: 'month', label: '本月' },
+  { key: 'all', label: '全部期間' },
 ]
 
 export default function CareSettlementPage() {
@@ -35,6 +36,7 @@ export default function CareSettlementPage() {
   const [dateRange, setDateRange] = useState('30days')
   const [loading, setLoading] = useState(true)
   const [tableMissing, setTableMissing] = useState(false)
+  const [error, setError] = useState('')
   const [summary, setSummary] = useState<Summary | null>(null)
   const [byPlan, setByPlan] = useState<PlanRow[]>([])
   const [byCounty, setByCounty] = useState<CountyRow[]>([])
@@ -45,6 +47,7 @@ export default function CareSettlementPage() {
 
   const load = useCallback(() => {
     setLoading(true)
+    setError('')
     fetch('/api/admin/care/settlement?dateRange=' + dateRange)
       .then(r => r.json())
       .then(d => {
@@ -56,10 +59,10 @@ export default function CareSettlementPage() {
           setUnsettled(d.data.unsettled)
           setTableMissing(!!d.table_missing)
           setPicked([])
-        } else toast.error(d.error || '載入失敗')
+        } else { setError(d.error || '載入失敗'); toast.error(d.error || '載入失敗') }
         setLoading(false)
       })
-      .catch(() => { toast.error('載入失敗'); setLoading(false) })
+      .catch(() => { setError('網路錯誤，請稍後再試'); setLoading(false) })
   }, [dateRange])
   useEffect(() => { load() }, [load])
 
@@ -125,10 +128,47 @@ export default function CareSettlementPage() {
         ))}
       </div>
 
-      {loading || !summary ? (
+      {loading ? (
         <div className="card p-10 text-center text-gray-600">載入中…</div>
+      ) : error ? (
+        <div className="card p-8 text-center">
+          <p className="text-red-600 font-bold text-lg mb-2">⚠️ {error}</p>
+          <p className="text-gray-700 text-[15px] leading-relaxed">
+            若訊息提到欄位或資料表不存在，請先到 Supabase SQL Editor 依序執行：
+            <br />
+            <code className="px-1.5 py-0.5 bg-gray-100 rounded">companion_care_schema.sql</code>
+            {' → '}
+            <code className="px-1.5 py-0.5 bg-gray-100 rounded">companion_settlement.sql</code>
+            {' → '}
+            <code className="px-1.5 py-0.5 bg-gray-100 rounded">companion_pickup_addons.sql</code>
+          </p>
+          <button onClick={load} className="btn-secondary mt-4">重新載入</button>
+        </div>
+      ) : !summary ? (
+        <div className="card p-10 text-center text-gray-600">沒有資料</div>
       ) : tab === 'report' ? (
         <>
+          {summary.total_bookings === 0 && (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 mb-4">
+              <p className="font-bold text-amber-900 text-base mb-1">此期間沒有任何陪診預約</p>
+              <p className="text-amber-900 text-[15px] leading-relaxed">
+                報表是以<strong>服務日期</strong>統計的（不是預約建立日期）。
+                如果測試單的服務日期排在未來，請改選「<strong>全部期間</strong>」就會出現。
+              </p>
+            </div>
+          )}
+          {summary.total_bookings > 0 && summary.completed === 0 && (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-5 mb-4">
+              <p className="font-bold text-amber-900 text-base mb-1">
+                此期間有 {summary.total_bookings} 筆預約，但沒有「已完成」的
+              </p>
+              <p className="text-amber-900 text-[15px] leading-relaxed">
+                營收、成本與結算<strong>只計算狀態為「已完成」</strong>的預約。
+                請到「🩺 陪診預約」把該筆狀態改為<strong>已完成</strong>，或由陪診員在工單按「服務完成」。
+              </p>
+            </div>
+          )}
+
           {/* 財務總覽 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <div className="bg-gradient-to-br from-green-600 to-emerald-600 rounded-2xl p-5 text-white">
@@ -272,8 +312,15 @@ export default function CareSettlementPage() {
 
           {shown.length === 0 ? (
             <div className="card p-10 text-center text-gray-600">
-              沒有待結算的項目 🎉
-              <p className="text-[13px] mt-1">只有狀態為「已完成」且已指派陪診員的預約會出現在這裡</p>
+              <p className="text-lg font-semibold text-gray-800 mb-2">沒有待結算的項目</p>
+              <p className="text-[15px] leading-relaxed">
+                要出現在這裡，需同時符合三個條件：<br />
+                ① 狀態為「<strong>已完成</strong>」　② 已<strong>指派陪診員</strong>　③ 尚未標記結算
+              </p>
+              <p className="text-[13px] mt-2">
+                目前期間共 {summary.total_bookings} 筆預約、已完成 {summary.completed} 筆。
+                若服務日期排在未來，請改選「全部期間」。
+              </p>
             </div>
           ) : (
             <>
