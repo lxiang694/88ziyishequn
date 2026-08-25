@@ -12,7 +12,11 @@ interface Avail { id: number; date: string; time_slot: string }
 interface Earnings {
   jobs: number; total: number; settled: number; unsettled: number
   by_month: { month: string; jobs: number; fee: number; unsettled: number }[]
-  list: { id: number; booking_no: string; service_name: string; service_date: string; hospital: string; fee: number; settled: boolean }[]
+  list: {
+    id: number; booking_no: string; service_name: string; service_date: string
+    hospital: string; fee: number; settled: boolean; settled_at: string | null
+    base_fee: number; addon_fee: number; extra_fee: number; note: string
+  }[]
 }
 interface Job {
   id: number; booking_no: string; service_name: string; service_date: string; time_slot: string
@@ -22,6 +26,7 @@ interface Job {
   accepted_at: string | null; contact_confirmed_at: string | null; met_at: string | null
   pickup_address: string | null; pickup_time: string | null; pickup_note: string | null
   addon_fee: number | null; addon_companion_fee: number | null; companion_fee: number | null
+  extra_companion_fee: number | null
 }
 
 // 產生未來 14 天
@@ -213,14 +218,17 @@ export default function CompanionDashboard() {
                       )}
 
                       {/* 本趟可領報酬 */}
-                      {(j.companion_fee || j.addon_companion_fee) && (
+                      {(j.companion_fee || j.addon_companion_fee || j.extra_companion_fee) && (
                         <div className="bg-green-50 border border-green-200 rounded-xl p-3 mt-2">
                           <p className="t-body text-green-900">
                             <strong>💰 本趟報酬：</strong>
-                            {formatPrice((j.companion_fee || 0) + (j.addon_companion_fee || 0))}
-                            {j.addon_companion_fee ? (
+                            {formatPrice((j.companion_fee || 0) + (j.addon_companion_fee || 0) + (j.extra_companion_fee || 0))}
+                            {(j.addon_companion_fee || j.extra_companion_fee) ? (
                               <span className="t-meta text-green-800 ml-1">
-                                （含加購 {formatPrice(j.addon_companion_fee)}）
+                                （{[
+                                  j.addon_companion_fee ? `含加購 ${formatPrice(j.addon_companion_fee)}` : '',
+                                  j.extra_companion_fee ? `額外 ${formatPrice(j.extra_companion_fee)}` : '',
+                                ].filter(Boolean).join('、')}）
                               </span>
                             ) : null}
                           </p>
@@ -354,17 +362,45 @@ export default function CompanionDashboard() {
                 ) : (
                   <div className="space-y-2">
                     {earn.list.map(r => (
-                      <div key={r.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-800 text-[15px]">{r.service_date}・{r.hospital}</p>
-                          <p className="t-meta">{r.service_name}</p>
+                      <div key={r.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-800 text-[15px]">{r.service_date}・{r.hospital}</p>
+                            <p className="t-meta">{r.service_name}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="font-bold text-gray-900 text-lg">{formatPrice(r.fee)}</p>
+                            <span className={`text-[13px] font-semibold px-2 py-0.5 rounded-md ${r.settled ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+                              {r.settled ? '已入帳' : '待結算'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="font-bold text-gray-900 text-lg">{formatPrice(r.fee)}</p>
-                          <span className={`text-[13px] font-semibold px-2 py-0.5 rounded-md ${r.settled ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
-                            {r.settled ? '已入帳' : '待結算'}
-                          </span>
-                        </div>
+
+                        {/* 拆帳明細：加購與額外報酬要看得見，不能只給一個總數 */}
+                        {(r.addon_fee > 0 || r.extra_fee > 0) && (
+                          <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
+                            <div className="flex justify-between t-meta">
+                              <span>方案報酬</span><span>{formatPrice(r.base_fee)}</span>
+                            </div>
+                            {r.addon_fee > 0 && (
+                              <div className="flex justify-between t-meta">
+                                <span>加購報酬（接送等）</span><span>＋{formatPrice(r.addon_fee)}</span>
+                              </div>
+                            )}
+                            {r.extra_fee > 0 && (
+                              <div className="flex justify-between text-[13px] font-semibold text-green-700">
+                                <span>額外報酬（超時／加班）</span><span>＋{formatPrice(r.extra_fee)}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {r.note && (
+                          <p className="t-meta mt-2 bg-gray-50 rounded-lg px-3 py-2">📝 {r.note}</p>
+                        )}
+                        {r.settled && r.settled_at && (
+                          <p className="t-meta mt-2">入帳時間：{r.settled_at.slice(0, 10)}</p>
+                        )}
                       </div>
                     ))}
                   </div>

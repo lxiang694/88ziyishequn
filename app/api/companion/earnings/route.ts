@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('care_bookings')
-    .select('id, booking_no, service_name, service_date, hospital, companion_fee, addon_companion_fee, settled_at, status')
+    .select('*')
     .eq('companion_id', auth.companion.id)
     .eq('status', '已完成')
     .order('service_date', { ascending: false })
@@ -25,7 +25,9 @@ export async function GET(req: NextRequest) {
   }
 
   const rows = data || []
-  const feeOf = (r: any) => (r.companion_fee || 0) + (r.addon_companion_fee || 0)
+  // 實拿 = 方案報酬 + 加購報酬 + 額外報酬（結算時加給的超時、加班等）
+  const feeOf = (r: any) =>
+    (r.companion_fee || 0) + (r.addon_companion_fee || 0) + (r.extra_companion_fee || 0)
   const total = rows.reduce((s: number, r: any) => s + feeOf(r), 0)
   const settled = rows.filter((r: any) => r.settled_at).reduce((s: number, r: any) => s + feeOf(r), 0)
 
@@ -53,6 +55,12 @@ export async function GET(req: NextRequest) {
         id: r.id, booking_no: r.booking_no, service_name: r.service_name,
         service_date: r.service_date, hospital: r.hospital,
         fee: feeOf(r), settled: !!r.settled_at,
+        settled_at: r.settled_at || null,
+        // 拆帳明細：陪診員要看得懂這筆錢是怎麼算出來的
+        base_fee: r.companion_fee || 0,
+        addon_fee: r.addon_companion_fee || 0,
+        extra_fee: r.extra_companion_fee || 0,
+        note: r.settlement_note || '',
       })),
     },
   })

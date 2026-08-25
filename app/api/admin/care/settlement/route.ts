@@ -57,8 +57,13 @@ export async function GET(req: NextRequest) {
   const done = all.filter((r: any) => r.status === '已完成')
   const cancelled = all.filter((r: any) => r.status === '已取消')
 
-  const revenue = done.reduce((s: number, r: any) => s + (r.price || 0) + (r.addon_fee || 0) + (r.extra_fee || 0), 0)
-  const cost = done.reduce((s: number, r: any) => s + (r.companion_fee || 0) + (r.addon_companion_fee || 0), 0)
+  // 營收 = 方案 + 加購 + 額外向客戶收取
+  const revenueOf = (r: any) => (r.price || 0) + (r.addon_fee || 0) + (r.extra_fee || 0)
+  // 成本 = 陪診員實拿（方案報酬 + 加購報酬 + 額外報酬）
+  const payOf = (r: any) => (r.companion_fee || 0) + (r.addon_companion_fee || 0) + (r.extra_companion_fee || 0)
+
+  const revenue = done.reduce((s: number, r: any) => s + revenueOf(r), 0)
+  const cost = done.reduce((s: number, r: any) => s + payOf(r), 0)
   const profit = revenue - cost
 
   // 方案分佈
@@ -95,26 +100,46 @@ export async function GET(req: NextRequest) {
     }
     const item = byCompanionMap.get(r.companion_id)!
     item.jobs++
-    item.revenue += (r.price || 0) + (r.addon_fee || 0) + (r.extra_fee || 0)
-    item.fee += (r.companion_fee || 0) + (r.addon_companion_fee || 0)
+    item.revenue += revenueOf(r)
+    item.fee += payOf(r)
     if (!r.settled_at) {
       item.unsettled_jobs++
-      item.unsettled_fee += (r.companion_fee || 0) + (r.addon_companion_fee || 0)
+      item.unsettled_fee += payOf(r)
     }
   }
+
+  // 逐筆明細的共用格式
+  const toRow = (r: any) => ({
+    id: r.id, booking_no: r.booking_no, service_date: r.service_date,
+    service_name: r.service_name, patient_name: r.patient_name,
+    hospital: r.hospital, county: r.county,
+    price: r.price || 0, extra_fee: r.extra_fee || 0, addon_fee: r.addon_fee || 0,
+    companion_fee: r.companion_fee || 0,
+    addon_companion_fee: r.addon_companion_fee || 0,
+    extra_companion_fee: r.extra_companion_fee || 0,
+    companion_id: r.companion_id,
+    companion_name: (r.companions as any)?.name || '',
+    settled_at: r.settled_at || null,
+    settled_by: r.settled_by || '',
+    settlement_note: r.settlement_note || '',
+  })
 
   // 未結算明細（供逐筆核對與批次結算）——來源為「全部已完成」，不套用期間
   const unsettled = (doneRows || [])
     .filter((r: any) => !r.settled_at && r.companion_id)
-    .map((r: any) => ({
-      id: r.id, booking_no: r.booking_no, service_date: r.service_date,
-      service_name: r.service_name, patient_name: r.patient_name,
-      hospital: r.hospital, county: r.county,
-      price: r.price, extra_fee: r.extra_fee || 0, addon_fee: r.addon_fee || 0,
-      companion_fee: r.companion_fee || 0, addon_companion_fee: r.addon_companion_fee || 0,
-      companion_id: r.companion_id,
-      companion_name: (r.companions as any)?.name || '',
-    }))
+    .map(toRow)
+
+  // 已結算記錄——結算後不能憑空消失，需可查核與追溯
+  const settledRows = (doneRows || [])
+    .filter((r: any) => r.settled_at)
+    .sort((a: any, b: any) => String(b.settled_at).localeCompare(String(a.settled_at)))
+  const settled = settledRows.slice(0, 500).map(toRow)
+  const settledSummary = {
+    count: settledRows.length,
+    paid: settledRows.reduce((s: number, r: any) => s + payOf(r), 0),
+    revenue: settledRows.reduce((s: number, r: any) => s + revenueOf(r), 0),
+    truncated: settledRows.length > 500,
+  }
 
   return NextResponse.json({
     success: true,
@@ -128,8 +153,10 @@ export async function GET(req: NextRequest) {
         revenue, cost, profit,
         margin: revenue > 0 ? Math.round((profit / revenue) * 1000) / 10 : 0,
         avg_order: done.length > 0 ? Math.round(revenue / done.length) : 0,
-        unsettled_total: unsettled.reduce((s, r) => s + r.companion_fee + r.addon_companion_fee, 0),
+        unsettled_total: unsettled.reduce((s, r) => s + r.companion_fee + r.addon_companion_fee + r.extra_companion_fee, 0),
       },
+      settled,
+      settled_summary: settledSummary,
       by_plan: [...byPlanMap.values()].sort((a, b) => b.count - a.count),
       by_county: [...byCountyMap.entries()].map(([county, count]) => ({ county, count })).sort((a, b) => b.count - a.count),
       by_companion: [...byCompanionMap.values()].sort((a, b) => b.jobs - a.jobs),
@@ -145,7 +172,9 @@ function emptyPayload() {
       total_bookings: 0, completed: 0, cancelled: 0, in_progress: 0, pending: 0,
       revenue: 0, cost: 0, profit: 0, margin: 0, avg_order: 0, unsettled_total: 0,
     },
-    by_plan: [], by_county: [], by_companion: [], unsettled: [], range: { start: '', end: '' },
+    by_plan: [], by_county: [], by_companion: [], unsettled: [],
+    settled: [], settled_summary: { count: 0, paid: 0, revenue: 0, truncated: false },
+    range: { start: '', end: '' },
   }
 }
 
@@ -158,21 +187,22 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    const { action, ids, id, companion_fee, extra_fee, settlement_note } = await req.json()
+    const { action, ids, id, companion_fee, extra_fee, extra_companion_fee, settlement_note } = await req.json()
 
     // 批次標記已結算 / 取消結算
     if (action === 'settle' || action === 'unsettle') {
       if (!Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ success: false, error: '請選擇要結算的項目' }, { status: 400 })
       }
-      const { error } = await supabaseAdmin
-        .from('care_bookings')
-        .update({
-          settled_at: action === 'settle' ? new Date().toISOString() : null,
-          settlement_note: settlement_note ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .in('id', ids)
+      const isSettle = action === 'settle'
+      const patch: any = {
+        settled_at: isSettle ? new Date().toISOString() : null,
+        // 留下是誰結算的，日後對帳才追得回來
+        settled_by: isSettle ? auth.admin.name || auth.admin.account : null,
+        updated_at: new Date().toISOString(),
+      }
+      if (settlement_note !== undefined) patch.settlement_note = settlement_note
+      const { error } = await supabaseAdmin.from('care_bookings').update(patch).in('id', ids)
       if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
       return NextResponse.json({ success: true, count: ids.length })
     }
@@ -182,6 +212,7 @@ export async function PATCH(req: NextRequest) {
     const update: any = { updated_at: new Date().toISOString() }
     if (companion_fee !== undefined) update.companion_fee = Number(companion_fee) || 0
     if (extra_fee !== undefined) update.extra_fee = Number(extra_fee) || 0
+    if (extra_companion_fee !== undefined) update.extra_companion_fee = Number(extra_companion_fee) || 0
     if (settlement_note !== undefined) update.settlement_note = settlement_note
 
     const { error } = await supabaseAdmin.from('care_bookings').update(update).eq('id', id)
