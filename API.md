@@ -150,16 +150,22 @@ UI 上有明確警語。
 
 | 端點 | 方法 | 權限 |
 |---|---|---|
-| `/api/admin/care/service-control` | GET | 任一履約權限 |
-| `/api/admin/care/services/[id]` | GET | 任一履約權限 |
+| `/api/admin/care/service-control` | GET | 督導類讀取權限（不含結算） |
+| `/api/admin/care/services/[id]` | GET | 督導類讀取權限（不含結算） |
 | `/api/admin/care/services/[id]` | POST | `care_summary.review`：`set_event_visibility` / `grant_authorization` / `revoke_authorization` |
-| `/api/admin/care/records` | GET | 任一履約權限 |
+| `/api/admin/care/records` | GET | 督導類讀取權限（不含結算） |
 | `/api/admin/care/records/[id]` | GET / POST | POST 需 `care_record.review`：`review` / `return_for_revision` |
 | `/api/admin/care/summaries` | GET / POST | POST 需 `care_summary.review`：建立草稿 |
 | `/api/admin/care/summaries/[id]` | GET / POST | POST 需 `care_summary.review`：`update_draft` / `submit_for_review` / `publish` / `withdraw` |
-| `/api/admin/care/incidents` | GET | 任一履約權限 |
+| `/api/admin/care/incidents` | GET | 督導類讀取權限（不含結算） |
 | `/api/admin/care/incidents/[id]` | POST | `care_incident.manage`：`acknowledge` / `resolve` / `close` / `prepare_notification` |
 | `/api/admin/care/settlements` | GET / POST | **`care_settlement.manage`**：`generate_line` / `create_manual_line` / `review_line` / `create_batch` / `approve_batch` / `publish_batch` / `close_batch` |
+
+### 督導類讀取權限 = 不含結算
+
+`care_record.review`／`care_summary.review`／`care_incident.manage`／`care_operations.view`
+其中任一即可，但 `care_settlement.manage` **不算**。財務帳號呼叫上面標示
+「督導類讀取權限」的端點會拿到 403，讀不到內部服務紀錄與未發布小結。
 
 ### 通知：沒有 mark_sent
 

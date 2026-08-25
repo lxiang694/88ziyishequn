@@ -203,3 +203,15 @@ service_name, mobility, required_capabilities, expires_at
   純粹是排班可用性，不是人事假單
 - **後台仍一律使用 service_role**：與既有 realm 相同，RLS 是縱深防禦，
   授權的實際強制點在 Route Handler 與 Service 層
+
+### 財務與督導的雙向隔離（Sprint D 複核補強）
+
+初版把「任一履約權限」當成督導類清單的讀取守門，而那個全集裡含
+`care_settlement.manage`——結果是只有結算權限的財務帳號，
+可以讀到陪診員的內部客觀服務紀錄與尚未發布的家屬小結。
+側邊選單本來就沒給財務那些頁面，但選單不是強制點，API 才是。
+
+現在讀取守門改用 `SUPERVISORY_READ_PERMISSIONS`（明確列出四個非財務權限），
+`ALL_FULFILMENT_PERMISSIONS` 只當目錄用，不再當守門。
+`scripts/check-care-ops.mjs` 第 17 節與 `tests/care/authorization.test.ts`
+兩邊都鎖住這個行為，避免有人日後為了方便又換回全集。

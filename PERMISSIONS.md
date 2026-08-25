@@ -91,8 +91,19 @@ seed 語句（可撤回）。
 | `care_incident.manage` | 受理、處理、結案異常；推進通知狀態 | 異常內容 |
 | `care_settlement.manage` | 結算明細與批次的全部操作 | **唯一**能看到報酬金額的權限 |
 
-讀取類清單（服務控制台、紀錄、小結、異常）接受任一履約權限或 `care_operations.view`；
-**結算端點只接受 `care_settlement.manage`**，不接受任一 care 權限。
+### 財務與督導的隔離是雙向的
+
+督導類讀取（服務控制台、單筆詳情、內部紀錄、家屬小結、異常）接受
+`care_record.review`／`care_summary.review`／`care_incident.manage`／`care_operations.view`
+其中任一，**刻意排除 `care_settlement.manage`** —— 財務該看到的是金額，
+不該因為同樣在 Admin portal 就讀得到陪診員的內部客觀紀錄或未發布的家屬小結。
+
+反過來也一樣：**結算端點只接受 `care_settlement.manage`**，
+督導與一般營運讀不到任何金額。
+
+程式碼裡的單一來源是 `lib/care/fulfilment/domain.ts` 的
+`SUPERVISORY_READ_PERMISSIONS`（督導側）與 `FINANCE_ONLY_PERMISSION`（財務側）。
+`ALL_FULFILMENT_PERMISSIONS` 是完整目錄，**不可**當成讀取守門用。
 
 ### 三個 realm 的資料範圍
 
