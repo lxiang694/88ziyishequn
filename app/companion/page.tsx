@@ -7,6 +7,7 @@ import { TIME_SLOTS, MOBILITY_OPTIONS, ADDON_OPTIONS, labelOf, statusColor } fro
 import ProfileForm from '@/components/companion/ProfileForm'
 import JobFlow from '@/components/companion/JobFlow'
 import { AvailabilityTab, ProposalsTab, TimeOffTab } from '@/components/companion/StaffingTabs'
+import { StaffNotificationsTab, StaffFollowUpsTab } from '@/components/companion/ClosureTabs'
 
 interface Me { id: number; name: string; phone: string; employment_type: string; completed_count: number; service_areas: string[]; status: string; profile_submitted_at: string | null; reject_reason: string | null }
 interface Avail { id: number; date: string; time_slot: string }
@@ -30,7 +31,7 @@ interface Job {
   extra_companion_fee: number | null
 }
 
-type Tab = 'jobs' | 'invites' | 'schedule' | 'timeoff' | 'income' | 'profile'
+type Tab = 'jobs' | 'notices' | 'invites' | 'schedule' | 'timeoff' | 'improve' | 'income' | 'profile'
 
 /**
  * Sprint C：分頁依僱用型態不同。
@@ -41,9 +42,11 @@ function tabsFor(employmentType: string): [Tab, string][] {
   const partTime = employmentType !== 'fulltime'
   return [
     ['jobs', '📋 工作'],
+    ['notices', '🔔 通知'],
     ...(partTime ? ([['invites', '📨 服務邀請']] as [Tab, string][]) : []),
     ['schedule', '📅 班表'],
     ['timeoff', partTime ? '🚫 暫停接案' : '🗓 請假'],
+    ['improve', '🔧 流程改善'],
     ['income', '💰 收入'],
     ['profile', '👤 我的資料'],
   ]
@@ -306,6 +309,12 @@ export default function CompanionDashboard() {
             )}
           </>
         )}
+
+        {/* 站內通知 */}
+        {tab === 'notices' && <StaffNotificationsTab />}
+
+        {/* 流程改善事項 */}
+        {tab === 'improve' && <StaffFollowUpsTab />}
 
         {/* 服務邀請（兼職） */}
         {tab === 'invites' && <ProposalsTab />}

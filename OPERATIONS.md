@@ -299,3 +299,68 @@ Migration 不自動賦予任何角色。超級管理員（`all`）本來就能�
 - 能力驗證的實際認定標準與有效期限（目前由後台人員自行填寫）
 - 請假是否需要區分事假／病假／特休等假別（目前只有 5 個原因代碼，不與薪資連動）
 - 全職的公司班表目前沿用既有 14 天可服務時段表，是否要改為正式輪班表
+
+---
+
+## Sprint E 上線步驟
+
+### 1. 執行 migration
+
+```
+migrations/care_operations_closure_schema.sql   ← Sprint E
+```
+
+前置：Sprint B／C／D 三份都要先跑過。整份冪等。
+
+驗證：
+
+```sql
+select count(*) from information_schema.tables
+where table_schema = 'public' and table_name in (
+  'care_notifications','care_notification_preferences','care_notification_outbox',
+  'care_feedback_requests','care_feedback','care_concerns',
+  'care_quality_reviews','care_quality_follow_ups',
+  'care_policy_versions','care_policy_acceptances','care_data_lifecycle_reviews');
+-- 應回傳 11
+
+select policy_kind, status, (body_text is null) as 正文為空
+from care_policy_versions order by policy_kind;
+-- 應回傳 4 筆 draft，正文全部為空（系統不代寫條款）
+```
+
+### 2. 開通權限
+
+| 角色 | 權限 |
+|---|---|
+| 客服／協調員 | `care_operations.view`、`care_concern.manage` |
+| 督導 | `care_quality.review`、`care_quality.manage`、`care_feedback.manage` |
+| 通知管理 | `care_notification.manage` |
+| 營運主管 | `care_insights.view`、`care_release_readiness.view` |
+| 法務／個資窗口 | `care_policy.manage`、`care_data_lifecycle.manage` |
+
+**建議不要合併給同一人**：`care_policy.manage`（條款）與
+`care_data_lifecycle.manage`（個資處理）是外部監督性質的職責，
+與日常營運分開比較能發揮作用。
+
+### 3. 日常流程
+
+見 `RUNBOOK.md`。
+
+### 4. 重要提醒
+
+- **系統不會發送任何外部訊息**。家屬與陪診員要登入才看得到通知。
+  急件請用既有客服管道人工聯絡，並在系統內留下紀錄。
+- **上線檢核不能打勾**。`/admin/care/release-readiness` 的每一項
+  都從真實狀態算出來。「人工待決」區永遠是待處理，那是提醒不是錯誤。
+- **條款正文是空的**。系統只做版本管理，正文要由法務提供後貼入並發布，
+  否則上線檢核會一直卡在那裡。
+- **資料保留待辦不會刪除任何東西**。它只是清單。
+- **回饋不公開**。不會變成網站評價，也沒有人員排行。
+
+### Sprint E 待營運／法務／財務確認
+
+完整清單見 `RUNBOOK.md` 第 7 節。最關鍵的三項：
+
+1. 四份政策文件的正文（法務）
+2. 外部通知通道與 opt-in 文案（法務 + 產品 + 營運）
+3. 資料保留期限與個資事故上報時限（法務）

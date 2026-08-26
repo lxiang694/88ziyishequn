@@ -271,3 +271,75 @@ UI 上有明確警語。
 
 所有寫入動作寫入 `admin_audit_logs`，記錄操作者、對象 id、狀態轉換與原因代碼，
 **不記錄**申請理由自由文字或邀請內容。
+
+---
+
+## 陪診營運閉環端點（Sprint E）
+
+一樣沒有通用 PATCH／PUT／DELETE。所有寫入都是 `POST { action, ... }`，走白名單。
+
+### 後台
+
+| 端點 | 方法 | action | 需要權限 |
+|---|---|---|---|
+| `/api/admin/care/operations` | GET | — | 營運類讀取（不含結算／個資） |
+| `/api/admin/care/notifications` | GET / POST | `suppress_outbox` | `care_notification.manage` |
+| `/api/admin/care/feedback` | GET / POST | `create_request` / `start_review` / `close` | `care_feedback.manage` |
+| `/api/admin/care/concerns` | GET / POST | `create` | GET：營運類讀取；POST：`care_concern.manage` |
+| `/api/admin/care/concerns/[id]` | POST | `acknowledge` / `assign` / `resolve` / `close` | `care_concern.manage` |
+| `/api/admin/care/quality` | GET / POST | `create_review` | GET：營運類讀取；POST：`care_quality.review` |
+| `/api/admin/care/quality/[id]` | POST | `start` / `complete` / `complete_follow_up` | `care_quality.review` |
+| | | `create_follow_up` / `verify_follow_up` | `care_quality.manage` |
+| `/api/admin/care/insights` | GET | — | `care_insights.view` |
+| `/api/admin/care/release-readiness` | GET | —（**沒有 POST**） | `care_release_readiness.view` |
+| `/api/admin/care/policies` | GET / POST | `create_draft` | `care_policy.manage` |
+| `/api/admin/care/policies/[id]` | POST | `publish` | `care_policy.manage` |
+| `/api/admin/care/lifecycle` | GET / POST | `create` | `care_data_lifecycle.manage` |
+| `/api/admin/care/lifecycle/[id]` | POST | `mark_reviewed` | `care_data_lifecycle.manage` |
+
+### 家屬端（Supabase Auth，且每次都再驗單筆授權）
+
+| 端點 | 方法 | action |
+|---|---|---|
+| `/api/care/notifications` | GET / POST | `update_preference` |
+| `/api/care/notifications/[id]` | POST | `mark_read` / `archive` |
+| `/api/care/feedback` | GET | — |
+| `/api/care/feedback/[id]` | POST | `submit` |
+| `/api/care/concerns` | GET / POST | `create` |
+
+### 陪診員端（`companion_token`）
+
+| 端點 | 方法 | action |
+|---|---|---|
+| `/api/companion/notifications` | GET / POST | `update_preference` |
+| `/api/companion/notifications/[id]` | POST | `mark_read` / `archive` |
+| `/api/companion/follow-ups` | GET | —（去識別化摘要） |
+| `/api/companion/follow-ups/[id]` | POST | `complete` |
+
+### 通知內容不由呼叫端決定
+
+建立通知的輸入**只有** `notification_type` 與 `link_path`。
+標題與內文由 `NOTIFICATION_TEMPLATES` 的固定模板產生；
+收件人由資源關係推出；時間由資料庫寫入。
+
+送 `title`、`body`、`recipient_user_id`、`status`、`created_at` 都會被丟棄，
+不是報錯，是根本沒有進入解析結果。
+
+`link_path` 必須是站內相對路徑，且**不可帶 query string 或 fragment**——
+那些會進到伺服器 log 與 analytics。
+
+### 沒有「送出通知」這個動作
+
+`/api/admin/care/notifications` 的 POST 只有 `suppress_outbox` 一個 action。
+沒有 provider，就沒有「送出」可以按。所有外部 outbox 一律停在 `not_configured`。
+
+### 上線檢核只有 GET
+
+`/api/admin/care/release-readiness` **沒有 POST**。每一項都從真實設定與資料算出來，
+沒有任何手動標記為完成的路徑。
+
+### 稽核
+
+所有寫入寫入 `admin_audit_logs`，detail 走 `buildAuditDetail` 白名單
+（`resource` / `resource_id` / `from_status` / `to_status` / `reason_code`）。
+通知內文、家屬意見全文、品質備註、政策正文、電話、地址一律不會被寫進去。

@@ -533,6 +533,258 @@ console.log('\n17. 財務與督導的雙向隔離')
   }
 }
 
+// ══ Sprint E：營運閉環、受控通知與發版檢核 ═════════════════
+const CLOSURE_LIB = 'lib/care/operations'
+
+const SPRINT_E_ADMIN_ROUTES = [
+  'app/api/admin/care/operations/route.ts',
+  'app/api/admin/care/notifications/route.ts',
+  'app/api/admin/care/feedback/route.ts',
+  'app/api/admin/care/concerns/route.ts',
+  'app/api/admin/care/concerns/[id]/route.ts',
+  'app/api/admin/care/quality/route.ts',
+  'app/api/admin/care/quality/[id]/route.ts',
+  'app/api/admin/care/insights/route.ts',
+  'app/api/admin/care/release-readiness/route.ts',
+  'app/api/admin/care/policies/route.ts',
+  'app/api/admin/care/policies/[id]/route.ts',
+  'app/api/admin/care/lifecycle/route.ts',
+  'app/api/admin/care/lifecycle/[id]/route.ts',
+]
+const SPRINT_E_FAMILY_ROUTES = [
+  'app/api/care/notifications/route.ts',
+  'app/api/care/notifications/[id]/route.ts',
+  'app/api/care/feedback/route.ts',
+  'app/api/care/feedback/[id]/route.ts',
+  'app/api/care/concerns/route.ts',
+]
+const SPRINT_E_STAFF_ROUTES = [
+  'app/api/companion/notifications/route.ts',
+  'app/api/companion/notifications/[id]/route.ts',
+  'app/api/companion/follow-ups/route.ts',
+  'app/api/companion/follow-ups/[id]/route.ts',
+]
+
+console.log('\n18. 營運閉環 API 的授權')
+{
+  for (const r of SPRINT_E_ADMIN_ROUTES) {
+    const s = strip(read(r) || '')
+    if (!s) { fail(`找不到 ${r}`); continue }
+    if (/requireClosurePermission\(/.test(s)) ok(`${r} 檢查營運權限`)
+    else fail(`${r} 未檢查營運權限`)
+  }
+  for (const r of SPRINT_E_FAMILY_ROUTES) {
+    const s = strip(read(r) || '')
+    if (!s) { fail(`找不到 ${r}`); continue }
+    if (/requireFamilyActor\(/.test(s)) ok(`${r} 需要家屬登入`)
+    else fail(`${r} 未驗證家屬身分`)
+  }
+  for (const r of SPRINT_E_STAFF_ROUTES) {
+    const s = strip(read(r) || '')
+    if (!s) { fail(`找不到 ${r}`); continue }
+    if (/requireStaffActor\(/.test(s)) ok(`${r} 需要陪診員登入`)
+    else fail(`${r} 未驗證陪診員身分`)
+  }
+
+  const generic = [...SPRINT_E_ADMIN_ROUTES, ...SPRINT_E_FAMILY_ROUTES, ...SPRINT_E_STAFF_ROUTES]
+    .filter(r => /export async function (PATCH|PUT|DELETE)\b/.test(strip(read(r) || '')))
+  if (generic.length === 0) ok('沒有通用更新或刪除端點')
+  else fail('出現通用更新／刪除端點', generic.join(', '))
+}
+
+console.log('\n19. 外部發送本輪絕不成立')
+{
+  const dom = strip(read(`${CLOSURE_LIB}/domain.ts`) || '')
+
+  if (/export const EXTERNAL_NOTIFICATION_ENABLED = false/.test(dom)) {
+    ok('外部通知 flag 是硬編的 false')
+  } else fail('外部通知 flag 不是硬編的 false')
+
+  // 不從環境變數讀：否則正式環境設一個變數就會開始發送
+  if (/EXTERNAL_NOTIFICATION_ENABLED[\s\S]{0,80}process\.env/.test(dom)) {
+    fail('外部通知 flag 從環境變數讀取')
+  } else ok('外部通知 flag 不從環境變數讀取')
+
+  const statuses = (dom.match(/export const OUTBOX_STATUSES = \[([\s\S]*?)\]/) || [])[1] || ''
+  const bad = ['sent', 'delivered', 'success'].filter(k => statuses.includes(`'${k}`))
+  if (statuses && bad.length === 0) ok('outbox 狀態清單沒有已送出／已送達')
+  else fail('outbox 狀態含有已送出狀態', bad.join(', '))
+
+  const sql = read('migrations/care_operations_closure_schema.sql') || ''
+  if (/care_guard_outbox/.test(sql) && /不可標記為已送出/.test(sql)) {
+    ok('資料庫 trigger 也擋下假的「已送出」')
+  } else fail('資料庫層未擋下已送出狀態')
+
+  // 整個模組不得出現任何外部 provider 的 SDK、網址或金鑰
+  const files = [...walk(CLOSURE_LIB), ...SPRINT_E_ADMIN_ROUTES, ...SPRINT_E_FAMILY_ROUTES,
+                 ...SPRINT_E_STAFF_ROUTES].filter(f => existsSync(join(ROOT, f)))
+  const providerHits = []
+  for (const f of files) {
+    const s = strip(read(f) || '')
+    for (const p of ['api.line.me', 'notify-api.line.me', 'twilio', 'sendgrid',
+                     'nodemailer', 'graph.facebook.com', 'CHANNEL_ACCESS_TOKEN']) {
+      if (s.includes(p)) providerHits.push(`${f}（${p}）`)
+    }
+  }
+  if (providerHits.length === 0) ok(`${files.length} 個檔案沒有任何外部 provider 呼叫或金鑰`)
+  else fail('出現外部 provider 痕跡', providerHits.join(', '))
+
+  // 也不得有背景輪詢、排程或 worker
+  const loopHits = files.filter(f => {
+    const s = strip(read(f) || '')
+    return /setInterval\(|setTimeout\([^)]*\d{4,}|node-cron|new Worker\(|while\s*\(true\)/.test(s)
+  })
+  if (loopHits.length === 0) ok('沒有輪詢、排程或背景 worker')
+  else fail('出現背景自動化', loopHits.join(', '))
+}
+
+console.log('\n20. 通知內容的白名單')
+{
+  const val = strip(read(`${CLOSURE_LIB}/validation.ts`) || '')
+  const iface = (val.match(/interface CreateNotificationInput \{([\s\S]*?)\}/) || [])[1] || ''
+  const leaked = ['title', 'body', 'recipient', 'status', 'created_at', 'user_id']
+    .filter(k => new RegExp(`\\b${k}\\b`).test(iface))
+  if (iface && leaked.length === 0) ok('通知輸入不含內容、收件人或狀態欄位')
+  else fail('通知輸入含有不該由 client 控制的欄位', leaked.join(', '))
+
+  const dom = strip(read(`${CLOSURE_LIB}/domain.ts`) || '')
+  const fn = (dom.match(/export function toNotificationPayload[\s\S]*?\n\}/) || [''])[0]
+  if (/NOTIFICATION_TEMPLATES\[type\]/.test(fn)) ok('通知內容一律來自固定模板')
+  else fail('通知內容不是來自固定模板')
+  if (/startsWith\('\/'\)/.test(fn) && /includes\('\?'\)/.test(fn)) {
+    ok('通知連結必須是站內路徑且不可帶參數')
+  } else fail('通知連結未限制為無參數的站內路徑')
+
+  // 偏好輸入不得開放外部 opt-in（沒有法務確認的文案就不該讓人同意）
+  const pref = (val.match(/interface NotificationPreferenceInput \{([\s\S]*?)\}/) || [])[1] || ''
+  if (pref && !/external/.test(pref)) ok('通知偏好輸入不開放外部通道 opt-in')
+  else fail('通知偏好輸入開放了外部通道')
+}
+
+console.log('\n21. 家屬與陪診員的資料範圍')
+{
+  const dom = strip(read(`${CLOSURE_LIB}/domain.ts`) || '')
+
+  const concern = (dom.match(/export function toConcernPublicStatus[\s\S]*?\n\}/) || [''])[0]
+  const cLeaks = ['internal_note', 'owner_admin_id', 'description', 'source_user_id']
+    .filter(k => new RegExp(`${k}\\s*:`).test(concern))
+  if (concern && cLeaks.length === 0) ok('意見案件的對外狀態不含內部備註與負責人')
+  else fail('意見案件對外狀態夾帶內部欄位', cLeaks.join(', '))
+
+  const fu = (dom.match(/export function toFollowUpStaffView[\s\S]*?\n\}/) || [''])[0]
+  const fLeaks = ['internal_note', 'owner_admin_id', 'verified_by_admin_id', 'review_id']
+    .filter(k => new RegExp(`${k}\\s*:`).test(fu))
+  if (fu && fLeaks.length === 0) ok('陪診員的改善事項摘要不含督導備註')
+  else fail('改善事項摘要夾帶內部欄位', fLeaks.join(', '))
+
+  const svc = strip(read(`${CLOSURE_LIB}/service.ts`) || '')
+  const own = (svc.match(/export async function listOwnConcernStatuses[\s\S]*?\n\}/) || [''])[0]
+  if (/toConcernPublicStatus/.test(own)) ok('家屬端案件列表一律經過去識別化函式')
+  else fail('家屬端案件列表未去識別化')
+
+  const ownFu = (svc.match(/export async function listOwnQualityFollowUps[\s\S]*?\n\}/) || [''])[0]
+  if (/toFollowUpStaffView/.test(ownFu)) ok('陪診員改善事項列表一律經過去識別化函式')
+  else fail('陪診員改善事項列表未去識別化')
+
+  // 家屬端 API 不得直接讀取內部資源
+  for (const r of SPRINT_E_FAMILY_ROUTES) {
+    const s = strip(read(r) || '')
+    const bad = ['supabaseAdmin', 'listFeedbackForReview', 'getQualityAdminView', 'listConcernsForAdmin']
+      .filter(k => s.includes(k))
+    if (bad.length === 0) continue
+    fail(`${r} 讀取了內部資源`, bad.join(', '))
+  }
+  ok('家屬端 API 不讀取內部審核資源')
+}
+
+console.log('\n22. 指標與上線檢核不造假')
+{
+  const dom = strip(read(`${CLOSURE_LIB}/domain.ts`) || '')
+
+  const avg = (dom.match(/export function averageOrSuppressed[\s\S]*?\n\}/) || [''])[0]
+  if (/minSample/.test(avg) && /suppressed: true/.test(avg)) {
+    ok('樣本不足時回傳 suppressed 而不是平均值')
+  } else fail('樣本不足時仍會給出平均值')
+
+  const build = (dom.match(/export function buildReadinessChecks[\s\S]*?\n\}\n/) || [''])[0]
+  if (/manual/.test(build) && /需由營運／法務／財務確認/.test(build)) {
+    ok('人工待決項目一律標為待處理')
+  } else fail('人工待決項目沒有被標出來')
+  if (/monitoringProvider \? 'ready' : 'blocked'/.test(build)) {
+    ok('沒有監控 provider 就顯示未設定')
+  } else fail('監控狀態可能被假造為已啟用')
+
+  // 檢核頁不得有任何手動打勾的寫入路徑
+  const rr = strip(read('app/api/admin/care/release-readiness/route.ts') || '')
+  if (rr && !/export async function POST/.test(rr)) ok('上線檢核端點只有讀取，沒有手動標記')
+  else fail('上線檢核端點有寫入路徑')
+
+  // 排行與公開評價：整個模組都不該出現
+  const files = walk(CLOSURE_LIB).concat(walk('app/admin/care')).filter(f => /\.tsx?$/.test(f))
+  const rank = files.filter(f => {
+    const s = strip(read(f) || '')
+    return /staff_ranking|leaderboard|public_review|star_rating|排行榜/.test(s)
+  })
+  if (rank.length === 0) ok('沒有人員排行或公開評價功能')
+  else fail('出現排行或公開評價', rank.join(', '))
+}
+
+console.log('\n23. 生命週期不刪除資料')
+{
+  const dom = strip(read(`${CLOSURE_LIB}/domain.ts`) || '')
+  if (/LIFECYCLE_DELETION_ENABLED = false/.test(dom)) ok('刪除功能旗標為 false')
+  else fail('刪除功能旗標不是 false')
+
+  const statuses = (dom.match(/export const LIFECYCLE_STATUSES = \[([\s\S]*?)\]/) || [])[1] || ''
+  const bad = ['deleted', 'anonymized', 'purged', 'erased'].filter(k => statuses.includes(k))
+  if (statuses && bad.length === 0) ok('生命週期狀態清單沒有刪除或匿名化')
+  else fail('生命週期狀態含有刪除動作', bad.join(', '))
+
+  const repo = strip(read(`${CLOSURE_LIB}/repository.ts`) || '')
+  if (!/\.delete\(\)/.test(repo)) ok('Repository 沒有任何 delete 呼叫')
+  else fail('Repository 出現 delete 呼叫')
+}
+
+console.log('\n24. Sprint E 分層與 RLS')
+{
+  const comps = [...walk('app/admin/care'), ...walk('app/companion'),
+                 ...walk('components/care'), ...walk('components/companion')]
+    .filter(f => f.endsWith('.tsx'))
+  const bad = comps.filter(f => {
+    const s = strip(read(f) || '')
+    return s.includes('operations/repository') || s.includes('operations/service')
+  })
+  if (bad.length === 0) ok(`${comps.length} 個 component 未直接呼叫 Sprint E repository／service`)
+  else fail('有 component 直接碰資料層', bad.join(', '))
+
+  const sql = read('migrations/care_operations_closure_schema.sql') || ''
+  const loops = [...sql.matchAll(/foreach t in array array\[([\s\S]*?)\] loop([\s\S]*?)end loop/g)]
+  const rlsBlock = loops.find(m => /enable row level security/.test(m[2])) || ['', '', '']
+  const rlsOn = /enable row level security/.test(rlsBlock[2])
+    && /force row level security/.test(rlsBlock[2])
+    && /revoke all on/.test(rlsBlock[2])
+  for (const t of ['care_notifications', 'care_notification_preferences', 'care_notification_outbox',
+                   'care_feedback_requests', 'care_feedback', 'care_concerns',
+                   'care_quality_reviews', 'care_quality_follow_ups',
+                   'care_policy_versions', 'care_policy_acceptances', 'care_data_lifecycle_reviews']) {
+    if (rlsOn && rlsBlock[1].includes(`'${t}'`)) ok(`${t} 已啟用並強制 RLS`)
+    else fail(`${t} 未啟用 RLS`)
+  }
+
+  for (const fn of ['care_guard_outbox', 'care_guard_notification', 'care_guard_feedback',
+                    'care_guard_concern', 'care_guard_quality_review',
+                    'care_guard_policy_version', 'care_guard_policy_acceptance']) {
+    if (sql.includes(fn)) ok(`資料庫 trigger ${fn} 已定義`)
+    else fail(`缺少資料庫 trigger ${fn}`)
+  }
+  if (/care_block_delete/.test(sql)) ok('通知與政策接受紀錄在資料庫層不可刪除')
+  else fail('缺少不可刪除的保護')
+
+  // 政策種子只建 draft，正文留空 —— 系統不代寫條款
+  if (/'v1-draft', 'draft', null/.test(sql)) ok('政策種子只建草稿，正文留空由法務填入')
+  else fail('政策種子可能夾帶自撰條款內容')
+}
+
 console.log(`\n── 結果 ──\n  通過 ${passes}\n  失敗 ${failures}\n`)
 if (failures > 0) { console.log('✗ 陪診營運檢查未通過\n'); process.exit(1) }
 console.log('✓ 陪診營運檢查全部通過\n')
