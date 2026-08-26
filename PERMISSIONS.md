@@ -173,3 +173,58 @@ Migration 不自動賦予任何角色。`super_admin`（`'all'`）涵蓋全部�
 Migration 不自動賦予任何角色。建議的職責分離：
 `care_staff_credential.manage`（驗證能力）與 `care_dispatch.manage`（派工）
 不要給同一個人——否則派工者可以自己補一張能力驗證來繞過媒合檢查。
+
+---
+
+## Sprint E 新增的營運閉環權限
+
+定義於 `lib/care/operations/domain.ts` 的 `CLOSURE_PERMISSION_KEYS`。
+
+| 權限 | 可做什麼 | 可看到什麼 |
+|---|---|---|
+| `care_notification.manage` | 檢視站內通知 metadata、抑制 outbox | 通知的類型與狀態，**不含內文** |
+| `care_feedback.manage` | 建立回饋邀請、處理與結案回饋 | 家屬回饋的分數與意見 |
+| `care_concern.manage` | 受理、指派、處理、結案意見案件 | 案件全文與內部備註 |
+| `care_quality.review` | 建立、開始、完成品質覆核 | 覆核 checklist 與內部備註 |
+| `care_quality.manage` | 建立、覆核改善事項 | 改善事項與負責人 |
+| `care_insights.view` | 檢視去識別化營運指標 | 統計數字；樣本不足時看不到分數 |
+| `care_release_readiness.view` | 檢視上線檢核 | 檢核結果；**沒有寫入路徑** |
+| `care_policy.manage` | 建立與發布條款／隱私版本 | 政策正文 |
+| `care_data_lifecycle.manage` | 資料保留待辦 | 待辦清單；**不能刪除任何資料** |
+
+### 家屬與陪診員本人的能力
+
+登入即有，無法由後台角色調整：
+
+| 能力 | 對應端點 |
+|---|---|
+| `care_notification.read_own` | `/api/care/notifications`、`/api/companion/notifications` |
+| `care_feedback.submit_own_authorized_order` | `/api/care/feedback/[id]`（submit） |
+
+### 營運類讀取排除財務與個資權限
+
+`OPERATIONS_READ_PERMISSIONS` 明確列出六個權限
+（`care_operations.view` 與通知、品質×2、回饋、意見），
+**刻意排除** `care_settlement.manage` 與 `care_data_lifecycle.manage`。
+
+理由與 Sprint D 修過的那個洞相同：財務該看到的是金額，不是家屬意見與品質備註；
+個資處理人員該看到的是保留期限，不是服務內容。`ALL_CLOSURE_PERMISSIONS`
+是完整目錄，**不可**當讀取守門用。
+
+### 各角色的實際範圍
+
+| 角色 | 可讀 | 不可讀 |
+|---|---|---|
+| 客服／協調員（`care_operations.view` + concern） | 營運佇列、意見案件 | 結算金額、品質內部備註、政策正文、資料保留待辦 |
+| 督導（quality×2 + feedback） | 品質覆核、家屬回饋、改善事項 | 結算金額、資料保留待辦 |
+| 財務（`care_settlement.manage`） | 結算明細與批次 | 內部服務紀錄、未發布小結、家屬回饋、意見案件、品質備註 |
+| 個資窗口（`care_data_lifecycle.manage`） | 保留待辦清單 | 服務內容、回饋、品質、結算 |
+| 陪診員 | 自己的通知、自己的改善事項摘要 | 家屬回饋原文、他人品質資料、Admin 指標、outbox、完整意見案件 |
+| 家屬 | 有效授權下的通知、已發布小結、自己的回饋與案件狀態 | 內部紀錄、內部異常、未發布小結、品質覆核、其他訂單 |
+
+### 三件事互相獨立
+
+接受政策、單筆服務授權、外部通知 opt-in 是三個不同的概念，
+存在三張不同的表，**任一件都不會自動產生另一件**。
+`policyAcceptanceImpliesNothing()` 與對應的測試存在的目的，
+就是讓有人想用其中一個推導另一個時，CI 會失敗。

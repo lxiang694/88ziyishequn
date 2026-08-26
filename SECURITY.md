@@ -215,3 +215,92 @@ service_name, mobility, required_capabilities, expires_at
 `ALL_FULFILMENT_PERMISSIONS` 只當目錄用，不再當守門。
 `scripts/check-care-ops.mjs` 第 17 節與 `tests/care/authorization.test.ts`
 兩邊都鎖住這個行為，避免有人日後為了方便又換回全集。
+
+---
+
+## Sprint E 營運閉環的安全設計
+
+### 通知內容的白名單
+
+`toNotificationPayload()` 是唯一來源。呼叫端只能給 `notification_type` 與
+一個站內路徑，標題與內文一律來自 `NOTIFICATION_TEMPLATES`。
+
+理由：通知會出現在鎖定畫面、推播預覽、瀏覽器分頁標題與伺服器 log。
+只要開放一個自由文字欄位，遲早會有人把「王先生的心導管結果」寫進去。
+
+連結必須是站內相對路徑，且**不可帶 query string 或 fragment**——
+那些會進到 access log 與 analytics。深層頁面自己會再做一次授權檢查，
+所以連結本身不需要（也不該）夾帶 token。
+
+資料庫層再限一次長度：title ≤ 60、body ≤ 200、link 必須 `like '/%'`。
+
+### 外部發送：三道鎖
+
+1. `EXTERNAL_NOTIFICATION_ENABLED` 是**硬編的 false**，不從環境變數讀——
+   否則正式環境設一個變數就會開始發送真實訊息
+2. `OUTBOX_STATUSES` 裡根本沒有 `sent` / `delivered`
+3. `care_guard_outbox` trigger 明文擋下 `sent` / `delivered` / `sent_or_confirmed` / `success`
+
+第 2 與第 3 刻意重複：check constraint 可以被 `alter table` 放寬，
+trigger 比較不會被順手改掉。
+
+`scripts/check-care-ops.mjs` 第 19 節另外掃描整個模組，
+確認沒有任何 provider SDK、網址或金鑰（`api.line.me`、`twilio`、
+`sendgrid`、`CHANNEL_ACCESS_TOKEN` 等），也沒有 `setInterval`／
+`node-cron`／`while(true)` 之類的背景自動化。
+
+### 資料庫裡不存外部帳號
+
+`care_notification_preferences` 只記錄**狀態**（`not_configured` /
+`pending_approval` / `approved`），不存 LINE user ID、手機、Email 或 token。
+未來的 provider 設定要走 server-side 安全設定，不是資料表欄位。
+
+### 外部 opt-in 不開放給前端
+
+`parseNotificationPreference()` 刻意只接受 `category` 與 `in_app_enabled`。
+外部通道還沒有 provider，也還沒有法務確認的 opt-in 文案——
+這時候開放這個欄位，等於讓人在不知道自己同意了什麼的情況下同意。
+
+### 個資偵測：在存進去之前擋，不是事後才發現
+
+`findPersonalData()` 掃描四種最常見的樣式（手機、市話、身分證字號、Email），
+套用在家屬回饋、意見說明、內部備註與**給陪診員看的改善說明**上。
+
+這不是完整的個資偵測——那做不到。它擋的是最容易誤填的那幾種，
+並且在使用者按下送出前就告訴他是哪一種。
+
+### 授權撤回後立刻失效
+
+- 授權撤回後**不再建立**新通知（`createInAppCareNotification` 回傳 `skipped`）
+- 已存在的通知 deep-link 指向的頁面會再驗一次授權，撤回後直接拒絕
+- 回饋送出時**當下**再驗一次授權，不是只在建立邀請時驗
+
+### 財務、督導、個資窗口三方隔離
+
+`OPERATIONS_READ_PERMISSIONS` 排除 `care_settlement.manage` 與
+`care_data_lifecycle.manage`。這是 Sprint D 那個洞（財務讀得到內部服務紀錄）
+的同類預防：同在一個 Admin portal 不代表責任相同。
+
+### 稽核不記錄內容
+
+`buildAuditDetail` 白名單只有 5 個欄位。通知內文、家屬意見全文、
+品質內部備註、政策正文、電話、地址、金額一律不可能被寫進稽核。
+
+### 錯誤訊息不外流
+
+`closureErrorResponse` 對未預期的例外一律回「操作失敗，請稍後再試」，
+不回傳 exception message——那可能含資料庫欄位名、值或內部路徑。
+
+### 不可刪除
+
+`care_notifications` 與 `care_policy_acceptances` 在資料庫層擋下 DELETE。
+刪掉通知就查不出誰在什麼時候被通知過什麼；刪掉接受紀錄就無法證明
+使用者同意過什麼版本。
+
+### 本輪未實作（不是已完成）
+
+- **沒有任何外部通知 provider**：outbox 只是資料結構
+- **沒有背景 worker、排程或輪詢**
+- **沒有真正的資料刪除或匿名化**：生命週期表是待辦清單
+- **沒有監控／錯誤追蹤 provider**：上線檢核誠實顯示「未設定」
+- **條款與隱私正文是空的**：系統不代寫，法務確認前一律 blocked

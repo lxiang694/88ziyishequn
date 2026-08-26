@@ -271,3 +271,87 @@ create unique index uniq_cdp_open_per_pair
 並 `revoke all from anon, authenticated`。伺服器端走 service_role，
 所以 RLS 是縱深防禦，**不是**授權的實際強制點——真正的強制點在
 Route Handler 與 Service 層。
+
+---
+
+## 陪診營運閉環（Sprint E）
+
+Migration：`migrations/care_operations_closure_schema.sql`（冪等）。
+前置：Sprint B／C／D 三份都要先跑過。
+
+### 責任邊界
+
+這一輪處理的是「事情有沒有人接手、有沒有做完、家屬知不知道」。
+**不處理**外部訊息發送、背景排程、真實付款、醫療內容。
+
+### 資料表責任
+
+| 表 | 負責什麼 | 誰能寫 |
+| --- | --- | --- |
+| `care_notifications` | 站內通知收件匣 | 只有伺服器；收件人只能改狀態 |
+| `care_notification_preferences` | 站內通知的開關 | 只有本人 |
+| `care_notification_outbox` | 未來外部通道的資料結構 | 只有伺服器；本輪一律 `not_configured` |
+| `care_feedback_requests` | 回饋邀請 | 後台建立 |
+| `care_feedback` | 家屬填的回饋 | 只有本人送出一次 |
+| `care_concerns` | 意見／申訴追蹤 | 家屬、陪診員、營運皆可建立；只有營運可處理 |
+| `care_quality_reviews` | 內部品質覆核 | 只有督導 |
+| `care_quality_follow_ups` | 改善事項 | 督導建立；陪診員只能回報自己的完成 |
+| `care_policy_versions` | 條款／隱私版本 | 只有 `care_policy.manage` |
+| `care_policy_acceptances` | 接受紀錄 | 只有伺服器；建立後不可改也不可刪 |
+| `care_data_lifecycle_reviews` | 資料保留待辦 | 只有 `care_data_lifecycle.manage` |
+
+### 通知內容在資料庫層就限長
+
+```sql
+constraint care_notif_title_len_chk check (char_length(title) <= 60),
+constraint care_notif_body_len_chk check (body is null or char_length(body) <= 200),
+constraint care_notif_link_chk check (link_path is null or link_path like '/%')
+```
+
+就算日後有人繞過 Service 直接寫入，也塞不進一整段服務紀錄，
+也不能把使用者導到站外網址。
+
+### `care_guard_outbox`：擋下假的「已送出」
+
+check constraint 已經限制了狀態值，trigger 再擋一次：
+
+```sql
+if new.status in ('sent','delivered','sent_or_confirmed','success') then
+  raise exception '沒有已核准的外部通知 provider，不可標記為已送出';
+end if;
+```
+
+刻意重複，因為 constraint 可以被 `alter table` 放寬，trigger 比較不會被順手改掉。
+
+### 其他資料庫層保護
+
+- `care_guard_notification`：內容與收件人建立後不可修改；`read_at` 由資料庫寫
+- `care_block_delete`：`care_notifications` 與 `care_policy_acceptances` 不可刪除
+- `care_guard_feedback`：分數與意見送出後不可修改
+- `care_guard_concern`：狀態機（open → acknowledged → resolved → closed），結案不可重開
+- `care_guard_policy_version`：已發布正文不可改寫；正文空白不可發布
+- `care_guard_policy_acceptance`：接受紀錄不可修改（`raise exception` on UPDATE）
+
+### 關鍵唯一性
+
+```sql
+-- 一位家屬對一筆服務只有一張回饋邀請
+constraint care_fbreq_uniq unique (booking_id, recipient_user_id)
+-- 一張邀請只收一份回饋
+constraint care_fb_request_uniq unique (request_id)
+-- 一筆服務只有一份品質覆核
+constraint care_qr_booking_uniq unique (booking_id)
+-- 同一種文件同時只有一個已發布版本
+create unique index uniq_care_policy_published
+  on care_policy_versions(policy_kind) where status = 'published';
+```
+
+### 政策種子
+
+只建 4 筆 `draft`，`body_text` 為 **null**。系統不代寫任何條款文字，
+上線檢核會因此標示為待處理，直到營運與法務填入正文並發布。
+
+### RLS
+
+11 張表全部 `enable` + `force` + `revoke all from anon, authenticated`。
+與前幾輪相同，RLS 是縱深防禦，強制點在 Route Handler 與 Service。

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import FamilyClosurePanel from './FamilyClosurePanel'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { CARE_CTA } from '@/lib/careBrand'
@@ -162,6 +163,11 @@ export default function FamilyServiceClient({ bookingId }: { bookingId: string }
           </div>
         )
       )}
+
+      {/* Sprint E：通知、回饋與意見；每個 API 都會再驗一次單筆授權 */}
+      <div className="mb-5">
+        <FamilyClosurePanel bookingId={Number(bookingId)} />
+      </div>
 
       <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
         <p className="text-slate-700 text-[15px] leading-relaxed">

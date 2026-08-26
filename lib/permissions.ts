@@ -24,6 +24,16 @@ export const PERMISSION_CATALOG: { key: string; label: string; hint?: string }[]
   { key: 'care_schedule.manage', label: '陪診人力：班表與可服務時段檢視' },
   { key: 'care_staff_time_off.review', label: '陪診人力：請假／暫停接案審核' },
   { key: 'care_dispatch.manage', label: '陪診人力：人工媒合與兼職邀請' },
+  // ── 營運閉環（Sprint E）────────────────────────────────
+  { key: 'care_notification.manage', label: '陪診營運：站內通知與 outbox', hint: '外部通知尚未啟用，只看得到狀態' },
+  { key: 'care_feedback.manage', label: '陪診營運：家屬回饋處理' },
+  { key: 'care_concern.manage', label: '陪診營運：意見／申訴處理' },
+  { key: 'care_quality.review', label: '陪診品質：服務品質覆核' },
+  { key: 'care_quality.manage', label: '陪診品質：改善事項指派與覆核' },
+  { key: 'care_insights.view', label: '陪診營運：去識別化營運指標' },
+  { key: 'care_release_readiness.view', label: '陪診營運：上線檢核' },
+  { key: 'care_policy.manage', label: '陪診營運：條款與隱私版本管理', hint: '正文需由法務確認後填入' },
+  { key: 'care_data_lifecycle.manage', label: '陪診營運：資料保留待辦清單', hint: '本輪不刪除任何資料' },
 ]
 
 export const ALL_PERMISSION = 'all'
@@ -86,6 +96,27 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'care_dispatch.proposal_create': '媒合：建立兼職邀請',
   'care_dispatch.proposal_cancel': '媒合：撤回邀請',
   'care_dispatch.proposal_expire': '媒合：邀請逾時',
+
+  // 營運閉環（Sprint E）
+  'care_notification.outbox_suppress': '通知：抑制外部發送',
+  'care_feedback.request_create': '回饋：建立邀請',
+  'care_feedback.review_start': '回饋：開始處理',
+  'care_feedback.close': '回饋：結案',
+  'care_concern.create': '意見案件：建立',
+  'care_concern.acknowledge': '意見案件：受理',
+  'care_concern.assign': '意見案件：指派負責人',
+  'care_concern.resolve': '意見案件：標記已處理',
+  'care_concern.close': '意見案件：結案',
+  'care_quality.review_create': '品質：建立覆核',
+  'care_quality.review_start': '品質：開始覆核',
+  'care_quality.review_complete': '品質：完成覆核',
+  'care_quality.follow_up_create': '品質：建立改善事項',
+  'care_quality.follow_up_complete': '品質：改善事項完成',
+  'care_quality.follow_up_verify': '品質：改善事項覆核通過',
+  'care_policy.draft_create': '政策：建立版本草稿',
+  'care_policy.publish': '政策：發布版本',
+  'care_data_lifecycle.create': '資料保留：建立待辦',
+  'care_data_lifecycle.mark_reviewed': '資料保留：標記已檢視',
 }
 
 // 屬於「資料下載」的動作（需提示超級管理員）
