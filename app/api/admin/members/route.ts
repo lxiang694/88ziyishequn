@@ -40,28 +40,50 @@ export async function GET(req: NextRequest) {
   for (const p of profiles || []) profileMap.set(p.id, p)
 
   // 3. 統計每位會員的訂單數
+  //
+  // 必須跟 /api/account/orders 用**同一套規則**，否則後台顯示的數字
+  // 和會員自己在「我的訂單」看到的會對不起來：
+  //   a) user_id 等於這位會員的訂單
+  //   b) 尚未歸屬（user_id is null）且收件人手機等於會員手機的訪客單
+  //      —— 這是入會前下的單，會員本人也看得到
+  //
+  // 只算 (a) 會低估：orders.user_id 的外鍵一度指向不存在的 app_users，
+  // 那段期間所有連結都以 23503 失敗，訂單全部停在 user_id is null。
+  // 詳見 migrations/fix_orders_user_id_fkey.sql。
   const orderCount = new Map<string, number>()
+  const guestByPhone = new Map<string, number>()
+
   const { data: orderRows } = await supabaseAdmin
     .from('orders')
-    .select('user_id')
-    .not('user_id', 'is', null)
+    .select('user_id, phone')
+
   for (const o of orderRows || []) {
-    if (o.user_id) orderCount.set(o.user_id, (orderCount.get(o.user_id) || 0) + 1)
+    if (o.user_id) {
+      orderCount.set(o.user_id, (orderCount.get(o.user_id) || 0) + 1)
+    } else if (o.phone) {
+      guestByPhone.set(o.phone, (guestByPhone.get(o.phone) || 0) + 1)
+    }
   }
 
   // 4. 組合會員資料
   const members = authUsers.map(u => {
     const prof = profileMap.get(u.id) || {}
+    const phone = prof.phone || u.user_metadata?.phone || ''
+    const linked = orderCount.get(u.id) || 0
+    const guest = phone ? (guestByPhone.get(phone) || 0) : 0
     return {
       id: u.id,
       email: u.email || '',
       name: prof.name || u.user_metadata?.name || '',
-      phone: prof.phone || u.user_metadata?.phone || '',
+      phone,
       line_id: prof.line_id || '',
       created_at: u.created_at,
       last_sign_in_at: u.last_sign_in_at || null,
       email_confirmed: !!(u.email_confirmed_at || u.confirmed_at),
-      order_count: orderCount.get(u.id) || 0,
+      order_count: linked + guest,
+      // 分開回傳，後台才看得出「有幾筆是還沒正式歸屬的舊訪客單」
+      linked_order_count: linked,
+      guest_order_count: guest,
     }
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
