@@ -62,12 +62,36 @@ export async function POST(req: NextRequest) {
     const result = data as any
 
     // If user is logged in, link this order + update default profile fields
+    let linkedToUser = false
     if (authedUser) {
-      // Link order
-      await supabaseAdmin
-        .from('orders')
-        .update({ user_id: authedUser.id })
-        .eq('id', result.order_id)
+      // 用 order_no 而不是 result.order_id：order_no 是我們自己產生的，
+      // 一定存在且唯一；order_id 依賴 place_order RPC 的回傳格式，
+      // 那個函式不在 repo 裡，欄位少一個就會靜默地更新 0 筆。
+      //
+      // 這個連結是「我的訂單」唯一可靠的依據 —— 收件人可以是別人
+      // （幫家人代訂），所以不能靠手機號碼比對。連結失敗就等於
+      // 這筆訂單永遠不會出現在會員的訂單列表裡，因此要驗證並重試。
+      for (let attempt = 0; attempt < 2 && !linkedToUser; attempt++) {
+        const { data: linked, error: linkErr } = await supabaseAdmin
+          .from('orders')
+          .update({ user_id: authedUser.id })
+          .eq('order_no', order_no)
+          .select('id')
+
+        if (linkErr) {
+          console.error('[orders] link user_id failed', { order_no, attempt, code: linkErr.code })
+          continue
+        }
+        if (linked && linked.length > 0) linkedToUser = true
+      }
+
+      if (!linkedToUser) {
+        // 訂單已經成立，不能因為連結失敗就讓下單失敗；
+        // 但要留下明確紀錄，否則之後查不出來為什麼看不到這筆。
+        console.error('[orders] order created but not linked to user', {
+          order_no, user_id: authedUser.id,
+        })
+      }
 
       // Update profile: name, phone, line_id, default store (only fill missing fields)
       const { data: prof } = await supabaseAdmin
@@ -77,8 +101,14 @@ export async function POST(req: NextRequest) {
         .maybeSingle()
 
       const profileUpdate: any = {}
-      if (!prof?.name && customer_name?.trim()) profileUpdate.name = customer_name.trim()
-      if (!prof?.phone && phone?.trim()) profileUpdate.phone = phone.trim()
+      // ⚠️ 刻意不從結帳表單回填 name 與 phone。
+      //
+      // 結帳表單填的是「收件人」，幫家人代訂時那不是會員本人。
+      // 舊版會把收件人手機寫進會員的 user_profiles.phone，造成兩個問題：
+      //   1. 會員的手機變成別人的
+      //   2. /api/account/orders 會用這支手機去比對訂單，
+      //      於是會員看得到「剛好寄給同一支手機」的其他人的訂單
+      // 姓名與手機請會員在「個人資料」自行填寫。
       if (!prof?.line_id && line_id?.trim()) profileUpdate.line_id = line_id.trim()
       if (!prof?.default_store_id && store_id) {
         profileUpdate.default_store_id = store_id

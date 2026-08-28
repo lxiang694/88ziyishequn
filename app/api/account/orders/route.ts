@@ -24,7 +24,11 @@ export async function GET(req: NextRequest) {
     .limit(50)
 
   if (profile?.phone) {
-    query = query.or(`user_id.eq.${user.id},phone.eq.${profile.phone}`)
+    // user_id 是唯一可靠的歸屬依據（收件人可以是別人）。
+    // 手機比對只用來撈「入會前下的訪客單」，因此加上 user_id is null：
+    // 否則只要有人把貨寄到這支手機，這個帳號就看得到那筆別人的訂單。
+    query = query.or(
+      `user_id.eq.${user.id},and(user_id.is.null,phone.eq.${profile.phone})`)
   } else {
     query = query.eq('user_id', user.id)
   }
