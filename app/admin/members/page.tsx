@@ -1,12 +1,45 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
-import { formatDateTime } from '@/lib/utils'
+import { useState, useEffect, useMemo, useCallback, Fragment } from 'react'
+import { formatDateTime, formatPrice } from '@/lib/utils'
+
+interface MemberOrder {
+  id: number
+  order_no: string
+  customer_name: string
+  phone: string
+  store_name: string | null
+  order_status: string
+  items_count: number
+  total_amount: number
+  created_at: string
+  is_linked: boolean
+  order_items?: {
+    id: number; product_name_snapshot: string; variant_name_snapshot: string | null
+    unit_price: number; quantity: number; subtotal: number
+  }[]
+}
 
 export default function MembersPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [denied, setDenied] = useState(false)
   const [keyword, setKeyword] = useState('')
+
+  // 展開的會員與其訂單（一次只展開一位，避免一次拉太多資料）
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [orders, setOrders] = useState<MemberOrder[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [ordersError, setOrdersError] = useState('')
+
+  const toggle = useCallback((id: string) => {
+    if (openId === id) { setOpenId(null); return }
+    setOpenId(id); setOrders([]); setOrdersError(''); setOrdersLoading(true)
+    fetch(`/api/admin/members/${id}/orders`)
+      .then(r => r.json())
+      .then(d => { d.success ? setOrders(d.data) : setOrdersError(d.error || '載入失敗') })
+      .catch(() => setOrdersError('網路錯誤，請稍後再試'))
+      .finally(() => setOrdersLoading(false))
+  }, [openId])
 
   useEffect(() => {
     fetch('/api/admin/members')
@@ -86,23 +119,104 @@ export default function MembersPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {filtered.map(m => (
-                      <tr key={m.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{m.name || '—'}</td>
-                        <td className="px-4 py-3 text-gray-600 font-mono whitespace-nowrap">{m.phone || '—'}</td>
-                        <td className="px-4 py-3 text-gray-600 break-all">{m.email || '—'}</td>
-                        <td className="px-4 py-3">
-                          {m.order_count > 0
-                            ? <span className="bg-green-50 text-green-700 font-bold px-2 py-1 rounded-lg">{m.order_count}</span>
-                            : <span className="text-gray-600">0</span>}
-                        </td>
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDateTime(m.created_at)}</td>
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{m.last_sign_in_at ? formatDateTime(m.last_sign_in_at) : '從未登入'}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-[13px] font-semibold px-2 py-1 rounded-full ${m.email_confirmed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                            {m.email_confirmed ? '已驗證' : '未驗證'}
-                          </span>
-                        </td>
-                      </tr>
+                      <Fragment key={m.id}>
+                        <tr className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{m.name || '—'}</td>
+                          <td className="px-4 py-3 text-gray-600 font-mono whitespace-nowrap">{m.phone || '—'}</td>
+                          <td className="px-4 py-3 text-gray-600 break-all">{m.email || '—'}</td>
+                          <td className="px-4 py-3">
+                            {m.order_count > 0 ? (
+                              <button onClick={() => toggle(m.id)}
+                                className="bg-green-50 text-green-700 font-bold px-2 py-1 rounded-lg hover:bg-green-100 transition-colors">
+                                {m.order_count} {openId === m.id ? '▲' : '▼'}
+                              </button>
+                            ) : (
+                              <span className="text-gray-600">0</span>
+                            )}
+                            {m.guest_order_count > 0 && (
+                              <span className="block text-[12px] text-amber-700 mt-1 whitespace-nowrap">
+                                含 {m.guest_order_count} 筆未歸屬
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDateTime(m.created_at)}</td>
+                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{m.last_sign_in_at ? formatDateTime(m.last_sign_in_at) : '從未登入'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-[13px] font-semibold px-2 py-1 rounded-full ${m.email_confirmed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                              {m.email_confirmed ? '已驗證' : '未驗證'}
+                            </span>
+                          </td>
+                        </tr>
+
+                        {openId === m.id && (
+                          <tr>
+                            <td colSpan={7} className="bg-gray-50 px-4 py-4">
+                              {ordersLoading ? (
+                                <p className="text-gray-500 text-center py-6">載入訂單中…</p>
+                              ) : ordersError ? (
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                  <p className="text-red-800 text-sm">{ordersError}</p>
+                                </div>
+                              ) : orders.length === 0 ? (
+                                <p className="text-gray-500 text-center py-6">沒有訂單</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {orders.map(o => (
+                                    <div key={o.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                                      <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+                                        <div className="min-w-0">
+                                          <p className="font-bold text-gray-800">
+                                            {o.order_no}
+                                            {!o.is_linked && (
+                                              <span className="ml-2 text-[12px] font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                                                未歸屬（靠手機比對）
+                                              </span>
+                                            )}
+                                          </p>
+                                          <p className="text-[13px] text-gray-500 mt-0.5">
+                                            收件人 {o.customer_name}・{o.phone}
+                                            {o.store_name && `・${o.store_name}`}
+                                          </p>
+                                          <p className="text-[13px] text-gray-500">{formatDateTime(o.created_at)}</p>
+                                        </div>
+                                        <div className="text-right flex-shrink-0">
+                                          <p className="font-bold text-gray-900">{formatPrice(o.total_amount)}</p>
+                                          <span className="text-[13px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                                            {o.order_status}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {Array.isArray(o.order_items) && o.order_items.length > 0 && (
+                                        <div className="border-t border-gray-100 pt-2 space-y-1">
+                                          {o.order_items.map(it => (
+                                            <div key={it.id} className="flex justify-between gap-3 text-[13px] text-gray-600">
+                                              <span className="min-w-0">
+                                                {it.product_name_snapshot}
+                                                {it.variant_name_snapshot && `（${it.variant_name_snapshot}）`}
+                                                <span className="text-gray-400"> × {it.quantity}</span>
+                                              </span>
+                                              <span className="flex-shrink-0">{formatPrice(it.subtotal)}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+
+                                  {orders.some(o => !o.is_linked) && (
+                                    <p className="text-[13px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                      「未歸屬」是入會前下的訪客單，靠收件人手機比對出來的。
+                                      會員本人在「我的訂單」也看得到，但如果之後改了手機就會消失。
+                                      要永久綁定，請在資料庫把該筆的 user_id 設為這位會員的編號。
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
