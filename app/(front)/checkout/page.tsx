@@ -145,8 +145,10 @@ export default function CheckoutPage() {
     if (items.length === 0) { trackFunnel('submit_fail', { reason: 'empty_cart' }); toast.error('購物車是空的'); return }
     setSubmitting(true)
     try {
-      const fetchFn = user ? authedFetch : fetch
-      const res = await fetchFn('/api/orders', {
+      // 一律用 authedFetch：它在沒有 session 時就是普通 fetch，
+      // 但可以避免「session 還在載入、user 暫時是 null」時把訂單送成訪客單，
+      // 那會讓這筆訂單永遠不會出現在「我的訂單」。
+      const res = await authedFetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
