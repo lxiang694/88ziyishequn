@@ -306,7 +306,18 @@ export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
             <code className="bg-white px-1 rounded">- 項目</code>、
             <code className="bg-white px-1 rounded">**粗體**</code>、
             <code className="bg-white px-1 rounded">{'> 警告區塊'}</code>、
-            <code className="bg-white px-1 rounded">![圖說](網址)</code>。段落間用空行分隔。
+            <code className="bg-white px-1 rounded">![圖說](網址)</code>、
+            <code className="bg-white px-1 rounded">1. 編號項目</code>、
+            <code className="bg-white px-1 rounded">---</code>（分隔線）。
+            <span className="block mt-2 text-gray-600">
+              <strong>直接貼上也可以：</strong>
+              從 Word、Google 文件或其他地方貼進來的內容會自動排版 ——
+              換行就是換段落（不必特地空一行）、
+              <code className="bg-white px-1 rounded">•</code>
+              <code className="bg-white px-1 rounded">※</code>
+              <code className="bg-white px-1 rounded">①</code> 等符號會變成條列、
+              「一、」開頭或整行粗體會變成標題。中文之間也不會多出空格。
+            </span>
           </div>
           <div className="mb-2 flex items-center justify-between gap-2 bg-green-50 border border-green-100 rounded-lg p-3">
             <p className="text-[13px] text-green-800 leading-relaxed">
