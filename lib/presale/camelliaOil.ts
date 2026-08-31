@@ -123,6 +123,28 @@ export const PRESALE = {
     },
   ],
 
+  /**
+   * 首頁彈窗設定。
+   *
+   * 預售結束後把 enabled 改成 false 就好，不必動元件。
+   * hideAfter 是保險：萬一忘了關，過了那天也會自動停。
+   */
+  popup: {
+    enabled: true,
+    /** 進站後隔多久才彈（讓頁面先畫完，不要一開就蓋住） */
+    delayMs: 800,
+    /** 自動關閉時間 */
+    autoCloseMs: 5000,
+    /** 關掉之後隔多久才會再出現（同一個瀏覽器） */
+    cooldownHours: 12,
+    /** 過了這天自動不再顯示（YYYY-MM-DD，台灣時間） */
+    hideAfter: '2026-10-31',
+    /** 這些路徑不彈：已經在預售頁、或正在結帳的人，彈窗只會擋路 */
+    excludedPaths: ['/camellia-oil', '/cart', '/checkout', '/order-success'],
+    /** localStorage 的 key */
+    storageKey: 'presale_popup_camellia_v1',
+  },
+
   /** 法規聲明 —— 不要移除 */
   disclaimer:
     '本商品為食用油品（一般食品），非藥品，不具備診斷、治療或預防疾病之效果。'
