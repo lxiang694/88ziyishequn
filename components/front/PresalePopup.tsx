@@ -20,9 +20,10 @@ const CFG = PRESALE.popup
  *      鍵盤使用者打到一半被跳走會很煩。Esc 仍然可以關。
  *   3. 關掉之後 12 小時內不再出現，而且結帳流程中完全不彈。
  */
-export default function PresalePopup({ coverImage }: { coverImage?: string | null }) {
+export default function PresalePopup() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [coverImage, setCoverImage] = useState<string | null>(null)
   const [leaving, setLeaving] = useState(false)
   const autoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -31,6 +32,18 @@ export default function PresalePopup({ coverImage }: { coverImage?: string | nul
       clearTimeout(autoCloseRef.current)
       autoCloseRef.current = null
     }
+  }, [])
+
+  /**
+   * 封面圖在瀏覽器端抓，而且只在確定要顯示時才抓。
+   * 抓不到就不放圖 —— 彈窗照樣能用，不會因為一張圖整個壞掉。
+   */
+  const loadCover = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/products/${PRESALE.productSlug}`)
+      const d = await res.json()
+      if (d?.success && d.data?.cover_image_url) setCoverImage(d.data.cover_image_url)
+    } catch {}
   }, [])
 
   const close = useCallback(() => {
@@ -50,7 +63,7 @@ export default function PresalePopup({ coverImage }: { coverImage?: string | nul
     } catch {}
 
     if (force) {
-      const t = setTimeout(() => { setOpen(true) }, 100)
+      const t = setTimeout(() => { setOpen(true); void loadCover() }, 100)
       return () => clearTimeout(t)
     }
 
@@ -75,6 +88,7 @@ export default function PresalePopup({ coverImage }: { coverImage?: string | nul
 
     const showTimer = setTimeout(() => {
       setOpen(true)
+      void loadCover()
       try { localStorage.setItem(CFG.storageKey, String(Date.now())) } catch {}
       autoCloseRef.current = setTimeout(close, CFG.autoCloseMs)
     }, CFG.delayMs)
