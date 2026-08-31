@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  maskName, maskPhone, relativeTime, toPublicRecentOrder, isRecentEnough,
+  maskName, relativeTime, toPublicRecentOrder, isRecentEnough,
 } from '../lib/presale/maskIdentity.ts'
 
 describe('姓名遮罩', () => {
@@ -30,31 +30,6 @@ describe('姓名遮罩', () => {
     for (const n of ['陳如玉', '王小明豪', '李明', 'Chen']) {
       assert.notEqual(maskName(n), n)
     }
-  })
-})
-
-describe('手機遮罩', () => {
-  test('保留前三後三，中間固定四顆星', () => {
-    assert.equal(maskPhone('0931234698'), '093****698')
-  })
-  test('有分隔符號也能處理', () => {
-    assert.equal(maskPhone('0931-234-698'), '093****698')
-    assert.equal(maskPhone('0931 234 698'), '093****698')
-  })
-  test('中間星號數量固定，看不出原本幾位', () => {
-    const a = maskPhone('0931234698')      // 10 碼
-    const b = maskPhone('09312346981234')  // 14 碼
-    assert.equal(a.length, b.length)
-  })
-  test('太短或空值不外洩', () => {
-    assert.equal(maskPhone('0912'), '09*****')
-    assert.equal(maskPhone(''), '09*****')
-    assert.equal(maskPhone(null), '09*****')
-  })
-  test('遮罩後中間四碼一定看不到', () => {
-    const masked = maskPhone('0931234698')
-    assert.equal(masked.includes('1234'), false)
-    assert.match(masked, /^\d{3}\*{4}\d{3}$/)
   })
 })
 
@@ -104,35 +79,33 @@ describe('太舊的不顯示', () => {
   })
 })
 
-describe('對外輸出只有三個欄位', () => {
+describe('對外輸出只有兩個欄位', () => {
   const now = new Date('2026-09-01T12:00:00Z')
 
   test('欄位固定，不夾帶其他資料', () => {
     const out = toPublicRecentOrder({
       customer_name: '陳如玉',
-      phone: '0931234698',
       created_at: new Date(now.getTime() - 600000).toISOString(),
     }, now)
-    assert.deepEqual(Object.keys(out).sort(), ['name', 'phone', 'when'])
+    assert.deepEqual(Object.keys(out).sort(), ['name', 'when'])
     assert.equal(out.name, '陳＊玉')
-    assert.equal(out.phone, '093****698')
     assert.equal(out.when, '10 分鐘前')
   })
 
-  test('輸出裡不會出現原始姓名或完整手機', () => {
-    const out = toPublicRecentOrder({
+  test('輸出裡沒有原始姓名，也完全沒有電話欄位', () => {
+    const out: any = toPublicRecentOrder({
+      // 就算呼叫端硬塞 phone 進來，也不會出現在輸出裡
       customer_name: '陳如玉', phone: '0931234698', created_at: now.toISOString(),
-    }, now)
+    } as any, now)
     const json = JSON.stringify(out)
     assert.equal(json.includes('陳如玉'), false)
-    assert.equal(json.includes('0931234698'), false)
-    assert.equal(json.includes('1234'), false)
+    assert.equal(json.includes('0931'), false)
+    assert.equal('phone' in out, false)
   })
 
   test('缺資料時也不會壞掉', () => {
     const out = toPublicRecentOrder(
-      { customer_name: null, phone: null, created_at: now.toISOString() }, now)
+      { customer_name: null, created_at: now.toISOString() }, now)
     assert.equal(out.name, '匿名')
-    assert.equal(out.phone, '09*****')
   })
 })

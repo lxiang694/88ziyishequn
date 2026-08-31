@@ -16,8 +16,9 @@ const MAX_ITEMS = 8
  *    《公平交易法》第 21 條的不實廣告。沒有訂單就回空陣列，
  *    前端會整個區塊不顯示。
  *
- * 回傳欄位只有 name / phone / when 三個字串，
- * 沒有訂單編號、金額、門市、地址，也沒有任何可回查的 id。
+ * 回傳欄位只有 name / when 兩個字串。電話**連查都不查** ——
+ * 不需要的個資就不要離開資料庫。也沒有訂單編號、金額、
+ * 門市、地址或任何可回查的 id。
  */
 export async function GET() {
   try {
@@ -35,7 +36,7 @@ export async function GET() {
     // 3. 取這些訂單的最小必要欄位；已取消的不算
     const { data: orders } = await supabaseAdmin
       .from('orders')
-      .select('customer_name, phone, created_at, order_status')
+      .select('customer_name, created_at, order_status')
       .in('id', orderIds.slice(0, 200))
       .neq('order_status', '已取消')
       .order('created_at', { ascending: false })
