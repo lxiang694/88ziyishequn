@@ -141,7 +141,7 @@ export default function PresaleBuyBox({ product, shipMonth, sticky = false }: Pr
 
       <p className="text-[13px] text-gray-500 leading-relaxed mt-3">
         結帳後即完成預訂，出貨前會再通知您一次。
-        若因天候延後，我們會主動告知新時程，您可以選擇繼續等或全額退款。
+        若因天候延後，我們會主動告知新時程，您可以選擇繼續等或退訂。
       </p>
     </div>
   )
