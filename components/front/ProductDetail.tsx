@@ -8,6 +8,7 @@ import { formatPrice } from '@/lib/utils'
 import { timingLabels } from '@/lib/productMeta'
 import toast from 'react-hot-toast'
 import SocialShareButtons from './SocialShareButtons'
+import { PRESALE } from '@/lib/presale/camelliaOil'
 
 const SITE_URL = 'https://healthec.vercel.app'
 
@@ -134,6 +135,23 @@ export default function ProductDetail({ product }: { product: Product }) {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 leading-snug">{product.product_name}</h1>
+
+          {/*
+            預售商品的出貨時間跟一般商品不同。從首頁或搜尋進到這一頁的人
+            看不到預售頁的說明，如果不講清楚，他們會以為是立即出貨。
+          */}
+          {product.slug === PRESALE.productSlug && (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 mb-4">
+              <p className="font-bold text-amber-900 mb-1">🌿 這是預售商品</p>
+              <p className="text-amber-800 text-[15px] leading-relaxed mb-2">
+                油還在山上，現在下訂是預約今年這一批，預計 {PRESALE.shipMonth} 出貨。
+              </p>
+              <Link href="/camellia-oil"
+                className="inline-flex items-center gap-1 font-bold text-amber-900 underline min-h-[44px]">
+                看完整介紹與出貨時程 →
+              </Link>
+            </div>
+          )}
           {product.short_intro && (
             <p className="text-gray-600 text-base leading-relaxed mb-4 bg-gray-50 rounded-xl p-3 border border-gray-100">
               {product.short_intro}
