@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useCart } from './CartContext'
 import { formatPrice } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import PresaleRecentOrders from './PresaleRecentOrders'
 
 interface Variant {
   id: number
@@ -138,6 +139,9 @@ export default function PresaleBuyBox({ product, shipMonth, sticky = false }: Pr
         className="w-full min-h-[52px] rounded-2xl bg-green-700 hover:bg-green-800 text-white font-bold text-lg transition-colors disabled:bg-gray-300 disabled:text-gray-500">
         {soldOut ? '本批已售完' : '立即預購'}
       </button>
+
+      {/* 真實訂單的社群證明；沒有近期訂單就整個不顯示 */}
+      <PresaleRecentOrders />
 
       <p className="text-[13px] text-gray-500 leading-relaxed mt-3">
         結帳後即完成預訂，出貨前會再通知您一次。
