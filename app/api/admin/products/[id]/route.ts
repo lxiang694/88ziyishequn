@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { normalizeSlug } from '@/lib/utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
 import { HOME_SECTION_KEYS } from '@/lib/homeSections'
@@ -29,7 +30,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (auth instanceof NextResponse) return auth
   try {
     const body = await req.json()
-    const { product_name, short_intro, suitable_people, usage_method, ingredients,
+    const { product_name, slug: rawSlug, short_intro, suitable_people, usage_method, ingredients,
             precautions, storage_method, is_published, cover_image_url, home_section,
             intake_timing, pairing_tips, source_notes,
             category_ids, variants, gallery_images } = body
@@ -38,6 +39,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Build update object - only include defined fields
     const updateData: any = {}
     if (product_name !== undefined) updateData.product_name = product_name
+    // 網址識別碼可以改，但改了舊網址就會失效，所以只在真的有填時才動
+    if (rawSlug !== undefined) {
+      const custom = normalizeSlug(rawSlug)
+      if (custom) {
+        const { data: dup } = await supabaseAdmin
+          .from('products').select('id').eq('slug', custom).maybeSingle()
+        if (dup && dup.id !== productId) {
+          return NextResponse.json(
+            { success: false, error: `網址識別碼「${custom}」已經被其他商品使用了` }, { status: 409 })
+        }
+        updateData.slug = custom
+      }
+    }
     if (home_section !== undefined) updateData.home_section = HOME_SECTION_KEYS.includes(home_section) ? home_section : 'community'
     if (intake_timing !== undefined) updateData.intake_timing = intake_timing || null
     if (pairing_tips !== undefined) updateData.pairing_tips = pairing_tips || null

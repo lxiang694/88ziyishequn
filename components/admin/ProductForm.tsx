@@ -15,7 +15,7 @@ const emptyVariant = (): Variant => ({ variant_name: '', sale_price: '', origina
 export default function ProductForm({ initialData, productId, onSuccess }: Props) {
   const [categories, setCategories] = useState<any[]>([])
   const [form, setForm] = useState({
-    product_name: '', short_intro: '', suitable_people: '', usage_method: '',
+    product_name: '', slug: '', short_intro: '', suitable_people: '', usage_method: '',
     ingredients: '', precautions: '', storage_method: '', is_published: false, cover_image_url: '',
     home_section: 'community', intake_timing: '', pairing_tips: '', source_notes: '',
   })
@@ -34,6 +34,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
     if (initialData) {
       setForm({
         product_name: initialData.product_name || '',
+        slug: initialData.slug || '',
         short_intro: initialData.short_intro || '',
         suitable_people: initialData.suitable_people || '',
         usage_method: initialData.usage_method || '',
@@ -141,6 +142,28 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
           <div>
             <label className="form-label">商品名稱 *</label>
             <input className="form-input" value={form.product_name} onChange={e => setForm(f => ({ ...f, product_name: e.target.value }))} />
+          </div>
+
+          <div>
+            <label className="form-label">網址識別碼</label>
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-gray-500 text-sm font-mono">/products/</span>
+              <input
+                className="form-input flex-1 min-w-[200px] font-mono"
+                placeholder="留空會自動產生"
+                value={form.slug}
+                onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
+              />
+            </div>
+            <p className="text-[13px] text-gray-500 mt-1 leading-relaxed">
+              只能用小寫英文、數字與連字號，例：<code className="bg-gray-100 px-1 rounded">wild-camellia-oil</code>。
+              留空的話系統會自動產生（中文名稱＋時間戳）。
+              {initialData?.slug && (
+                <span className="block text-amber-700 mt-1">
+                  ⚠️ 已上架的商品改這裡，舊網址就會失效（已分享出去的連結會連不到）。
+                </span>
+              )}
+            </p>
           </div>
 
           {/* AI generate buttons */}

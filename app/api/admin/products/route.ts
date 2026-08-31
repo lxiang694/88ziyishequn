@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
-import { generateSlug } from '@/lib/utils'
+import { generateSlug, normalizeSlug } from '@/lib/utils'
 import { HOME_SECTION_KEYS } from '@/lib/homeSections'
 
 export async function GET(req: NextRequest) {
@@ -58,9 +58,20 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = await req.json()
-    const { product_name, short_intro, suitable_people, usage_method, ingredients, precautions, storage_method, is_published, cover_image_url, home_section, intake_timing, pairing_tips, source_notes, category_ids, variants, gallery_images } = body
+    const { product_name, slug: rawSlug, short_intro, suitable_people, usage_method, ingredients, precautions, storage_method, is_published, cover_image_url, home_section, intake_timing, pairing_tips, source_notes, category_ids, variants, gallery_images } = body
     if (!product_name) return NextResponse.json({ success: false, error: '商品名稱為必填' }, { status: 400 })
-    const slug = generateSlug(product_name)
+
+    // 自訂網址識別碼；沒填或整理後是空的就退回自動產生
+    const custom = normalizeSlug(rawSlug)
+    const slug = custom || generateSlug(product_name)
+    if (custom) {
+      const { data: dup } = await supabaseAdmin
+        .from('products').select('id').eq('slug', custom).maybeSingle()
+      if (dup) {
+        return NextResponse.json(
+          { success: false, error: `網址識別碼「${custom}」已經被其他商品使用了` }, { status: 409 })
+      }
+    }
     const { data: product, error: pe } = await supabaseAdmin
       .from('products')
       .insert({ product_name, slug, short_intro: short_intro || null, suitable_people: suitable_people || null, usage_method: usage_method || null, ingredients: ingredients || null, precautions: precautions || null, storage_method: storage_method || null, is_published: !!is_published, cover_image_url: cover_image_url || null, home_section: HOME_SECTION_KEYS.includes(home_section) ? home_section : 'community', intake_timing: intake_timing || null, pairing_tips: pairing_tips || null, source_notes: source_notes || null })
