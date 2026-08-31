@@ -25,20 +25,6 @@ export function maskName(raw: string | null | undefined): string {
 }
 
 /**
- * 手機遮罩：保留前 3 碼與後 3 碼，中間固定 4 個星號。
- *
- *   0931234698 → 093****698
- *
- * 中間固定用 4 顆星（不隨實際位數變動），
- * 這樣看不出原本號碼有幾位，少洩漏一點資訊。
- */
-export function maskPhone(raw: string | null | undefined): string {
-  const digits = (raw || '').replace(/\D/g, '')
-  if (digits.length < 7) return '09*****'
-  return `${digits.slice(0, 3)}****${digits.slice(-3)}`
-}
-
-/**
  * 相對時間。刻意不給精確時間戳 ——
  * 「14:32 下單」加上遮罩後的姓名，認識的人就能對上是誰。
  */
@@ -62,13 +48,18 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
 
 export interface RecentOrderRaw {
   customer_name: string | null
-  phone: string | null
   created_at: string
 }
 
+/**
+ * 對外只有姓名與時間。
+ *
+ * 電話刻意不在這裡出現 —— 遮罩過的手機（093****698）配上遮罩姓名，
+ * 認識當事人的親友仍然對得出來，而它對「有人在買」這件事
+ * 沒有增加任何說服力。不需要的個資就不要送出來。
+ */
 export interface RecentOrderPublic {
   name: string
-  phone: string
   when: string
 }
 
@@ -77,7 +68,6 @@ export function toPublicRecentOrder(
 ): RecentOrderPublic {
   return {
     name: maskName(row.customer_name),
-    phone: maskPhone(row.phone),
     when: relativeTime(row.created_at, now),
   }
 }

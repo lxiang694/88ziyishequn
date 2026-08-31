@@ -5,7 +5,7 @@ import type { RecentOrderPublic } from '@/lib/presale/maskIdentity'
 /**
  * 「最近有人預訂」的輪播區塊。
  *
- * 資料是**真實訂單**，姓名與電話在伺服器端就遮罩過了
+ * 資料是**真實訂單**，姓名在伺服器端就遮罩過了，電話完全不傳
  * （lib/presale/maskIdentity.ts）。沒有近期訂單時整個區塊不顯示 ——
  * 寧可少一個區塊，也不要放假的購買訊息。
  */
@@ -55,8 +55,7 @@ export default function PresaleRecentOrders() {
           fading ? 'opacity-0' : 'opacity-100'}`}
       >
         <span className="font-semibold">{current.name}</span>
-        <span className="text-green-700 font-mono mx-1.5">{current.phone}</span>
-        <span className="text-green-800">{current.when}預訂成功</span>
+        <span className="text-green-800 ml-1.5">{current.when}預訂成功</span>
       </p>
     </div>
   )
