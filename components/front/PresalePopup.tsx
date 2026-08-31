@@ -41,6 +41,19 @@ export default function PresalePopup({ coverImage }: { coverImage?: string | nul
   }, [cancelAutoClose])
 
   useEffect(() => {
+    // 測試用：網址加上 ?popup=1 就強制顯示一次，略過冷卻與日期限制。
+    // 沒有這個開關的話，看過一次之後 12 小時內都無法再驗證，
+    // 只能清 localStorage 或換瀏覽器，很難確認到底有沒有壞。
+    let force = false
+    try {
+      force = new URLSearchParams(window.location.search).get('popup') === '1'
+    } catch {}
+
+    if (force) {
+      const t = setTimeout(() => { setOpen(true) }, 100)
+      return () => clearTimeout(t)
+    }
+
     let lastShownAt: number | null = null
     try {
       const raw = localStorage.getItem(CFG.storageKey)
