@@ -291,6 +291,7 @@ function OrdersContent() {
   const [pageSize, setPageSize] = useState(20)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [dateOverridden, setDateOverridden] = useState(false)
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -301,7 +302,10 @@ function OrdersContent() {
     if (dateRange === 'custom' && startDate && endDate) { params.set('startDate', startDate); params.set('endDate', endDate) }
     const res = await fetch('/api/admin/orders?' + params)
     const data = await res.json()
-    if (data.success) { setOrders(data.data); setTotal(data.total) }
+    if (data.success) {
+      setOrders(data.data); setTotal(data.total)
+      setDateOverridden(!!data.date_filter_overridden)
+    }
     setLoading(false)
   }, [search, status, dateRange, startDate, endDate, page, pageSize])
 
@@ -394,6 +398,15 @@ function OrdersContent() {
             </button>
           ))}
         </div>
+        {dateOverridden && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
+            <p className="text-[13px] text-blue-800 leading-relaxed">
+              🔍 搜尋時會查詢<strong>全部期間</strong>，上方的期間篩選暫時不套用 ——
+              否則您要找的舊訂單會被擋在期間外。清空搜尋框即可恢復期間篩選。
+            </p>
+          </div>
+        )}
+
         {dateRange === 'custom' && (
           <div className="flex flex-wrap gap-3 items-center">
             <input type="date" className="form-input w-auto" style={{ height: '44px' }} value={startDate} onChange={e => setStartDate(e.target.value)} />
