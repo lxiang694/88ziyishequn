@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
+import {
+  sanitizeOrderSearch, shouldApplyDateFilter, isDateFilterOverridden,
+} from '@/lib/adminOrderSearch'
 
 function twDayToUTC(dateStr: string, isEnd: boolean): string {
   const time = isEnd ? 'T23:59:59' : 'T00:00:00'
@@ -17,7 +20,9 @@ export async function GET(req: NextRequest) {
   if (auth instanceof NextResponse) return auth
 
   const { searchParams } = new URL(req.url)
-  const search = searchParams.get('search') || ''
+  // 使用者輸入會被組進 PostgREST 的 or() 語法，逗號與括號會破壞結構，
+  // % 與 _ 是 LIKE 萬用字元 —— 輸入一個 % 就會撈出全部訂單
+  const search = sanitizeOrderSearch(searchParams.get('search'))
   const status = searchParams.get('status') || ''
   const dateRange = searchParams.get('dateRange') || ''
   const startDate = searchParams.get('startDate') || ''
@@ -37,7 +42,14 @@ export async function GET(req: NextRequest) {
   if (search) query = query.or(`order_no.ilike.%${search}%,customer_name.ilike.%${search}%,phone.ilike.%${search}%`)
   if (status) query = query.eq('order_status', status)
 
-  if (dateRange === 'today') {
+  // 搜尋訂單號／姓名／手機時不套用期間篩選 —— 那是「找特定一筆」，
+  // 不是瀏覽某個期間。從儀表板「本月訂單」進來時 dateRange=month 會留著，
+  // 以前會導致搜舊訂單永遠找不到，而畫面上沒有任何提示。
+  const applyDate = shouldApplyDateFilter(search, dateRange)
+
+  if (!applyDate) {
+    // 不加任何日期條件
+  } else if (dateRange === 'today') {
     query = query.gte('created_at', twDayToUTC(todayTW, false)).lte('created_at', twDayToUTC(todayTW, true))
   } else if (dateRange === 'yesterday') {
     const yd = new Date(Date.now() + 8 * 60 * 60 * 1000)
@@ -56,6 +68,8 @@ export async function GET(req: NextRequest) {
 
   const { data, error, count } = await query
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+
+  const dateFilterOverridden = isDateFilterOverridden(search, dateRange)
 
   const rows = data || []
 
@@ -83,5 +97,9 @@ export async function GET(req: NextRequest) {
     customer_orders: totalByPhone[r.phone] ?? 0,      // 該客戶累計購買次數
   }))
 
-  return NextResponse.json({ success: true, data: withSeq, total: count || 0, page, limit })
+  return NextResponse.json({
+    success: true, data: withSeq, total: count || 0, page, limit,
+    // 讓畫面能提示「搜尋時已忽略期間篩選」，避免使用者以為篩選還在作用
+    date_filter_overridden: dateFilterOverridden,
+  })
 }
