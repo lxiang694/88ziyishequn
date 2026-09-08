@@ -20,6 +20,7 @@ const NAV = [
   { href: '/admin/funnel', label: '🔻 下單漏斗', perms: ['all', 'orders.view'] },
   { href: '/admin/customers', label: '🔁 復購分析', perms: ['all', 'orders.view'] },
   { href: '/admin/events', label: '📅 社群活動', perms: ['all', 'events.view'] },
+  { href: '/admin/popups', label: '💬 前台彈窗', perms: ['all', 'site_popup.manage'] },
   { href: '/admin/care', label: '🩺 陪診營運總覽', perms: ['all', 'care_operations.view', 'care_intake.manage', 'care_quote.manage', 'care_case.manage'] },
   { href: '/admin/care/intakes', label: '　└ 需求初評', perms: ['all', 'care_operations.view', 'care_intake.manage'] },
   { href: '/admin/care/cases', label: '　└ 陪診案件', perms: ['all', 'care_operations.view', 'care_case.manage'] },
