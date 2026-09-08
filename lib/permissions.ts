@@ -7,6 +7,7 @@ export const PERMISSION_CATALOG: { key: string; label: string; hint?: string }[]
   { key: 'products.all', label: '商品管理、健康知識文章' },
   { key: 'categories.all', label: '健康分類管理' },
   { key: 'events.view', label: '社群活動報名管理' },
+  { key: 'site_popup.manage', label: '前台彈窗管理', hint: '可開關與新增全站彈窗' },
   // ── 陪診營運（Sprint B）──────────────────────────────────
   // 這四個與既有的 care.view（陪診預約頁）責任不同，不可互相沿用。
   { key: 'care_operations.view', label: '陪診營運：檢視總覽與清單', hint: '不含補充需求等自由文字' },
@@ -45,6 +46,10 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   export_event_registrations: '下載活動報名名單',
   export_orders: '下載訂單資料',
   export_members: '下載會員資料',
+  'site_popup.create': '彈窗：新增',
+  'site_popup.update': '彈窗：修改',
+  'site_popup.toggle': '彈窗：開關',
+  'site_popup.delete': '彈窗：刪除',
   // 陪診營運（Sprint B）
   'care_intake.review_start': '陪診初評：開始審查',
   'care_intake.request_more_info': '陪診初評：要求補充資料',
