@@ -1,7 +1,9 @@
 import './compat.js'
-import { createRunner, isHealth, HEALTH_ORIGINS } from './runner.mjs'
+import { createRunner, isHealth, isMarket, HEALTH_ORIGINS } from './runner.mjs'
 
 const CHANNEL = 'health-myship-assistant-v1'
+/** 每個賣場一把 key，換賣場不會沿用上一個賣場的驗收狀態 */
+const pilotKey = market => `pilotPassed:${market}`
 const MYSHIP_PAGES = ['https://myship.7-11.com.tw/orderimport/*', 'https://myship.7-11.com.tw/seller/order/*']
 const isMyshipPage = value => {
   try {
@@ -25,7 +27,10 @@ const call = async (tab, kind, command, payload = {}) => {
 }
 const io = {
   load: () => read('job'), save: job => browserCall(chrome.storage.local, 'set', { job }),
-  hasPilot: () => read('pilotPassed'), pilotPassed: () => browserCall(chrome.storage.local, 'set', { pilotPassed: true }),
+  // 驗收狀態按賣場各自存。原本是單一個 pilotPassed 布林值，
+  // 新增第二個賣場時會直接沿用第一個賣場的驗收結果。
+  hasPilot: market => read(pilotKey(market)),
+  pilotPassed: market => isMarket(market) ? browserCall(chrome.storage.local, 'set', { [pilotKey(market)]: true }) : undefined,
   uuid: () => crypto.randomUUID(), now: () => new Date().toISOString(),
   source: async (job, command, data) => {
     const tab = await browserCall(chrome.tabs, 'get', job.source_tab)
@@ -89,9 +94,11 @@ async function handle(message, sender) {
   if (!isHealth(tab?.url) || new URL(tab.url).origin !== senderOrigin) throw new Error('請開啟健康優選「賣貨便工作台」後重新檢查連線')
   if (message.source_url && (!isHealth(message.source_url) || new URL(message.source_url).origin !== senderOrigin)) throw new Error('工作台網址已變更，請重新整理健康優選頁面')
   if (message.type === 'hello' || message.type === 'status') {
-    try { await runner.sync({ source_tab: sender.tab.id, source_url: tab.url }) }
+    const market = message.marketplace_id
+    try { await runner.sync({ source_tab: sender.tab.id, source_url: tab.url, marketplace_id: market }) }
     catch { /* Preserve existing job and pilot on a transient server error; recovery remains available. */ }
-    const [job, pilot] = await Promise.all([read('job'), read('pilotPassed')])
+    // 沒帶賣場（舊版工作台）時一律回報未驗收 —— 寧可多跑一次單筆試轉
+    const [job, pilot] = await Promise.all([read('job'), isMarket(market) ? read(pilotKey(market)) : false])
     return { version: chrome.runtime.getManifest().version, job: job || null, pilot: !!pilot }
   }
   const input = { source_tab: sender.tab.id, source_url: tab.url, order_ids: message.order_ids, marketplace_id: message.marketplace_id }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "健康優選・賣貨便助手",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "minimum_chrome_version": "104",
   "description": "在健康優選發起轉單，傳送官方匯入檔並核對賣貨便結果。",
   "permissions": ["storage"],

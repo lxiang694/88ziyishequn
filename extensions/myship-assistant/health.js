@@ -13,7 +13,11 @@
     if (!isPage()) throw new Error('請保持健康優選賣貨便工作台開啟')
     const { command, batch_id: batch } = message
     if (command === 'context') return responseData(await fetch('/api/admin/myship', { cache: 'no-store' }))
-    if (command === 'eligibility') return responseData(await fetch('/api/admin/myship/eligibility', { cache: 'no-store' }))
+    if (command === 'eligibility') {
+      // 驗收狀態按賣場查，不能不帶賣場就問「有沒有驗收過」
+      if (!/^GM\d{6,20}$/.test(message.marketplace_id || '')) throw new Error('缺少有效的賣場代碼')
+      return responseData(await fetch(`/api/admin/myship/eligibility?marketplace_id=${encodeURIComponent(message.marketplace_id)}`, { cache: 'no-store' }))
+    }
     if (!batchValid(batch)) throw new Error('批次編號錯誤')
     if (command === 'create') return responseData(await fetch('/api/admin/myship/batches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ batch_id: batch, order_ids: message.order_ids }) }))
     if (command === 'status') return responseData(await fetch(`/api/admin/myship/batches/${batch}/status`, { cache: 'no-store' }))

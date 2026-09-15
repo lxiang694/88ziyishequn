@@ -4,15 +4,19 @@ import { createRunner, isHealth } from '../extensions/myship-assistant/runner.mj
 
 const input = { source_tab: 1, source_url: 'https://www.88ziyishequn.com/admin/myship', marketplace_id: 'GM2601252733206', order_ids: [1] }
 function setup() {
-  let stored: any = null, pilot = false
+  let stored: any = null
+  // 驗收狀態按賣場記錄，與助手實際的 storage key 一致
+  const pilots = new Set<string>()
   const calls: string[] = []
   const io = {
     load: async () => structuredClone(stored), save: async (job: any) => { stored = structuredClone(job); calls.push(`save:${job.phase}`) },
-    hasPilot: async () => pilot, pilotPassed: async () => { pilot = true }, uuid: () => '00000000-0000-4000-8000-000000000001', now: () => '2026-09-10',
+    hasPilot: async (market: string) => pilots.has(market),
+    pilotPassed: async (market: string) => { pilots.add(market) },
+    uuid: () => '00000000-0000-4000-8000-000000000001', now: () => '2026-09-10',
     findTarget: async () => ({ id: 2, url: 'https://myship.7-11.com.tw/seller/order/DealWith' }),
     source: async (_job: any, command: string) => {
       calls.push(command)
-      if (command === 'context') return { orders: [{ order_id: 1, reserved: false, errors: [], marketplace_id: input.marketplace_id }] }
+      if (command === 'context') return { orders: [{ order_id: 1, reserved: false, errors: [], marketplace_id: _job.marketplace_id }] }
       if (command === 'file') return 'file'
       if (command === 'apply') return { confirmed: 1, unresolved: [], complete: true }
       if (command === 'status') return { pending: 1, confirmed: 0, released: 0 }
@@ -21,7 +25,7 @@ function setup() {
     target: async (_job: any, command: string) => { calls.push(command); assert.equal(stored.phase, 'upload_attempted'); return {} },
     waitResult: async () => { calls.push('read-result'); return 'result' },
   }
-  return { io, calls, state: () => stored, pilot: () => pilot }
+  return { io, calls, state: () => stored, pilot: (market = input.marketplace_id) => pilots.has(market) }
 }
 test('上傳前先保存狀態，成功結果後才回寫並允許批次處理', async () => {
   const env = setup(), runner = createRunner(env.io)
@@ -59,6 +63,32 @@ test('人工核對後恢復只讀批次狀態；解除保留或數量不符不�
     assert.equal(env.calls.includes('apply'), false)
   }
 })
+test('新賣場不繼承其他賣場的驗收狀態，仍須先跑一筆試轉', async () => {
+  // 這是新增第二個賣場時最危險的地方：舊版把驗收狀態存成單一布林值，
+  // 於是新賣場會直接開放批次 —— 而它的溫層、代收金額、運費都還沒有
+  // 被任何一筆真實訂單驗證過，錯了就是整批寄錯。
+  const second = 'GM2604107313905'
+  const env = setup(), runner = createRunner(env.io)
+
+  await runner.start(input)
+  assert.equal(env.pilot(), true, '第一個賣場驗收通過')
+  assert.equal(env.pilot(second), false, '第二個賣場不應被連帶標記為已驗收')
+
+  // 第二個賣場一次選兩筆要被擋下來
+  await assert.rejects(
+    createRunner(setup().io).start({ ...input, marketplace_id: second, order_ids: [1, 2] }),
+    /首次請選1筆/)
+})
+
+test('批次只接受屬於所選賣場的訂單', async () => {
+  const env = setup()
+  env.io.source = async (_job: any, command: string) =>
+    command === 'context'
+      ? { orders: [{ order_id: 1, reserved: false, errors: [], marketplace_id: 'GM9999999999999' }] } as any
+      : {} as any
+  await assert.rejects(createRunner(env.io).start(input), /訂單狀態或商品配對已變更/)
+})
+
 test('初次限制1筆、未知賣場及錯誤來源不能建立批次', async () => {
   for (const args of [{ ...input, order_ids: [1, 2] }, { ...input, marketplace_id: 'other' }, { ...input, source_url: 'https://evil.example/admin/myship' }]) {
     const env = setup(); await assert.rejects(createRunner(env.io).start(args)); assert.equal(env.calls.includes('create'), false)

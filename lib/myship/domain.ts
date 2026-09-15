@@ -1,4 +1,19 @@
 export const MAX_ROWS = 500
+
+/**
+ * 賣貨便賣場代碼格式（與 myship_marketplaces.id 的 CHECK 條件一致）。
+ *
+ * 賣場代碼出現在網址上，例如
+ *   https://myship.7-11.com.tw/general/detail/GM2604107313905
+ *
+ * 用格式檢查取代寫死某一個代碼 —— 真正「這個賣場能不能用」由資料庫的
+ * myship_marketplaces 決定（enabled 欄位），不由程式碼裡的常數決定。
+ */
+export const MARKETPLACE_ID_PATTERN = /^GM\d{6,20}$/
+export function isMarketplaceId(value: unknown): value is string {
+  return typeof value === 'string' && MARKETPLACE_ID_PATTERN.test(value)
+}
+
 export type ImportRow = [string, string, string, string, string, string, string, string, string, string]
 export interface TransferItem {
   id: number; variant_id: number | null; product_name_snapshot: string

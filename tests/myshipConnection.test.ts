@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { createContext, runInContext } from 'node:vm'
-import { HEALTH_ORIGINS, isHealth, createRunner } from '../extensions/myship-assistant/runner.mjs'
+import { HEALTH_ORIGINS, isHealth, isMarket, createRunner } from '../extensions/myship-assistant/runner.mjs'
 import { parseAssistantStatus } from '@/lib/myship/assistantProtocol'
 
 const root = new URL('../extensions/myship-assistant/', import.meta.url)
@@ -12,12 +12,15 @@ const ownSender = { id: 'fixture-extension', frameId: 0, tab: { id: 3 }, url: cu
 const compat = () => readFile(new URL('compat.js', root), 'utf8')
 
 // Callback-only fixtures also model older Chromium extension APIs. No browser or order is accessed.
+const fixtureMarket = 'GM2601252733206'
+
 async function workerHarness(server?: { pilot: boolean; job: any; batch: any }) {
-  const stored: any = server ? { job: server.job, pilotPassed: false } : {}
+  // 驗收狀態按賣場存，key 是 `pilotPassed:<賣場代碼>`
+  const stored: any = server ? { job: server.job, [`pilotPassed:${fixtureMarket}`]: false } : {}
   let listener: any, reads = 0, starts = 0, tabUrl = currentUrl, tabError = ''
   const runtime: any = { id: ownSender.id, getManifest: () => ({ version: '0.2.1' }), onMessage: { addListener(fn: any) { listener = fn } } }
   const context = createContext({
-    URL, crypto, setTimeout, HEALTH_ORIGINS, isHealth,
+    URL, crypto, setTimeout, HEALTH_ORIGINS, isHealth, isMarket,
     createRunner: server ? createRunner : () => ({ start: async (input: any) => { starts++; return input }, recover: async (input: any) => input }),
     chrome: { runtime, storage: { local: {
       get: (key: string, cb: any) => { reads++; queueMicrotask(() => cb?.({ [key]: stored[key] })) },
@@ -48,8 +51,19 @@ test('連線採用目前分頁網址：從儀表板切到工作台，舊文件�
 })
 
 test('只提供 callback 的瀏覽器介面仍能取得助手狀態', async () => {
-  const h = await workerHarness(), answer = await h.call()
+  const h = await workerHarness(), answer = await h.call(ownSender, { marketplace_id: fixtureMarket })
+  // 兩次讀取：job 與該賣場的驗收狀態
   assert.equal(answer?.ok, true); assert.equal(answer.data.job, null); assert.equal(h.reads(), 2)
+})
+
+test('沒有指定賣場時一律回報未驗收，不會沿用其他賣場的驗收狀態', async () => {
+  // 舊版工作台不會帶 marketplace_id。那種情況寧可讓使用者再跑一次
+  // 單筆試轉，也不要讓新賣場直接放行批次。
+  const h = await workerHarness()
+  const answer = await h.call()
+  assert.equal(answer?.ok, true); assert.equal(answer.data.pilot, false)
+  // 只讀 job，不去猜某個賣場的驗收狀態
+  assert.equal(h.reads(), 1)
 })
 
 test('不信任訊息內的網址：外站、子框架、其他擴展或已離開工作台都不能讀取狀態或發起轉單', async () => {
@@ -114,9 +128,9 @@ test('空白或格式不完整的狀態不能讓後台啟用轉單按鈕', () =>
   assert.deepEqual(parseAssistantStatus(valid), valid)
 })
 
-test('完整背景訊息鏈：重開瀏覽器後从目前健康優選分頁取得後台資格和舊批完成狀態', async () => {
+test('完整背景訊息鏈：重開瀏覽器後從目前健康優選分頁取得後台資格和舊批完成狀態', async () => {
   const h = await workerHarness({ pilot: true, job: { phase: 'attention', message: 'No tab with id: 123.', source_url: currentUrl, source_tab: 456, target_tab: 123, count: 1, batch_id: '00000000-0000-4000-8000-000000000001' }, batch: { total: 1, pending: 0, confirmed: 1, released: 0 } })
-  const reply = await h.call()
+  const reply = await h.call(ownSender, { marketplace_id: fixtureMarket })
   assert.equal(reply.ok, true); assert.equal(reply.data.pilot, true)
   assert.equal(reply.data.job.phase, 'complete'); assert.equal(reply.data.job.source_tab, 3)
   assert.doesNotMatch(reply.data.job.message, /No tab/)

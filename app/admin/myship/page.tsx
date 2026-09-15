@@ -24,7 +24,9 @@ export default function MyshipPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
-  const [market, setMarket] = useState('GM2601252733206')
+  // 不寫死賣場代碼 —— 載入後選第一個已啟用的賣場。
+  // 寫死的話，那個賣場一旦停用或改代碼，整頁就會停在一個選不到訂單的狀態。
+  const [market, setMarket] = useState('')
   const [tab, setTab] = useState<'orders' | 'mapping' | 'history'>('orders')
   const [selected, setSelected] = useState<number[]>([])
   const [confirming, setConfirming] = useState<Transfer | null>(null)
@@ -39,6 +41,12 @@ export default function MyshipPage() {
     if (!response.ok) throw new Error(result.error || '讀取失敗')
     setData(result)
     setSelected([])
+    // 目前選的賣場若不在（或已停用），退回第一個已啟用的
+    setMarket(current => {
+      const markets: Marketplace[] = result.markets || []
+      if (markets.some(m => m.id === current && m.enabled)) return current
+      return markets.find(m => m.enabled)?.id || ''
+    })
   }, [])
   useEffect(() => { load().catch(e => setError(e.message)) }, [load])
   const run = async (action: () => Promise<void>) => {
