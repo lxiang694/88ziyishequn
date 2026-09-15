@@ -61,6 +61,19 @@ export async function POST(req: NextRequest) {
 
     const result = data as any
 
+    // 記錄來源 = 客戶自己在網站下單。後台代客下單會寫成 line_dm 等其他值。
+    // 訂單已經成立，這一步失敗不能讓下單失敗；欄位尚未 migrate 時
+    // 會失敗，屬於預期情況（見 migrations/orders_source.sql）。
+    const { error: srcErr } = await supabaseAdmin
+      .from('orders')
+      .update({ source: 'web' })
+      .eq('order_no', order_no)
+    if (srcErr) {
+      console.error('[orders] source 未記錄'
+        + '（若尚未執行 migrations/orders_source.sql 屬預期）',
+        { order_no, code: srcErr.code })
+    }
+
     // If user is logged in, link this order + update default profile fields
     let linkedToUser = false
     if (authedUser) {

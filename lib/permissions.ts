@@ -1,6 +1,7 @@
 // 後台可指派的權限清單（'all' = 超級管理員，擁有全部權限，單獨處理）
 export const PERMISSION_CATALOG: { key: string; label: string; hint?: string }[] = [
   { key: 'orders.view', label: '查看訂單、銷售報表、復購分析', hint: '含客戶手機等資料' },
+  { key: 'orders.create', label: '快速下單（代客建立訂單）', hint: '會扣庫存並產生真實訂單，與查看／編輯分開' },
   { key: 'orders.status', label: '更新訂單狀態' },
   { key: 'orders.status.ship', label: '出貨作業（備貨 / 出貨 / 到店）' },
   { key: 'orders.edit', label: '編輯訂單' },

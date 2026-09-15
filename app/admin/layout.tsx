@@ -11,6 +11,7 @@ const SEEN_KEY = 'audit_downloads_seen_at'
 
 const NAV = [
   { href: '/admin/dashboard', label: '📊 儀表板', perms: [] },
+  { href: '/admin/quick-order', label: '⚡ 快速下單', perms: ['orders.create','all'] },
   { href: '/admin/orders', label: '📦 訂單管理', perms: ['orders.view','orders.status','orders.status.ship','orders.edit','all'] },
   { href: '/admin/products', label: '🛍️ 商品管理', perms: ['products.all','all'] },
   { href: '/admin/categories', label: '🏷️ 健康分類', perms: ['products.all','categories.all','all'] },
