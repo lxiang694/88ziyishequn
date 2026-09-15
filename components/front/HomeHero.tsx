@@ -25,14 +25,18 @@ export default function HomeHero({ products, onShop }: { products: HeroProduct[]
               <span aria-hidden="true" className="h-px w-6 bg-[#829471]" />
               88 自醫社群・日常好物精選
             </p>
-            <h1 id="home-hero-title" className="text-[32px] sm:text-[42px] lg:text-[44px] leading-[1.3] font-bold tracking-tight">
+            {/*
+              手機上標題縮一級。原本 32px 兩行加上兩行副標，光文字就吃掉
+              超過半個首屏，把真正會轉換的商品擠到很下面。
+            */}
+            <h1 id="home-hero-title" className="text-[27px] sm:text-[42px] lg:text-[44px] leading-[1.25] font-bold tracking-tight">
               為自己，也為家人，<br />
               <span className="text-[#437451]">選好日常營養。</span>
             </h1>
-            <p className="mt-3 max-w-sm text-[15px] sm:text-base leading-relaxed text-[#536455]">
+            <p className="mt-2.5 max-w-sm text-[15px] sm:text-base leading-relaxed text-[#536455]">
               從日常保健到餐桌好物，<br className="hidden lg:block" />讓每一次選購，都簡單一點。
             </p>
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-1">
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 sm:mt-5">
               <button type="button" onClick={onShop} className="inline-flex min-h-[48px] items-center justify-center gap-3 rounded-xl bg-[#214e39] px-5 py-3 text-base font-bold text-white transition-colors hover:bg-[#153a29] focus-visible:outline-offset-4">
                 選購人氣商品 <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -54,11 +58,25 @@ export default function HomeHero({ products, onShop }: { products: HeroProduct[]
                   const price = Math.min(...available.map(v => v.sale_price))
                   return (
                     <Link key={product.id} href={`/products/${product.slug}`} className="group min-w-0 rounded-xl bg-white p-2 sm:p-3 transition-shadow hover:shadow-md lg:rounded-2xl">
-                      <div className="relative mx-auto h-[48px] sm:h-[100px] lg:h-[128px] w-full overflow-hidden rounded-lg bg-white">
-                        <Image src={product.cover_image_url!} alt={product.product_name} fill priority={index === 0} sizes="(max-width: 640px) 28vw, 140px" className="object-contain" />
+                      {/*
+                        圖框要接近正方形。商品照幾乎都是方形或直式，
+                        用 object-contain 放進一個扁的長方形裡，圖只會
+                        縮到框高，兩側留下大片空白 —— 手機上原本 48px 高、
+                        約 98px 寬，一張方形商品圖只渲染成 48×48。
+
+                        底色用極淺的米色而不是白色：NAC、綜合維生素這類
+                        去背白底的商品照放在白卡片上完全沒有邊界。
+                      */}
+                      <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-lg bg-[#faf9f4] sm:aspect-[4/3] lg:aspect-square">
+                        <Image src={product.cover_image_url!} alt={product.product_name} fill priority={index === 0} sizes="(max-width: 640px) 30vw, 150px" className="object-contain p-1" />
                       </div>
-                      <p className="mt-2 line-clamp-2 min-h-[36px] text-[13px] leading-[18px] font-semibold text-[#284b36] group-hover:underline">{product.product_name.replace(/^【小莊代購】\s*/, '')}</p>
-                      <p className="mt-1 text-[13px] sm:text-sm font-bold tabular-nums text-[#214e39]">{formatPrice(price)}{available.length > 1 && <span className="ml-0.5 text-xs font-normal">起</span>}</p>
+                      {/*
+                        底線限定在真的有游標的裝置。觸控裝置點過之後
+                        hover 狀態會黏住，只有被點過的那一張出現底線，
+                        看起來像壞掉。
+                      */}
+                      <p className="mt-2 line-clamp-2 min-h-[36px] text-[13px] leading-[18px] font-semibold text-[#284b36] [@media(hover:hover)]:group-hover:underline">{product.product_name.replace(/^【小莊代購】\s*/, '')}</p>
+                      <p className="mt-1 text-sm sm:text-[15px] font-bold tabular-nums text-[#214e39]">{formatPrice(price)}{available.length > 1 && <span className="ml-0.5 text-xs font-normal">起</span>}</p>
                     </Link>
                   )
                 })}
