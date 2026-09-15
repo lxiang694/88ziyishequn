@@ -9,6 +9,7 @@ import HomeHero from './HomeHero'
 import { formatPrice } from '@/lib/utils'
 import { HOME_SECTIONS, productSection } from '@/lib/homeSections'
 import type { HealthCategory } from '@/lib/types'
+import type { HomeEvent } from '@/lib/homeEvent'
 
 interface Variant {
   id: number; variant_name: string; sale_price: number
@@ -25,6 +26,8 @@ interface Props {
   initialProducts: Product[]
   initialTotal: number
   categories: HealthCategory[]
+  /** 目前開放報名的場次；沒有時整個活動區塊不顯示 */
+  openEvent?: HomeEvent | null
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -36,7 +39,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 const HOT_TAGS = ['維生素C', '魚油', '葉黃素', '益生菌', '鈣', '維他命B群']
 
-export default function HomeClient({ initialProducts, initialTotal, categories }: Props) {
+export default function HomeClient({ initialProducts, initialTotal, categories, openEvent = null }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { addItem } = useCart()
@@ -383,111 +386,44 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
           </section>
         )}
 
-        {/* ─── 陪診服務入口 ─── */}
-        <section className="py-2 mb-2">
-          <a href="/care" className="block">
-            <div className="rounded-2xl bg-gradient-to-r from-teal-700 to-cyan-700 p-5 shadow-md hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold text-lg leading-relaxed mb-1">
-                    🩺 陪診服務・一個人跑醫院不用怕
-                  </p>
-                  <p className="text-cyan-50 text-[15px] leading-relaxed">
-                    專業陪診員全程陪同掛號、看診、領藥，並回報家屬。全台主要縣市可預約
-                  </p>
-                </div>
-                <div className="flex-shrink-0 bg-white/20 text-white font-bold text-base px-4 py-3 rounded-xl min-h-[48px] flex items-center">
-                  →
-                </div>
-              </div>
-            </div>
-          </a>
-        </section>
-
-        {/* ─── QUIZ + ARTICLES + SLEEP ENTRY ─── */}
-        <section className="py-2 mb-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <a href="/health-quiz" className="block">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-700 to-emerald-600 p-5 shadow-md hover:shadow-lg transition-shadow h-full">
-              <div className="flex items-center justify-between gap-3 h-full">
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold text-base leading-relaxed mb-1">
-                    🩺 健康自測
-                  </p>
-                  <p className="text-green-100 text-sm leading-relaxed">
-                    2 分鐘了解您的保健需求
-                  </p>
-                </div>
-                <div className="flex-shrink-0 bg-white/20 text-white font-bold text-sm px-3 py-2 rounded-xl">
-                  →
-                </div>
-              </div>
-            </div>
-          </a>
-          <a href="/sleep-quiz" className="block">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 p-5 shadow-md hover:shadow-lg transition-shadow h-full">
-              <div className="flex items-center justify-between gap-3 h-full">
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold text-base leading-relaxed mb-1">
-                    🌙 睡眠自測
-                  </p>
-                  <p className="text-indigo-100 text-sm leading-relaxed">
-                    國際 ISI 量表 · 失眠分級
-                  </p>
-                </div>
-                <div className="flex-shrink-0 bg-white/20 text-white font-bold text-sm px-3 py-2 rounded-xl">
-                  →
-                </div>
-              </div>
-            </div>
-          </a>
-          <a href="/health-articles" className="block">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-600 to-orange-500 p-5 shadow-md hover:shadow-lg transition-shadow h-full">
-              <div className="flex items-center justify-between gap-3 h-full">
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold text-base leading-relaxed mb-1">
-                    📚 健康知識
-                  </p>
-                  <p className="text-amber-50 text-sm leading-relaxed">
-                    40+ 中年保養經驗分享
-                  </p>
-                </div>
-                <div className="flex-shrink-0 bg-white/20 text-white font-bold text-sm px-3 py-2 rounded-xl">
-                  →
-                </div>
-              </div>
-            </div>
-          </a>
-        </section>
-
-        {/* ─── OFFLINE EVENT ENTRY ─── */}
-        <section className="py-2 mb-2">
-          <Link href="/events" className="block group">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-600 via-pink-600 to-orange-500 p-5 sm:p-6 shadow-md hover:shadow-xl transition-all">
-              <div className="absolute -right-6 -top-6 w-28 h-28 bg-white/10 rounded-full" />
-              <div className="absolute -right-10 bottom-0 w-20 h-20 bg-white/10 rounded-full" />
-              <div className="relative flex items-center gap-4">
-                <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-3xl sm:text-4xl">
-                  🎉
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="inline-flex items-center gap-1.5 bg-white/25 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[13px] font-bold text-white mb-1.5">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                    線下活動・開放報名
+        {/*
+          ─── 線下活動 ───
+          只有真的有開放報名的場次才顯示。原本這塊是無條件的，沒活動時
+          也掛著「開放報名」加閃爍紅點，點進去是空的。
+          標題直接用那場活動的真實標題，不寫死。
+        */}
+        {openEvent && (
+          <section className="py-2 mb-2">
+            <Link href={`/events/${openEvent.slug}`} className="block group">
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-600 via-pink-600 to-orange-500 p-5 sm:p-6 shadow-md hover:shadow-xl transition-all">
+                <div className="absolute -right-6 -top-6 w-28 h-28 bg-white/10 rounded-full" />
+                <div className="absolute -right-10 bottom-0 w-20 h-20 bg-white/10 rounded-full" />
+                <div className="relative flex items-center gap-4">
+                  <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-3xl sm:text-4xl">
+                    🎉
                   </div>
-                  <p className="text-white font-bold text-base sm:text-xl leading-relaxed">
-                    🎉 88自醫社群・線下健康見面會
-                  </p>
-                  <p className="text-white text-sm mt-0.5 leading-relaxed">
-                    多場次・不同地點陸續開放，查看場次報名 →
-                  </p>
-                </div>
-                <div className="flex-shrink-0 hidden sm:flex bg-white text-rose-600 font-bold text-sm px-4 py-2.5 rounded-xl group-hover:scale-105 transition-transform">
-                  查看場次
+                  <div className="flex-1 min-w-0">
+                    <div className="inline-flex items-center gap-1.5 bg-white/25 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[13px] font-bold text-white mb-1.5">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                      線下活動・開放報名
+                    </div>
+                    <p className="text-white font-bold text-base sm:text-xl leading-relaxed">
+                      🎉 {openEvent.title}
+                    </p>
+                    {openEvent.event_time && (
+                      <p className="text-white text-sm mt-0.5 leading-relaxed">
+                        {openEvent.event_time}・立即查看報名 →
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex-shrink-0 hidden sm:flex bg-white text-rose-600 font-bold text-sm px-4 py-2.5 rounded-xl group-hover:scale-105 transition-transform">
+                    查看場次
+                  </div>
                 </div>
               </div>
-            </div>
-          </Link>
-        </section>
+            </Link>
+          </section>
+        )}
 
         {/* ─── HOW IT WORKS ─── */}
         <section className="py-6 mb-2">

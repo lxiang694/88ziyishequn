@@ -74,7 +74,10 @@ export const ORDER_STATUSES = ['待確認', '已確認', '備貨中', '已出貨
 
 // 活動報名於「開始時間前 2 小時」自動關閉；未設定開始時間則不自動關閉
 export const EVENT_CLOSE_BEFORE_MS = 2 * 60 * 60 * 1000
-export function isEventRegistrationClosed(startsAt: string | null | undefined): boolean {
+// now 可注入，讓呼叫端能寫「報名截止前後」的測試；不傳時行為與原本相同
+export function isEventRegistrationClosed(
+  startsAt: string | null | undefined, now: Date = new Date(),
+): boolean {
   if (!startsAt) return false
-  return Date.now() >= new Date(startsAt).getTime() - EVENT_CLOSE_BEFORE_MS
+  return now.getTime() >= new Date(startsAt).getTime() - EVENT_CLOSE_BEFORE_MS
 }
