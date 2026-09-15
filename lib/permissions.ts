@@ -5,6 +5,7 @@ export const PERMISSION_CATALOG: { key: string; label: string; hint?: string }[]
   { key: 'orders.status', label: '更新訂單狀態' },
   { key: 'orders.status.ship', label: '出貨作業（備貨 / 出貨 / 到店）' },
   { key: 'orders.edit', label: '編輯訂單' },
+  { key: 'orders.transfer', label: '賣貨便轉單', hint: '含收件資料匯出、商品配對及核對成功後更新已出貨' },
   { key: 'products.all', label: '商品管理、健康知識文章' },
   { key: 'categories.all', label: '健康分類管理' },
   { key: 'events.view', label: '社群活動報名管理' },
@@ -42,6 +43,11 @@ export const ALL_PERMISSION = 'all'
 
 // 稽核動作標籤
 export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  'myship.mapping': '賣貨便：設定商品配對',
+  'myship.export': '賣貨便：建立匯出批次',
+  'myship.confirm': '賣貨便：核對成功並更新出貨',
+  'myship.release': '賣貨便：核對未成立並解除保留',
+  'myship.results': '賣貨便：核對匯入結果並更新出貨',
   page_view: '瀏覽頁面',
   export_customers: '下載客戶 / 復購名單',
   export_event_registrations: '下載活動報名名單',

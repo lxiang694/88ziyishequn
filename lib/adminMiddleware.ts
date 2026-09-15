@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAdminFromRequest, AdminTokenPayload } from '@/lib/auth'
+import { getAdminFromRequest, type AdminTokenPayload } from '@/lib/auth'
 
 type AuthResult = { admin: AdminTokenPayload }
 

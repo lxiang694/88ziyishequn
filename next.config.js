@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    outputFileTracingIncludes: {
+      '/api/admin/myship/batches': ['./assets/myship/order-import-v1.4.xlsm'],
+      '/api/admin/myship/batches/*': ['./assets/myship/order-import-v1.4.xlsm'],
+    },
+  },
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   images: {

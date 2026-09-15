@@ -14,7 +14,8 @@ let failures = 0, passes = 0
 const ok = m => { passes++; console.log(`  ✓ ${m}`) }
 const fail = (m, d) => { failures++; console.log(`  ✗ ${m}`); if (d) console.log(`      ${d}`) }
 
-const read = p => (existsSync(join(ROOT, p)) ? readFileSync(join(ROOT, p), 'utf8') : null)
+// Windows 的 CRLF 換行也需套用相同檢查，避免函式擷取失敗造成誤報。
+const read = p => (existsSync(join(ROOT, p)) ? readFileSync(join(ROOT, p), 'utf8').replace(/\r\n?/g, '\n') : null)
 const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(?<!:)\/\/.*$/gm, '')
 
 function walk(dir, out = []) {

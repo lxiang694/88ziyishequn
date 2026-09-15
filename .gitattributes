@@ -1,0 +1,23 @@
+# 統一換行為 LF。
+#
+# 沒有這個檔案時，Windows 上的 checkout 會寫成 CRLF，於是每一個
+# 被打開過的檔案都變成「已修改」—— 實際比對時 438 個檔案裡有 300 多個
+# 是假差異，真正有內容差異的只有 11 個。這會讓 code review 與合併
+# 完全無法進行，也是 scripts/check-care-ops.mjs 需要自行 strip \r 的原因。
+#
+# 設定之後，工作區用什麼換行都可以，進到 git 裡一律是 LF。
+* text=auto eol=lf
+
+# 二進位檔不要做任何轉換，轉了會壞掉
+*.zip    binary
+*.xlsm   binary
+*.xlsx   binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.pdf    binary
+*.woff   binary
+*.woff2  binary

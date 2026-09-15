@@ -25,6 +25,7 @@ function firstExisting(base) {
 }
 
 export async function resolve(specifier, context, next) {
+  if (specifier === 'next/server') return next('next/server.js', context)
   // '@/lib/care/domain' → <root>/lib/care/domain.ts
   if (specifier.startsWith('@/')) {
     const hit = firstExisting(resolvePath(ROOT, specifier.slice(2)))
