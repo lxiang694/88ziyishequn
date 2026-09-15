@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from './CartContext'
 import VariantPicker from './VariantPicker'
+import HomeHero from './HomeHero'
 import { formatPrice } from '@/lib/utils'
 import { HOME_SECTIONS, productSection } from '@/lib/homeSections'
 import type { HealthCategory } from '@/lib/types'
@@ -263,55 +264,12 @@ export default function HomeClient({ initialProducts, initialTotal, categories }
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* ─── HERO ─── */}
-      <section className="relative text-white overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, rgba(14,63,35,0.93) 0%, rgba(21,95,47,0.88) 50%, rgba(6,78,59,0.90) 100%), url("https://images.unsplash.com/photo-1505576399279-565b52d4ac71?w=1400&q=80") center/cover no-repeat' }}>
-        <div className="max-w-5xl mx-auto px-4 py-14 sm:py-20">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-bold mb-5 border border-white/30">
-              <span className="w-2.5 h-2.5 bg-green-300 rounded-full animate-pulse" />
-              88自醫社群團購賣場
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold leading-tight mb-3">
-              守護您與家人的<br className="sm:hidden" />健康日常
-            </h1>
-            <p className="text-green-100 text-base sm:text-lg leading-relaxed mb-5">
-              精選保健品，依健康方向分類，選購更清楚、更安心
-            </p>
-
-            {/* 健康自測 CTA — 給「不知道怎麼選」的訪客最直接的入口 */}
-            <a href="/health-quiz"
-              className="group inline-flex items-center gap-3 bg-white text-green-800 rounded-2xl pl-4 pr-5 py-3 mb-7 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all">
-              <span className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center text-2xl">🩺</span>
-              <span className="text-left leading-tight">
-                <span className="block font-bold text-base sm:text-lg">不知道怎麼選？做個健康自測</span>
-                <span className="block text-[15px] text-green-700 font-semibold mt-0.5">2 分鐘・幫你推薦適合的保健品</span>
-              </span>
-              <span className="flex-shrink-0 text-green-700 font-bold text-lg group-hover:translate-x-0.5 transition-transform">→</span>
-            </a>
-
-            {/* Trust badges */}
-            <div className="grid grid-cols-3 gap-3 sm:flex sm:gap-6">
-              {[
-                { icon: '🏪', title: '7-11 取貨', desc: '全台門市' },
-                { icon: '🛒', title: '免註冊下單', desc: '輸入資料即可' },
-                { icon: '💬', title: 'LINE 客服', desc: '即時協助' },
-              ].map(b => (
-                <div key={b.title} className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
-                  <div className="text-2xl mb-1">{b.icon}</div>
-                  <div className="font-bold text-sm leading-tight">{b.title}</div>
-                  <div className="text-green-100 text-[13px] mt-0.5">{b.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <HomeHero products={initialProducts} onShop={() => isDefaultView ? scrollToId(hotProducts.length ? 'sec-hot' : 'home-product-search') : scrollToProducts()} />
 
       <div className="max-w-5xl mx-auto px-4">
 
         {/* ─── STICKY SEARCH ─── */}
-        <div className="sticky top-16 sm:top-20 z-30 -mx-4 px-4 pt-3 bg-gray-50/95 backdrop-blur">
+        <div id="home-product-search" className="sticky top-16 sm:top-20 z-30 -mx-4 px-4 pt-3 bg-gray-50/95 backdrop-blur scroll-mt-20">
           <div className="relative">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-green-600 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

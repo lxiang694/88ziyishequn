@@ -10,9 +10,9 @@ export default function SiteHeader() {
       <div className="max-w-5xl mx-auto px-4 h-16 sm:h-20 flex items-center justify-between gap-3">
 
         {/* Logo */}
-        <Link href="/" className="flex items-center no-underline flex-shrink-0" aria-label="健康優選">
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 no-underline flex-shrink-0" aria-label="健康優選首頁">
           <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"
-            className="w-11 h-11 sm:w-12 sm:h-12">
+            className="w-8 h-8 sm:w-11 sm:h-11">
             <defs>
               <linearGradient id="logoGrad" x1="0" y1="0" x2="48" y2="48">
                 <stop offset="0" stopColor="#15803d"/>
@@ -37,6 +37,10 @@ export default function SiteHeader() {
             {/* Small accent dot for premium feel */}
             <circle cx="36" cy="34" r="2.5" fill="#fbbf24"/>
           </svg>
+          <span className="leading-tight">
+            <span className="block text-base sm:text-xl font-bold tracking-wide text-[#214e39]">健康優選</span>
+            <span className="hidden sm:block mt-1 text-[11px] tracking-widest text-[#62745e]">88 社群精選</span>
+          </span>
         </Link>
 
         {/* Nav */}
