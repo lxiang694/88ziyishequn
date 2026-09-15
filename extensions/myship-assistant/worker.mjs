@@ -5,6 +5,8 @@ const CHANNEL = 'health-myship-assistant-v1'
 /** 每個賣場一把 key，換賣場不會沿用上一個賣場的驗收狀態 */
 const pilotKey = market => `pilotPassed:${market}`
 const MYSHIP_PAGES = ['https://myship.7-11.com.tw/orderimport/*', 'https://myship.7-11.com.tw/seller/order/*']
+/** 一批轉完後把賣貨便分頁帶回這裡，下一批不必手動點回來 */
+const IMPORT_PAGE = 'https://myship.7-11.com.tw/orderimport/import'
 const isMyshipPage = value => {
   try {
     const url = new URL(value)
@@ -67,6 +69,25 @@ const io = {
     if (found.length > 1) throw new Error('找到多個匯入頁，請只保留本次使用的那一個')
     if (!found.length) throw new Error(`已找到賣貨便分頁，但尚未就緒：${[...new Set(rejected)].join('；')}`)
     return found[0]
+  },
+  /**
+   * 整批核對成功後，把賣貨便分頁帶回匯入頁，下一批可以直接開始。
+   *
+   * 只在「完全成功」時做 —— 有未處理的項目時，那張結果頁正是使用者
+   * 要看的東西，導走等於把證據關掉。
+   *
+   * 失敗一律吞掉：分頁可能已經被關掉或手動導去別處。這只是便利功能，
+   * 訂單早已在上一步回寫完成，不該因為導頁失敗就讓整批看起來壞掉。
+   *
+   * 權限：manifest 已有 myship.7-11.com.tw 的 host permission，
+   * 目前網址與目標網址都在同一個 host，不需要額外的 tabs 權限。
+   */
+  resetTarget: async job => {
+    try {
+      const tab = await browserCall(chrome.tabs, 'get', job.target_tab)
+      if (!tab || !isMyshipPage(tab.url)) return
+      await browserCall(chrome.tabs, 'update', job.target_tab, { url: IMPORT_PAGE })
+    } catch { /* 導頁失敗不影響已完成的轉單 */ }
   },
   waitResult: async job => {
     const deadline = Date.now() + 120000

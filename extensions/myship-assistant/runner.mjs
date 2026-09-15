@@ -27,9 +27,15 @@ export function createRunner(io) {
     // 一次單筆驗收，也不要把驗收狀態記到錯的賣場上。
     if (result.complete && isMarket(job.marketplace_id)) await io.pilotPassed(job.marketplace_id)
     const final = { ...job, phase: result.complete ? 'complete' : 'attention', confirmed: result.confirmed,
-      message: result.complete ? `已核對 ${result.confirmed} 筆，健康優選已更新出貨` : `已核對 ${result.confirmed} 筆，${result.unresolved.length} 筆需要處理；請查看批次紀錄`,
+      message: result.complete ? `已核對 ${result.confirmed} 筆，健康優選已更新出貨，賣貨便分頁已回到匯入頁` : `已核對 ${result.confirmed} 筆，${result.unresolved.length} 筆需要處理；請查看批次紀錄`,
       unresolved: result.unresolved }
     await io.save(final)
+    // 全部成功才把分頁帶回匯入頁 —— 有未處理項目時那張結果頁還要看。
+    //
+    // 放在 save 之後，而且自己接住例外：訂單在上一步就已經回寫完成，
+    // 導頁只是便利功能。不在這裡接的話，io 實作一旦丟出例外，
+    // 使用者會看到「助手處理中斷」，以為整批沒成功而重跑一次。
+    if (result.complete) { try { await io.resetTarget?.(job) } catch { /* 導頁失敗不影響結果 */ } }
     return final
   }
   const locked = async (action) => {

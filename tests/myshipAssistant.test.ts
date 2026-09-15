@@ -24,6 +24,7 @@ function setup() {
     },
     target: async (_job: any, command: string) => { calls.push(command); assert.equal(stored.phase, 'upload_attempted'); return {} },
     waitResult: async () => { calls.push('read-result'); return 'result' },
+    resetTarget: async () => { calls.push('reset-target') },
   }
   return { io, calls, state: () => stored, pilot: (market = input.marketplace_id) => pilots.has(market) }
 }
@@ -63,6 +64,42 @@ test('人工核對後恢復只讀批次狀態；解除保留或數量不符不�
     assert.equal(env.calls.includes('apply'), false)
   }
 })
+test('整批成功後把賣貨便分頁帶回匯入頁，下一批不必手動點回來', async () => {
+  const env = setup()
+  await createRunner(env.io).start(input)
+  assert.equal(env.state().phase, 'complete')
+  // 一定要在回寫之後才導頁，否則等於在狀態寫好之前就把來源頁面換掉
+  assert.ok(env.calls.indexOf('apply') < env.calls.indexOf('reset-target'))
+  assert.match(env.state().message, /匯入頁/)
+})
+
+test('有未處理項目時不導頁 —— 那張結果頁正是使用者要看的東西', async () => {
+  const env = setup(), source = env.io.source
+  env.io.source = async (job: any, command: string) => command === 'apply'
+    ? { confirmed: 0, unresolved: [{ order_no: 'test', reason: 'pending' }], complete: false } as any
+    : source(job, command)
+  await createRunner(env.io).start(input)
+  assert.equal(env.state().phase, 'attention')
+  assert.equal(env.calls.includes('reset-target'), false)
+})
+
+test('導頁失敗不影響已完成的轉單', async () => {
+  // 分頁可能已被關掉或手動導去別處。訂單在上一步就已經回寫完成，
+  // 不該因為這個便利功能失敗就讓整批看起來壞掉。
+  const env = setup()
+  env.io.resetTarget = async () => { throw new Error('No tab with id: 2.') }
+  const final = await createRunner(env.io).start(input)
+  assert.equal(final.phase, 'complete')
+  assert.equal(env.state().phase, 'complete')
+})
+
+test('舊版助手沒有 resetTarget 也不會壞', async () => {
+  const env = setup()
+  delete (env.io as any).resetTarget
+  const final = await createRunner(env.io).start(input)
+  assert.equal(final.phase, 'complete')
+})
+
 test('新賣場不繼承其他賣場的驗收狀態，仍須先跑一筆試轉', async () => {
   // 這是新增第二個賣場時最危險的地方：舊版把驗收狀態存成單一布林值，
   // 於是新賣場會直接開放批次 —— 而它的溫層、代收金額、運費都還沒有

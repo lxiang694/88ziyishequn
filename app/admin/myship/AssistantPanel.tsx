@@ -64,7 +64,7 @@ export default function AssistantPanel({ selected, market, disabled, onChange }:
   const perMarketPilot = version[0] > 0 || version[1] > 2 || (version[1] === 2 && version[2] >= 6)
   const pilot = !!status?.pilot && perMarketPilot
   return <section className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-5" aria-label="瀏覽器自動轉單助手">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">比特瀏覽器自動轉單助手</h2><p className="mt-1 text-sm text-slate-600">{status ? `助手 ${status.version} 已連接。${pilot ? '可傳送所選訂單並核對結果。' : perMarketPilot ? '這個賣場首次請選 1 筆驗收，成功後即可批次處理。' : '請更新助手至 0.2.6；舊版無法分辨不同賣場的驗收狀態，目前一律先走單筆驗收。'}` : '首次安裝助手，並在同一個瀏覽器環境登入健康優選及賣貨便。'}</p></div><a href="/downloads/myship-assistant-0.2.6.zip" className="text-sm font-medium underline">下載助手 0.2.6 及安裝說明</a></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">比特瀏覽器自動轉單助手</h2><p className="mt-1 text-sm text-slate-600">{status ? `助手 ${status.version} 已連接。${pilot ? '可傳送所選訂單並核對結果。' : perMarketPilot ? '這個賣場首次請選 1 筆驗收，成功後即可批次處理。' : '請更新助手至 0.2.7；舊版無法分辨不同賣場的驗收狀態，目前一律先走單筆驗收。'}` : '首次安裝助手，並在同一個瀏覽器環境登入健康優選及賣貨便。'}</p></div><a href="/downloads/myship-assistant-0.2.7.zip" className="text-sm font-medium underline">下載助手 0.2.7 及安裝說明</a></div>
     {status?.job && <p role="status" className="text-sm">{status.job.message}</p>}
     {status?.job && !['complete', 'paused'].includes(status.job.phase) && <p className="text-sm text-amber-800">上一批尚待核對，請讀回結果；若要先處理其他訂單，請按「保留此批，繼續其他訂單」。</p>}
     {(connectionError || error) && <p role="alert" className="text-sm text-red-700">{connectionError || error}</p>}
