@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useCart } from './CartContext'
 import { formatPrice } from '@/lib/utils'
 import { timingLabels } from '@/lib/productMeta'
+import { renderProductText } from '@/lib/productBlocks'
 import toast from 'react-hot-toast'
 import SocialShareButtons from './SocialShareButtons'
 import { PRESALE } from '@/lib/presale/camelliaOil'
@@ -250,7 +251,7 @@ export default function ProductDetail({ product }: { product: Product }) {
               {product.suitable_people && (
                 <div className="flex gap-3">
                   <span className="text-xl flex-shrink-0">👥</span>
-                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">適合誰</p><p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{product.suitable_people}</p></div>
+                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">適合誰</p><div className="text-gray-600 text-sm leading-relaxed">{renderProductText(product.suitable_people)}</div></div>
                 </div>
               )}
               {timingLabels(product.intake_timing).length > 0 && (
@@ -269,13 +270,13 @@ export default function ProductDetail({ product }: { product: Product }) {
               {product.pairing_tips && (
                 <div className="flex gap-3">
                   <span className="text-xl flex-shrink-0">🔗</span>
-                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">怎麼搭</p><p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{product.pairing_tips}</p></div>
+                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">怎麼搭</p><div className="text-gray-600 text-sm leading-relaxed">{renderProductText(product.pairing_tips)}</div></div>
                 </div>
               )}
               {product.source_notes && (
                 <div className="flex gap-3">
                   <span className="text-xl flex-shrink-0">🌿</span>
-                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">來源 / 挑選</p><p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{product.source_notes}</p></div>
+                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">來源 / 挑選</p><div className="text-gray-600 text-sm leading-relaxed">{renderProductText(product.source_notes)}</div></div>
                 </div>
               )}
             </div>
@@ -287,7 +288,7 @@ export default function ProductDetail({ product }: { product: Product }) {
               <span className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-lg">📋</span>
               使用方法
             </h3>
-            <div className="text-gray-600 leading-relaxed whitespace-pre-line">{product.usage_method}</div>
+            <div className="text-gray-600 leading-relaxed">{renderProductText(product.usage_method)}</div>
           </div>
         )}
         {product.ingredients && (
@@ -296,7 +297,7 @@ export default function ProductDetail({ product }: { product: Product }) {
               <span className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-lg">🧪</span>
               成分說明
             </h3>
-            <div className="text-gray-600 leading-relaxed whitespace-pre-line">{product.ingredients}</div>
+            <div className="text-gray-600 leading-relaxed">{renderProductText(product.ingredients)}</div>
           </div>
         )}
         {product.precautions && (
@@ -304,7 +305,7 @@ export default function ProductDetail({ product }: { product: Product }) {
             <h3 className="text-lg font-bold text-amber-800 mb-3 flex items-center gap-2">
               <span className="text-xl">⚠️</span> 注意事項
             </h3>
-            <div className="text-amber-700 leading-relaxed whitespace-pre-line">{product.precautions}</div>
+            <div className="text-amber-700 leading-relaxed">{renderProductText(product.precautions)}</div>
           </div>
         )}
         {product.storage_method && (
@@ -313,7 +314,7 @@ export default function ProductDetail({ product }: { product: Product }) {
               <span className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-lg">📦</span>
               保存方式
             </h3>
-            <div className="text-gray-600 leading-relaxed">{product.storage_method}</div>
+            <div className="text-gray-600 leading-relaxed">{renderProductText(product.storage_method)}</div>
           </div>
         )}
       </div>
