@@ -7,8 +7,8 @@ import QuizResultCart from '@/components/front/QuizResultCart'
 import SocialShareButtons from '@/components/front/SocialShareButtons'
 import LoginPrompt from '@/components/front/LoginPrompt'
 import { formatPrice } from '@/lib/utils'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 export const dynamic = 'force-dynamic'
 

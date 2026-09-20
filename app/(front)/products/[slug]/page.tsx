@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import ProductDetailClient from '@/components/front/ProductDetailClient'
+import { fetchPublishedProduct } from '@/lib/productQuery'
+import { lowestActivePrice, isInStock } from '@/lib/productPricing'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 // ⚠️ 關鍵：強制動態渲染。
 // 商品的 metadata 用 supabaseAdmin 查庫（Next 無法追蹤的外部請求），
@@ -78,8 +80,56 @@ export async function generateMetadata(
   }
 }
 
-// Page 本身不需 async：渲染 client 元件，由它走 API route 抓資料。
-// 即使 metadata 的 Supabase 查詢失敗，頁面也不會 404。
-export default function ProductDetailPage({ params }: { params: { slug: string } }) {
-  return <ProductDetailClient slug={params.slug} />
+/**
+ * 在伺服器先把商品查好。
+ *
+ * 原本這裡只渲染 <ProductDetailClient slug={...} />，由瀏覽器自己去打
+ * API —— 伺服器回的 HTML 只有骨架，商品名稱、簡介、成分說明全都不在
+ * 裡面。搜尋引擎雖然會執行 JavaScript，但那是額外且不保證的工作，
+ * 對剛開始做 SEO 的站來說，內容要放進第一份 HTML 才穩。
+ *
+ * 查詢失敗時 initialProduct 為 null，元件會退回原本的前端抓取流程，
+ * 頁面不會因此 404。
+ */
+export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
+  const slug = decodeURIComponent(params.slug)
+  const product = await fetchPublishedProduct(slug)
+
+  // ── Product 結構化資料 ──────────────────────────────────
+  // 讓 Google 知道這是一個商品、價格多少、有沒有現貨，搜尋結果才可能
+  // 顯示價格與供應狀態。刻意不放 aggregateRating —— 站上沒有真實評價，
+  // 捏造評分違反 Google 的結構化資料政策，也是不實廣告。
+  const price = product ? lowestActivePrice(product) : null
+  const jsonLd = product ? {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.product_name,
+    description: product.short_intro || undefined,
+    image: [product.cover_image_url, ...(product.product_images || []).map((i: any) => i.image_url)]
+      .filter(Boolean),
+    url: `${SITE_URL}/products/${product.slug}`,
+    brand: { '@type': 'Brand', name: '健康優選' },
+    ...(price != null && {
+      offers: {
+        '@type': 'Offer',
+        price: String(price),
+        priceCurrency: 'TWD',
+        availability: isInStock(product)
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+        url: `${SITE_URL}/products/${product.slug}`,
+        seller: { '@type': 'Organization', name: '健康優選' },
+      },
+    }),
+  } : null
+
+  return (
+    <>
+      {jsonLd && (
+        <script type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      )}
+      <ProductDetailClient slug={slug} initialProduct={product} />
+    </>
+  )
 }

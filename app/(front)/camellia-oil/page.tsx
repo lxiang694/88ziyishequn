@@ -6,10 +6,10 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { PRESALE } from '@/lib/presale/camelliaOil'
 import PresaleBuyBox from '@/components/front/PresaleBuyBox'
 import SocialShareButtons from '@/components/front/SocialShareButtons'
+import { SITE_URL } from '@/lib/siteUrl'
 
 export const dynamic = 'force-dynamic'
 
-const SITE_URL = 'https://healthec.vercel.app'
 const PAGE_URL = `${SITE_URL}/camellia-oil`
 
 const getProduct = cache(async () => {

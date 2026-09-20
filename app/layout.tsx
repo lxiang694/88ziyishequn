@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 export const viewport: Viewport = {
   width: 'device-width',

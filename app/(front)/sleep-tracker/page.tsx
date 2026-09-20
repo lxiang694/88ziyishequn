@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { DAILY_HABITS } from '@/lib/sleepQuizData'
 import SocialShareButtons from '@/components/front/SocialShareButtons'
 import LoginPrompt from '@/components/front/LoginPrompt'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 const STORAGE_KEY = 'sleep_tracker_v1'
 

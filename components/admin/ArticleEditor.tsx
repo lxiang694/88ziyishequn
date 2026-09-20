@@ -208,7 +208,7 @@ export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
             placeholder="bone-joint-degeneration"
           />
           <p className="text-[13px] text-gray-600 mt-1">
-            完整網址：healthec.vercel.app/health-articles/<strong>{data.slug || 'your-slug'}</strong>
+            完整網址：www.88ziyishequn.com/health-articles/<strong>{data.slug || 'your-slug'}</strong>
           </p>
         </div>
 

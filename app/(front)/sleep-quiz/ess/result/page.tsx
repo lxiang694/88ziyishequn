@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { getESSLevel } from '@/lib/sleepQuizData'
 import SocialShareButtons from '@/components/front/SocialShareButtons'
 import LoginPrompt from '@/components/front/LoginPrompt'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 export const metadata: Metadata = {
   title: 'ESS 日間嗜睡報告',

@@ -3,10 +3,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { supabaseAdmin } from '@/lib/supabase'
 import { DIRECTION_INFO } from '@/lib/quizData'
+import { SITE_URL } from '@/lib/siteUrl'
 
 export const dynamic = 'force-dynamic'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 export const metadata: Metadata = {
   title: '健康知識專欄',

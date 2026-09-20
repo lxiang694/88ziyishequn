@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import SocialShareButtons from '@/components/front/SocialShareButtons'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 export const metadata: Metadata = {
   title: '睡眠健康自測 | 2 分鐘了解你的睡眠狀況',

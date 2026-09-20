@@ -12,10 +12,10 @@ import { formatPrice } from '@/lib/utils'
 import SocialShareButtons from '@/components/front/SocialShareButtons'
 import LoginPrompt from '@/components/front/LoginPrompt'
 import ArticleAudioPlayer from '@/components/front/ArticleAudioPlayer'
+import { SITE_URL } from '@/lib/siteUrl'
 
 export const dynamic = 'force-dynamic'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 const getArticle = cache(async (slug: string) => {
   const { data } = await supabaseAdmin

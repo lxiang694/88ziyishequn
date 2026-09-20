@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [{ data: products }, { data: articles }] = await Promise.all([

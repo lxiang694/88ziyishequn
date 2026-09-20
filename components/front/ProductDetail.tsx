@@ -10,8 +10,8 @@ import { renderProductText } from '@/lib/productBlocks'
 import toast from 'react-hot-toast'
 import SocialShareButtons from './SocialShareButtons'
 import { PRESALE } from '@/lib/presale/camelliaOil'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 interface Variant {
   id: number

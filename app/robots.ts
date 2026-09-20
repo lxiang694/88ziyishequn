@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const SITE_URL = 'https://healthec.vercel.app'
 
 export default function robots(): MetadataRoute.Robots {
   return {
