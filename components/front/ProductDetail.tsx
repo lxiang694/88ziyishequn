@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import SocialShareButtons from './SocialShareButtons'
 import { PRESALE } from '@/lib/presale/camelliaOil'
 import { SITE_URL } from '@/lib/siteUrl'
+import type { ScoredArticle } from '@/lib/productArticleMatcher'
 
 
 interface Variant {
@@ -50,7 +51,11 @@ interface Product {
   sales_count?: number
 }
 
-export default function ProductDetail({ product }: { product: Product }) {
+export default function ProductDetail({ product, relatedArticles = [] }: {
+  product: Product
+  /** 由伺服器算好傳進來；沒有夠相關的文章時為空陣列 */
+  relatedArticles?: ScoredArticle[]
+}) {
   const router = useRouter()
   const { addItem } = useCart()
 
@@ -318,6 +323,48 @@ export default function ProductDetail({ product }: { product: Product }) {
           </div>
         )}
       </div>
+
+      {/*
+        ─── 相關健康知識 ───
+        站上原本只有「文章 → 商品」的推薦，沒有反方向。像紫蘇油這種
+        主題，兩篇文章加一個商品三個頁面互不連結，客人看完商品不知道
+        有文章可讀，搜尋引擎也看不出它們是同一個主題。
+        沒有夠相關的文章時整區不顯示 —— 在紫蘇油頁推一篇講膝蓋的文章
+        比沒有推薦更傷信任。
+      */}
+      {relatedArticles.length > 0 && (
+        <section className="mt-8" aria-labelledby="related-articles-heading">
+          <h2 id="related-articles-heading" className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
+            <span className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-lg">📚</span>
+            延伸閱讀
+          </h2>
+          <p className="text-gray-600 text-sm mb-4">想先了解再決定？這幾篇跟這款商品有關</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {relatedArticles.map(({ article, reason }) => (
+              <Link key={article.id} href={`/health-articles/${article.slug}`}
+                className="group block rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                {article.cover_image_url && (
+                  <div className="relative aspect-[16/9] bg-gray-100">
+                    <Image src={article.cover_image_url} alt="" fill className="object-cover"
+                      sizes="(max-width: 640px) 100vw, 220px" />
+                  </div>
+                )}
+                <div className="p-3.5">
+                  <span className="inline-block text-[12px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full mb-1.5">
+                    {reason}
+                  </span>
+                  <p className="font-bold text-gray-800 text-sm leading-snug line-clamp-3 group-hover:text-green-700 transition-colors">
+                    {article.title}
+                  </p>
+                  {article.reading_minutes && (
+                    <p className="text-gray-500 text-[13px] mt-1.5">閱讀約 {article.reading_minutes} 分鐘</p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Social share — LINE / Facebook / Copy */}
       <SocialShareButtons

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import ProductDetailClient from '@/components/front/ProductDetailClient'
-import { fetchPublishedProduct } from '@/lib/productQuery'
+import { fetchPublishedProduct, fetchRelatedArticles } from '@/lib/productQuery'
 import { lowestActivePrice, isInStock } from '@/lib/productPricing'
 import { SITE_URL } from '@/lib/siteUrl'
 
@@ -94,6 +94,8 @@ export async function generateMetadata(
 export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
   const slug = decodeURIComponent(params.slug)
   const product = await fetchPublishedProduct(slug)
+  // 相關文章：商品頁連到健康知識，補上原本缺的反方向內部連結
+  const relatedArticles = product ? await fetchRelatedArticles(product) : []
 
   // ── Product 結構化資料 ──────────────────────────────────
   // 讓 Google 知道這是一個商品、價格多少、有沒有現貨，搜尋結果才可能
@@ -129,7 +131,7 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
         <script type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       )}
-      <ProductDetailClient slug={slug} initialProduct={product} />
+      <ProductDetailClient slug={slug} initialProduct={product} relatedArticles={relatedArticles} />
     </>
   )
 }

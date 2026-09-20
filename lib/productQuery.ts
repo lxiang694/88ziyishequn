@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSalesCountForProduct } from '@/lib/salesUtils'
+import { rankProductArticles } from '@/lib/productArticleMatcher'
 
 /**
  * 讀取一個已上架商品的完整資料（含規格、相簿、分類、銷量）。
@@ -41,4 +42,24 @@ export async function fetchPublishedProduct(slug: string) {
   data.sales_count = await getSalesCountForProduct(data.id)
 
   return data
+}
+
+/**
+ * 找出跟這個商品相關的已上架文章。
+ *
+ * 一次撈全部已發布文章再在記憶體排序 —— 站上文章是數十篇的量級，
+ * 而且比對要看標題與摘要的文字片段，那不是資料庫查詢擅長的事。
+ * 文章數長到幾百篇時再改成先用分類縮小範圍。
+ */
+export async function fetchRelatedArticles(product: any, topN = 3) {
+  if (!product?.product_name) return []
+
+  const { data, error } = await supabaseAdmin
+    .from('health_articles')
+    .select('id, slug, title, excerpt, cover_image_url, category_slug, reading_minutes, view_count')
+    .eq('is_published', true)
+    .limit(200)
+
+  if (error || !data) return []
+  return rankProductArticles(data as any, product, topN)
 }

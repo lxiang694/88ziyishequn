@@ -22,7 +22,9 @@ export interface ScoredArticleProduct {
 // To extend: add new keywords here. Products with matching text in any field are auto-detected.
 const KEYWORDS_BY_CATEGORY: Record<string, string[]> = {
   'bone-joint': ['葡萄糖胺', 'glucosamine', '軟骨素', 'chondroitin', '薑黃', 'curcumin', '鈣', 'calcium', '維生素d', '膠原蛋白', 'collagen', 'msm', '甲基硫醯基甲烷'],
-  'cardiovascular': ['魚油', 'omega-3', 'omega', 'epa', 'dha', '輔酶q10', 'coq10', 'q10', '紅麴', '納豆激酶', 'nattokinase', '大蒜精', 'garlic'],
+  // 植物性 Omega-3（紫蘇油、亞麻仁油）與植物油類 —— 原本只列了魚油系，
+  // 紫蘇籽油只能靠通用的 'omega' 擦邊命中，推薦理由也顯示不出重點
+  'cardiovascular': ['魚油', 'omega-3', 'omega', 'epa', 'dha', '輔酶q10', 'coq10', 'q10', '紅麴', '納豆激酶', 'nattokinase', '大蒜精', 'garlic', '紫蘇', '紫蘇油', '紫蘇籽油', 'ala', '亞麻酸', '次亞麻油酸', '亞麻仁', '苦茶油', '茶籽油'],
   'digestive': ['益生菌', 'probiotic', '益生元', 'prebiotic', '消化酵素', 'enzyme', '膳食纖維', 'fiber', '薑黃', '菊苣', 'inulin'],
   'sleep-relax': ['gaba', '酸棗仁', '褪黑', 'melatonin', '鎂', 'magnesium', '色胺酸', 'tryptophan', '茶氨酸', 'theanine', '甘氨酸', 'b群', '洋甘菊'],
   'eye-care': ['葉黃素', 'lutein', '玉米黃素', 'zeaxanthin', '花青素', 'anthocyanin', '蝦紅素', 'astaxanthin', 'dha', '維生素a', '玻尿酸', 'hyaluronic', '山桑子', 'bilberry'],
@@ -45,6 +47,9 @@ const FRIENDLY_NAME: Record<string, string> = {
   '膠原蛋白': '膠原蛋白', 'collagen': '膠原蛋白',
   'msm': 'MSM',
   '魚油': 'Omega-3', 'omega-3': 'Omega-3', 'omega': 'Omega-3',
+  '紫蘇': '紫蘇油', '紫蘇油': '紫蘇油', '紫蘇籽油': '紫蘇油',
+  'ala': 'ALA', '亞麻酸': 'ALA', '次亞麻油酸': 'ALA', '亞麻仁': '亞麻仁油',
+  '苦茶油': '苦茶油', '茶籽油': '茶籽油',
   '輔酶q10': '輔酶 Q10', 'coq10': '輔酶 Q10', 'q10': '輔酶 Q10',
   '紅麴': '紅麴',
   '納豆激酶': '納豆激酶', 'nattokinase': '納豆激酶',
