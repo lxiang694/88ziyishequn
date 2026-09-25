@@ -8,7 +8,6 @@ import HomeHero from './HomeHero'
 import { HOME_SECTIONS, productSection } from '@/lib/homeSections'
 import type { HealthCategory } from '@/lib/types'
 import type { HomeEvent } from '@/lib/homeEvent'
-import { SHOP_CATEGORIES } from '@/lib/shopCategories'
 import ProductCard from './ProductCard'
 
 interface Variant {
@@ -237,62 +236,10 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
           <div className="-mx-4 border-b border-gray-100" />
         </div>
 
-        {/* ─── 館別入口：格狀圖磚，全部一次可見，不需左右滑動 ─── */}
-        {isDefaultView && sectionGroups.length > 0 && (
-          <section className="pt-5">
-            <h2 className="t-section-title mb-3">選購館別</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-              {hotProducts.length > 0 && (
-                <button onClick={() => scrollToId('sec-hot')}
-                  className="flex items-center gap-3 p-4 min-h-[48px] rounded-2xl border-2 bg-orange-50 border-orange-300 text-orange-900 hover:bg-orange-100 shadow-sm hover:shadow-md transition-all text-left">
-                  <span className="text-3xl flex-shrink-0">🔥</span>
-                  <span className="min-w-0">
-                    <span className="block font-bold text-[15px] sm:text-base leading-snug">本週熱銷</span>
-                    <span className="block text-[13px] text-orange-800 mt-0.5">最多人買</span>
-                  </span>
-                </button>
-              )}
-              {sectionGroups.map(({ sec, items }) => (
-                <button key={sec.key} onClick={() => scrollToId('sec-' + sec.key)}
-                  className={`flex items-center gap-3 p-4 min-h-[48px] rounded-2xl border-2 shadow-sm hover:shadow-md transition-all text-left ${sec.tile}`}>
-                  <span className="text-3xl flex-shrink-0">{sec.emoji}</span>
-                  <span className="min-w-0">
-                    <span className="block font-bold text-[15px] sm:text-base leading-snug">{sec.label}</span>
-                    <span className="block text-[13px] mt-0.5">{items.length} 件商品</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ─── 商品分類 ─── */}
-        {/* 點下去直接進該分類的賣場頁，商品就在畫面上，不是在首頁原地篩選。
-            分類頁各自有網址，客人可以收藏、可以分享，搜尋引擎也收得到。 */}
-        {!search && (
-          <section className="py-8">
-            <div className="mb-4 flex items-baseline justify-between gap-3">
-              <h2 className="t-section-title">商品分類</h2>
-              <Link href="/shop" className="text-sm font-semibold text-green-700 hover:underline">
-                全部商品 →
-              </Link>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-              {SHOP_CATEGORIES.map(cat => (
-                <Link
-                  key={cat.slug}
-                  href={`/shop/${cat.slug}`}
-                  className="flex flex-col items-center justify-center gap-2 p-3 min-h-[88px] rounded-2xl border-2 border-gray-200 bg-white transition-all hover:border-green-300 hover:shadow-sm"
-                >
-                  <span className="text-2xl">{cat.emoji}</span>
-                  <span className="text-[15px] font-semibold leading-snug text-center text-gray-700">
-                    {cat.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* 原本這裡有「選購館別」與「商品分類」兩塊格狀入口，已移除。
+            館別的商品本來就一路往下捲就看得到，分類則整個搬到 /shop —— 那裡
+            左邊一條固定的分類欄比首頁上一格一格的圖磚好用。首頁留給第一次
+            來的人看故事與熱銷，想直接找東西的人走底部的「商品分類」。 */}
 
         {!search && !selectedCat && (
         <>
