@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
 import { generateSlug, normalizeSlug } from '@/lib/utils'
 import { HOME_SECTION_KEYS } from '@/lib/homeSections'
+import { normalizeCategoryIds } from '@/lib/shopCategories'
+import { saveShopCategories, shopCategoriesByProduct } from '@/lib/shopCategoryRepo'
 
 export async function GET(req: NextRequest) {
   const auth = requireAdmin(req)
@@ -46,7 +48,12 @@ export async function GET(req: NextRequest) {
 
   const { data, error, count } = await query
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true, data: data || [], total: count || 0, page, limit })
+
+  // 商品分類另外查再貼回去，遷移還沒跑時只是少一塊標籤，不會讓整頁掛掉
+  const shopByProduct = await shopCategoriesByProduct((data || []).map((p: any) => p.id))
+  const rows = (data || []).map((p: any) => ({ ...p, shop_categories: shopByProduct.get(p.id) || [] }))
+
+  return NextResponse.json({ success: true, data: rows, total: count || 0, page, limit })
 }
 
 export async function POST(req: NextRequest) {
@@ -58,7 +65,7 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = await req.json()
-    const { product_name, slug: rawSlug, short_intro, suitable_people, usage_method, ingredients, precautions, storage_method, is_published, cover_image_url, home_section, intake_timing, pairing_tips, source_notes, category_ids, variants, gallery_images } = body
+    const { product_name, slug: rawSlug, short_intro, suitable_people, usage_method, ingredients, precautions, storage_method, is_published, cover_image_url, home_section, intake_timing, pairing_tips, source_notes, category_ids, shop_category_ids, variants, gallery_images } = body
     if (!product_name) return NextResponse.json({ success: false, error: '商品名稱為必填' }, { status: 400 })
 
     // 自訂網址識別碼；沒填或整理後是空的就退回自動產生
@@ -80,6 +87,7 @@ export async function POST(req: NextRequest) {
     if (category_ids?.length > 0) {
       await supabaseAdmin.from('product_category_relations').insert(category_ids.map((cid: number) => ({ product_id: product.id, category_id: cid })))
     }
+    await saveShopCategories(product.id, normalizeCategoryIds(shop_category_ids))
     if (variants?.length > 0) {
       await supabaseAdmin.from('product_variants').insert(variants.map((v: any, i: number) => ({
         product_id: product.id, variant_name: v.variant_name, sale_price: parseFloat(v.sale_price),

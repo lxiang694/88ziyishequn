@@ -1,15 +1,15 @@
 'use client'
 import { useState, useCallback, useRef, useEffect } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from './CartContext'
 import VariantPicker from './VariantPicker'
 import HomeHero from './HomeHero'
-import { formatPrice } from '@/lib/utils'
 import { HOME_SECTIONS, productSection } from '@/lib/homeSections'
 import type { HealthCategory } from '@/lib/types'
 import type { HomeEvent } from '@/lib/homeEvent'
+import { SHOP_CATEGORIES } from '@/lib/shopCategories'
+import ProductCard from './ProductCard'
 
 interface Variant {
   id: number; variant_name: string; sale_price: number
@@ -181,88 +181,20 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
     }
   }
 
-  const getMinPrice = (variants: Variant[]) => {
-    const a = variants.filter(v => v.is_active)
-    return a.length ? Math.min(...a.map(v => v.sale_price)) : null
-  }
-  const hasStock = (variants: Variant[]) => variants.some(v => v.is_active && v.stock_qty > 0)
-  const multiVariant = (variants: Variant[]) => variants.filter(v => v.is_active && v.stock_qty > 0).length > 1
-
   const hotProducts = products.slice(0, 8)
 
-  // 商品卡（全站共用：館別預覽、搜尋結果、分類篩選）
-  const renderProductCard = (product: Product, rank?: number) => {
-    const minPrice = getMinPrice(product.product_variants)
-    const inStock = hasStock(product.product_variants)
-    const isMulti = multiVariant(product.product_variants)
-    const variantCount = product.product_variants.filter(v => v.is_active).length
-    const cats = product.product_category_relations?.map(r => r.health_categories).filter(Boolean) || []
-    return (
-      <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-200 flex flex-col">
-        <Link href={`/products/${product.slug}`} className="block relative">
-          <div className="aspect-square bg-gray-50 relative overflow-hidden">
-            {product.cover_image_url ? (
-              <Image src={product.cover_image_url} alt={product.product_name} fill
-                className="object-cover hover:scale-105 transition-transform duration-300"
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-5xl text-gray-200">💊</div>
-            )}
-            {/* 純裝飾角標：熱銷名次 */}
-            {rank !== undefined && rank < 3 && (
-              <span className="absolute top-2 left-2 bg-red-600 text-white t-badge-deco font-bold px-2 py-1 rounded-md">熱銷 {rank + 1}</span>
-            )}
-            {!inStock && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <span className="bg-gray-900/80 text-white text-base font-bold px-4 py-2 rounded-full">已售完</span>
-              </div>
-            )}
-          </div>
-        </Link>
-        <div className="p-3 sm:p-4 flex flex-col flex-1">
-          {cats.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-2">
-              {cats.slice(0, 1).map((cat: any) => (
-                <span key={cat.id} className="t-meta bg-green-50 text-green-800 px-2.5 py-1 rounded-full font-semibold border border-green-100">
-                  {CATEGORY_ICONS[cat.slug] || ''} {cat.name}
-                </span>
-              ))}
-            </div>
-          )}
-          <Link href={`/products/${product.slug}`}>
-            <h3 className="t-product-title mb-1 hover:text-green-700 line-clamp-3">{product.product_name}</h3>
-          </Link>
-          {product.short_intro && (
-            <p className="t-meta leading-relaxed mb-2 line-clamp-2 hidden sm:block">{product.short_intro}</p>
-          )}
-          {/* 價格（大、紅）→ 規格數（小、灰）→ CTA → 已購買人數（小、灰、置中） */}
-          <div className="mt-auto pt-2 space-y-2">
-            {minPrice !== null && (
-              <div>
-                <div className="t-price">
-                  {formatPrice(minPrice)}{isMulti ? ' 起' : ''}
-                </div>
-                {variantCount > 1 && (
-                  <div className="t-price-note mt-0.5">共 {variantCount} 種規格可選</div>
-                )}
-              </div>
-            )}
-            <button onClick={() => handleAddToCart(product)} disabled={!inStock} className="btn-card">
-              {!inStock ? '已售完' : isMulti ? '選擇規格' : '加入購物車'}
-            </button>
-            <Link href={`/products/${product.slug}`} className="btn-card-ghost">
-              查看詳情 →
-            </Link>
-            {(product.sales_count || 0) >= 5 && (
-              <p className="t-meta text-center font-semibold text-orange-700">
-                🔥 已有 {product.sales_count} 人購買
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // 商品卡的實作在 components/front/ProductCard.tsx，賣場分類頁共用同一份。
+  // 抄一份過去的話，價格顯示、售完遮罩、規格數這些規則遲早會各走各的。
+  const renderProductCard = (product: Product, rank?: number) => (
+    <ProductCard
+      key={product.id}
+      product={product as any}
+      rank={rank}
+      onAddToCart={handleAddToCart as any}
+      tagSource="health"
+      healthIcons={CATEGORY_ICONS}
+    />
+  )
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -334,26 +266,29 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
           </section>
         )}
 
-        {/* ─── CATEGORY GRID ─── */}
-        {!search && categories.length > 0 && (
+        {/* ─── 商品分類 ─── */}
+        {/* 點下去直接進該分類的賣場頁，商品就在畫面上，不是在首頁原地篩選。
+            分類頁各自有網址，客人可以收藏、可以分享，搜尋引擎也收得到。 */}
+        {!search && (
           <section className="py-8">
-            <h2 className="t-section-title mb-4">依健康方向選購</h2>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {categories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCat(cat.slug)}
-                  className={`flex flex-col items-center justify-center gap-2 p-3 min-h-[88px] rounded-2xl border-2 transition-all
-                    ${selectedCat === cat.slug
-                      ? 'border-green-600 bg-green-50 shadow-md'
-                      : 'border-gray-200 bg-white hover:border-green-300 hover:shadow-sm'}`}
+            <div className="mb-4 flex items-baseline justify-between gap-3">
+              <h2 className="t-section-title">商品分類</h2>
+              <Link href="/shop" className="text-sm font-semibold text-green-700 hover:underline">
+                全部商品 →
+              </Link>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+              {SHOP_CATEGORIES.map(cat => (
+                <Link
+                  key={cat.slug}
+                  href={`/shop/${cat.slug}`}
+                  className="flex flex-col items-center justify-center gap-2 p-3 min-h-[88px] rounded-2xl border-2 border-gray-200 bg-white transition-all hover:border-green-300 hover:shadow-sm"
                 >
-                  <span className="text-2xl">{CATEGORY_ICONS[cat.slug] || '💊'}</span>
-                  <span className={`text-[15px] font-semibold leading-snug text-center
-                    ${selectedCat === cat.slug ? 'text-green-800' : 'text-gray-700'}`}>
+                  <span className="text-2xl">{cat.emoji}</span>
+                  <span className="text-[15px] font-semibold leading-snug text-center text-gray-700">
                     {cat.name}
                   </span>
-                </button>
+                </Link>
               ))}
             </div>
           </section>
@@ -530,7 +465,10 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
       {/* Variant Picker Modal/Drawer */}
       {pickerProduct && (
         <VariantPicker
-          product={pickerProduct}
+          // 這裡的欄位叫 slug，VariantPicker 與購物車品項要的是 product_slug。
+          // 沒有轉換時，從首頁選規格加入的商品在購物車裡會連到
+          // /products/undefined —— 點了就是 404。
+          product={{ ...pickerProduct, product_slug: pickerProduct.slug } as any}
           onClose={() => setPickerProduct(null)}
         />
       )}

@@ -3,6 +3,8 @@ import { normalizeSlug } from '@/lib/utils'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
 import { HOME_SECTION_KEYS } from '@/lib/homeSections'
+import { normalizeCategoryIds } from '@/lib/shopCategories'
+import { saveShopCategories, shopCategoriesByProduct } from '@/lib/shopCategoryRepo'
 
 function requireProductPerm(req: NextRequest) {
   const result = requireAdmin(req)
@@ -22,7 +24,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     .select(`*, product_variants(id,variant_name,sale_price,original_price,stock_qty,sku_code,sort_order,is_active), product_images(id,image_url,sort_order), product_category_relations(health_categories(id,name,slug))`)
     .eq('id', params.id).single()
   if (error) return NextResponse.json({ success: false, error: '商品不存在' }, { status: 404 })
-  return NextResponse.json({ success: true, data })
+
+  const shop = await shopCategoriesByProduct([data.id])
+  return NextResponse.json({ success: true, data: { ...data, shop_categories: shop.get(data.id) || [] } })
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
@@ -33,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { product_name, slug: rawSlug, short_intro, suitable_people, usage_method, ingredients,
             precautions, storage_method, is_published, cover_image_url, home_section,
             intake_timing, pairing_tips, source_notes,
-            category_ids, variants, gallery_images } = body
+            category_ids, shop_category_ids, variants, gallery_images } = body
     const productId = parseInt(params.id)
 
     // Build update object - only include defined fields
@@ -77,6 +81,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         await supabaseAdmin.from('product_category_relations')
           .insert(category_ids.map((cid: number) => ({ product_id: productId, category_id: cid })))
       }
+    }
+
+    // 商品分類（逛街用）。沒帶這個欄位就不動 —— 批次指派畫面只送分類，
+    // 不該因此把商品其他欄位或原本的分類清掉。
+    if (shop_category_ids !== undefined) {
+      await saveShopCategories(productId, normalizeCategoryIds(shop_category_ids))
     }
 
     // Update variants

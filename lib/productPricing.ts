@@ -29,3 +29,19 @@ export function isInStock(product: any): boolean {
   return (product?.product_variants || []).some(
     (v: any) => v.is_active && v.stock_qty > 0)
 }
+
+/**
+ * 可購買的規格有幾種。
+ *
+ * 用「可購買」而不是「啟用」來判斷要不要跳規格選單：三種規格裡只剩
+ * 一種有貨時，按「加入購物車」應該直接加那一種，跳出只有一個選項的
+ * 選單只是多一次點擊。
+ */
+export function buyableVariants(product: any): any[] {
+  return (product?.product_variants || []).filter((v: any) => v.is_active && v.stock_qty > 0)
+}
+
+/** 啟用中的規格數（顯示「共 N 種規格可選」用，售完的也算） */
+export function activeVariantCount(product: any): number {
+  return (product?.product_variants || []).filter((v: any) => v.is_active).length
+}

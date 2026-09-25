@@ -4,6 +4,7 @@ import Image from 'next/image'
 import toast from 'react-hot-toast'
 import { TIMING_OPTIONS } from '@/lib/productMeta'
 import { HOME_SECTIONS, HOME_SECTION_KEYS } from '@/lib/homeSections'
+import { suggestShopCategories } from '@/lib/shopCategories'
 
 interface Props { initialData?: any; productId?: number; onSuccess: () => void }
 
@@ -20,6 +21,9 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
     home_section: 'community', intake_timing: '', pairing_tips: '', source_notes: '',
   })
   const [selectedCats, setSelectedCats] = useState<number[]>([])
+  const [shopCats, setShopCats] = useState<any[]>([])
+  const [selectedShopCats, setSelectedShopCats] = useState<number[]>([])
+  const [shopCatsNeedMigration, setShopCatsNeedMigration] = useState(false)
   const [variants, setVariants] = useState<Variant[]>([emptyVariant()])
   const [gallery, setGallery] = useState<GalleryImg[]>([])
   const [saving, setSaving] = useState(false)
@@ -28,6 +32,11 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
 
   useEffect(() => {
     fetch('/api/admin/categories').then(r => r.json()).then(d => { if (d.success) setCategories(d.data) })
+    fetch('/api/admin/shop-categories').then(r => r.json()).then(d => {
+      if (!d.success) return
+      setShopCats(d.data)
+      setShopCatsNeedMigration(!!d.needsMigration)
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -49,6 +58,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
         source_notes: initialData.source_notes || '',
       })
       setSelectedCats(initialData.product_category_relations?.map((r: any) => r.health_categories?.id).filter(Boolean) || [])
+      setSelectedShopCats(initialData.shop_categories?.map((c: any) => c.id).filter(Boolean) || [])
       if (initialData.product_variants?.length > 0) {
         setVariants(initialData.product_variants.sort((a: any, b: any) => a.sort_order - b.sort_order).map((v: any) => ({
           id: v.id, variant_name: v.variant_name, sale_price: String(v.sale_price),
@@ -110,11 +120,16 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
   const handleSave = async () => {
     if (!form.product_name) { toast.error('請填寫商品名稱'); return }
     if (variants.some(v => !v.variant_name || !v.sale_price)) { toast.error('請填寫所有規格的名稱與售價'); return }
+    // 沒有商品分類的商品在賣場裡只會出現在「全部商品」，客人照分類逛就找不到它
+    if (!shopCatsNeedMigration && shopCats.length > 0 && selectedShopCats.length === 0) {
+      toast.error('請至少選一個商品分類，客人是照這個分類逛賣場的'); return
+    }
     setSaving(true)
     try {
       const body = {
         ...form,
         category_ids: selectedCats,
+        shop_category_ids: selectedShopCats,
         variants: variants.map((v, i) => ({ ...v, sale_price: parseFloat(v.sale_price) || 0, original_price: v.original_price ? parseFloat(v.original_price) : null, stock_qty: parseInt(v.stock_qty) || 0, sort_order: i })),
         gallery_images: gallery,
       }
@@ -132,6 +147,11 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
   const removeVariant = (i: number) => setVariants(v => v.filter((_, idx) => idx !== i))
   const updateVariant = (i: number, key: keyof Variant, val: any) => setVariants(v => v.map((item, idx) => idx === i ? { ...item, [key]: val } : item))
   const toggleCat = (id: number) => setSelectedCats(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
+  const toggleShopCat = (id: number) => setSelectedShopCats(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
+  // 名稱與簡介打到一半就能給建議，省掉「這該歸哪一類」的猶豫
+  const shopSuggestions = suggestShopCategories({ product_name: form.product_name, short_intro: form.short_intro })
+    .map(sg => shopCats.find(c => c.slug === sg.slug))
+    .filter((c): c is any => !!c && !selectedShopCats.includes(c.id))
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -284,9 +304,55 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
         </div>
       </div>
 
+      {/* 商品分類 —— 客人逛賣場的動線，必選 */}
+      <div className="card p-5">
+        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-bold text-gray-800 text-lg">商品分類（必選，可多選）</h2>
+          {selectedShopCats.length === 0 && shopCats.length > 0 && (
+            <span className="text-sm font-semibold text-red-600">尚未選擇</span>
+          )}
+        </div>
+        <p className="mb-4 text-sm text-gray-500">
+          客人在賣場首頁與頁尾是照這個分類找商品的。沒有選的話，這件商品只會出現在「全部商品」裡。
+        </p>
+
+        {shopCatsNeedMigration ? (
+          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            商品分類資料表尚未建立。請先在 Supabase SQL Editor 執行
+            <code className="mx-1 rounded bg-amber-100 px-1">migrations/shop_categories_schema.sql</code>
+            ，這個區塊就會出現。在那之前商品仍可正常儲存。
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              {shopCats.map(cat => (
+                <button key={cat.id} type="button" onClick={() => toggleShopCat(cat.id)}
+                  className={`px-4 py-2 rounded-full font-medium text-sm transition-colors border-2 ${selectedShopCats.includes(cat.id) ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-200 text-gray-600 hover:border-green-300'}`}>
+                  {cat.emoji} {cat.name}
+                </button>
+              ))}
+            </div>
+            {shopSuggestions.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-gray-500">看商品名稱，可能是：</span>
+                {shopSuggestions.map(cat => (
+                  <button key={cat.id} type="button" onClick={() => toggleShopCat(cat.id)}
+                    className="rounded-full border border-dashed border-green-400 px-3 py-1 font-medium text-green-700 hover:bg-green-50">
+                    ＋ {cat.emoji} {cat.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {/* Categories */}
       <div className="card p-5">
-        <h2 className="font-bold text-gray-800 text-lg mb-4">健康方向分類（可多選）</h2>
+        <h2 className="font-bold text-gray-800 text-lg mb-1">健康方向分類（可多選）</h2>
+        <p className="mb-4 text-sm text-gray-500">
+          給健康知識文章與自測結果用的，決定這件商品會被哪些文章推薦。跟上面的商品分類是兩回事。
+        </p>
         <div className="flex flex-wrap gap-2">
           {categories.map(cat => (
             <button key={cat.id} onClick={() => toggleCat(cat.id)} className={`px-4 py-2 rounded-full font-medium text-sm transition-colors border-2 ${selectedCats.includes(cat.id) ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-200 text-gray-600 hover:border-green-300'}`}>

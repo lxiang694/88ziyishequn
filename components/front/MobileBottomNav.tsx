@@ -4,12 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCart } from './CartContext'
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'bone-joint': '🦴', 'cardiovascular': '❤️', 'digestive': '🫁',
-  'immune': '🛡️', 'beauty-skin': '✨', 'eye-care': '👁️',
-  'sleep-relax': '😴', 'weight-management': '⚖️', 'womens-health': '🌸',
-  'mens-health': '💪', 'children-growth': '🌱', 'senior-health': '🏆',
-}
+import { SHOP_CATEGORIES } from '@/lib/shopCategories'
 
 export default function MobileBottomNav() {
   const pathname = usePathname()
@@ -21,7 +16,11 @@ export default function MobileBottomNav() {
 
   useEffect(() => {
     if (showCats && cats.length === 0) {
-      fetch('/api/categories').then(r => r.json()).then(d => { if (d.success) setCats(d.data) }).catch(() => {})
+      // 讀不到就用程式裡的那份清單頂著。分類選單是主要導覽，
+      // 網路一時不順就變成「載入中…」卡住，客人只會以為站壞了。
+      fetch('/api/shop-categories').then(r => r.json())
+        .then(d => setCats(d.success && d.data?.length ? d.data : SHOP_CATEGORIES))
+        .catch(() => setCats(SHOP_CATEGORIES))
     }
   }, [showCats, cats.length])
 
@@ -49,7 +48,7 @@ export default function MobileBottomNav() {
 
   const goCategory = (slug: string) => {
     setShowCats(false)
-    router.push(`/?cat=${encodeURIComponent(slug)}`)
+    router.push(`/shop/${encodeURIComponent(slug)}`)
   }
 
   const itemCls = (active: boolean) =>
@@ -64,7 +63,7 @@ export default function MobileBottomNav() {
           <div className="absolute left-0 right-0 bottom-0 bg-white rounded-t-2xl p-4 pb-6" onClick={e => e.stopPropagation()}>
             <div className="flex justify-center pb-2"><div className="w-10 h-1 bg-gray-300 rounded-full" /></div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-gray-800 text-lg">依健康方向選購</h3>
+              <h3 className="font-bold text-gray-800 text-lg">商品分類</h3>
               <button onClick={() => setShowCats(false)} className="text-gray-600 text-2xl w-12 h-12 flex items-center justify-center">✕</button>
             </div>
             {cats.length === 0 ? (
@@ -72,12 +71,17 @@ export default function MobileBottomNav() {
             ) : (
               <div className="grid grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto">
                 {cats.map(c => (
-                  <button key={c.id} onClick={() => goCategory(c.slug)}
+                  <button key={c.slug} onClick={() => goCategory(c.slug)}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 border-gray-100 hover:border-green-300 active:bg-green-50 transition-colors">
-                    <span className="text-2xl">{CATEGORY_ICONS[c.slug] || '💊'}</span>
+                    <span className="text-2xl">{c.emoji || '💊'}</span>
                     <span className="text-[15px] font-semibold text-gray-700 text-center leading-snug">{c.name}</span>
                   </button>
                 ))}
+                <button onClick={() => { setShowCats(false); router.push('/shop') }}
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 border-green-200 bg-green-50 transition-colors">
+                  <span className="text-2xl">🛒</span>
+                  <span className="text-[15px] font-semibold text-green-800 text-center leading-snug">全部商品</span>
+                </button>
               </div>
             )}
           </div>
