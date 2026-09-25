@@ -245,13 +245,13 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
         <>
         {/* ─── 本週熱銷 RAIL ─── */}
         {hotProducts.length > 0 && (
-          <section id="sec-hot" className="pt-6 pb-2 scroll-mt-56">
-            <div className="flex items-center justify-between mb-3">
+          <section id="sec-hot" className="pt-7 scroll-mt-56">
+            <div className="flex items-center justify-between mb-3.5">
               <h2 className="t-section-title">🔥 本週熱銷</h2>
               <span className="t-price-note">最多人購買</span>
             </div>
             {/* 格狀呈現：不需左右滑動，避免使用者發現不了後面還有商品 */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {(showAllHot ? hotProducts : hotProducts.slice(0, HOT_PREVIEW)).map((p, idx) => renderProductCard(p, idx))}
             </div>
             {hotProducts.length > HOT_PREVIEW && (
@@ -332,12 +332,12 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
           const expanded = !!expandedSections[sec.key]
           const shown = expanded ? items : items.slice(0, SECTION_PREVIEW)
           return (
-            <section key={sec.key} id={'sec-' + sec.key} className="pt-8 pb-2 scroll-mt-56">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{sec.emoji} {sec.label}</h2>
+            <section key={sec.key} id={'sec-' + sec.key} className="pt-7 scroll-mt-56">
+              <div className="flex items-center justify-between mb-3.5">
+                <h2 className="t-section-title">{sec.emoji} {sec.label}</h2>
                 <span className="text-gray-500 text-sm font-medium bg-gray-100 px-3 py-1 rounded-full">共 {items.length} 件</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {shown.map(renderProductCard)}
               </div>
               {items.length > SECTION_PREVIEW && (
@@ -377,7 +377,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {mainProducts.slice(0, visibleCount).map(renderProductCard)}
 
                 {/* Loading skeleton */}

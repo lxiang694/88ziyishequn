@@ -1,11 +1,23 @@
 'use client'
 
 /**
- * 商品卡 —— 首頁與賣場分類頁共用。
+ * 商品卡 —— 首頁的方格版面。
  *
- * 原本這段寫在 HomeClient 裡面，新增 /shop 時照抄一份的話，兩邊的價格
- * 顯示、售完遮罩、規格數這些規則就會開始各走各的。價格是會出錯的東西，
- * 只留一份。
+ * 高度是這張卡最重要的設計約束。改版前一張卡約 480px，在手機上一屏
+ * 只看得到一列多一點，要找東西得一直捲。省下來的來源有三個：
+ *
+ *   1. 拿掉「查看詳情」那顆全寬按鈕（約 52px）
+ *      整張卡的圖片與標題本來就是連到商品頁的連結，再放一顆按鈕做
+ *      同一件事，只是把每張卡都撐高一截。
+ *   2. 價格與加入購物車併成同一列（約 40px）
+ *      原本價格一行、按鈕再一行。合併之後按鈕仍然是 48px 的圓鈕，
+ *      符合「可點元素 ≥ 48px」的規範，但那一列同時放得下價格。
+ *   3. 「共 N 種規格」與「已有 N 人購買」併成一行（約 20px）
+ *
+ * 加上標題從最多三行收成兩行，現在約 350px，一屏看得到將近兩列。
+ *
+ * 價格、庫存、規格數的判斷跟賣場的橫列（ProductRow）走同一組
+ * lib/productPricing 的函式 —— 版面有兩種，那幾個數字只能有一套。
  */
 
 import Image from 'next/image'
@@ -42,6 +54,7 @@ export default function ProductCard({
   const inStock = isInStock(product)
   const isMulti = buyableVariants(product).length > 1
   const variantCount = activeVariantCount(product)
+  const sales = product.sales_count || 0
 
   const tags = tagSource === 'shop'
     ? (product.shop_categories || []).map(c => ({ id: c.id, name: c.name, icon: c.emoji }))
@@ -49,68 +62,88 @@ export default function ProductCard({
         .map(r => r.health_categories).filter(Boolean)
         .map((c: any) => ({ id: c.id, name: c.name, icon: healthIcons[c.slug] || '' }))
 
+  // 規格數與銷量併成一行（原本各佔一行）。兩個都沒有就整行不出現。
+  // 銷量放前面：窄螢幕這行會被截斷，先保住比較能推一把的那個資訊。
+  const meta = [
+    sales >= 5 ? `🔥 ${sales} 人買過` : '',
+    variantCount > 1 ? `${variantCount} 種規格` : '',
+  ].filter(Boolean).join('・')
+
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-200 flex flex-col">
-      <Link href={`/products/${product.slug}`} className="block relative">
-        <div className="aspect-square bg-gray-50 relative overflow-hidden">
+    <div className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow duration-200 hover:shadow-lg">
+      <Link href={`/products/${product.slug}`} className="relative block">
+        <div className="relative aspect-square overflow-hidden bg-gray-50">
           {product.cover_image_url ? (
             <Image src={product.cover_image_url} alt={product.product_name} fill
-              className="object-cover hover:scale-105 transition-transform duration-300"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-5xl text-gray-200">💊</div>
+            <div className="flex h-full w-full items-center justify-center text-5xl text-gray-200">💊</div>
           )}
           {/* 純裝飾角標：熱銷名次 */}
           {rank !== undefined && rank < 3 && (
-            <span className="absolute top-2 left-2 bg-red-600 text-white t-badge-deco font-bold px-2 py-1 rounded-md">熱銷 {rank + 1}</span>
+            <span className="absolute left-2 top-2 rounded-md bg-red-600 px-2 py-0.5 t-badge-deco font-bold text-white">
+              熱銷 {rank + 1}
+            </span>
           )}
           {!inStock && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="bg-gray-900/80 text-white text-base font-bold px-4 py-2 rounded-full">已售完</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <span className="rounded-full bg-gray-900/80 px-4 py-2 text-base font-bold text-white">已售完</span>
             </div>
           )}
         </div>
       </Link>
-      <div className="p-3 sm:p-4 flex flex-col flex-1">
+
+      <div className="flex flex-1 flex-col p-3">
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {tags.slice(0, 1).map(tag => (
-              <span key={tag.id} className="t-meta bg-green-50 text-green-800 px-2.5 py-1 rounded-full font-semibold border border-green-100">
-                {tag.icon} {tag.name}
-              </span>
-            ))}
-          </div>
+          <span className="mb-1.5 inline-flex w-fit max-w-full items-center gap-1 truncate rounded-full border border-green-100 bg-green-50 px-2 py-0.5 text-[12px] font-semibold text-green-800">
+            {tags[0].icon} {tags[0].name}
+          </span>
         )}
+
         <Link href={`/products/${product.slug}`}>
-          <h3 className="t-product-title mb-1 hover:text-green-700 line-clamp-3">{product.product_name}</h3>
+          {/* leading-snug 覆寫 t-product-title 的 1.625 行高：字級維持 17px
+              不縮，但兩行只佔 47px（原本三行 83px） */}
+          <h3 className="t-product-title leading-snug line-clamp-2 group-hover:text-green-700">
+            {product.product_name}
+          </h3>
         </Link>
+
+        {/* 簡介只在桌機顯示。手機本來就藏著，這裡維持原樣，
+            不要因為改版把桌機上原有的資訊也拿掉 */}
         {product.short_intro && (
-          <p className="t-meta leading-relaxed mb-2 line-clamp-2 hidden sm:block">{product.short_intro}</p>
+          <p className="mt-1 hidden text-[13px] leading-relaxed text-gray-500 line-clamp-2 sm:block">
+            {product.short_intro}
+          </p>
         )}
-        {/* 價格（大、紅）→ 規格數（小、灰）→ CTA → 已購買人數（小、灰、置中） */}
-        <div className="mt-auto pt-2 space-y-2">
-          {minPrice !== null && (
-            <div>
-              <div className="t-price">
-                {formatPrice(minPrice)}{isMulti ? ' 起' : ''}
-              </div>
-              {variantCount > 1 && (
-                <div className="t-price-note mt-0.5">共 {variantCount} 種規格可選</div>
-              )}
+
+        {/* 價格一行、按鈕一行。
+            原本試過把兩者併成同一列（價格左、圓鈕右）來再省 40px，但實際
+            量過不行：手機兩欄時卡片只有 166px，扣掉內距與 48px 的按鈕，
+            留給價格只剩 86px，連「NT$580 起」都會被截成「NT$5…」。
+            報錯價比卡片高一點嚴重得多，所以維持兩行。 */}
+        <div className="mt-auto pt-2.5">
+          {minPrice !== null ? (
+            <div className="t-price whitespace-nowrap">
+              {formatPrice(minPrice)}
+              {isMulti && <span className="ml-0.5 text-[13px] font-normal text-gray-500">起</span>}
             </div>
+          ) : (
+            <div className="text-sm text-gray-400">暫無價格</div>
           )}
-          <button onClick={() => onAddToCart(product)} disabled={!inStock} className="btn-card">
+
+          <button
+            onClick={() => onAddToCart(product)}
+            disabled={!inStock}
+            className="btn-card mt-2"
+          >
             {!inStock ? '已售完' : isMulti ? '選擇規格' : '加入購物車'}
           </button>
-          <Link href={`/products/${product.slug}`} className="btn-card-ghost">
-            查看詳情 →
-          </Link>
-          {(product.sales_count || 0) >= 5 && (
-            <p className="t-meta text-center font-semibold text-orange-700">
-              🔥 已有 {product.sales_count} 人購買
-            </p>
-          )}
         </div>
+
+        {meta && (
+          <p className="mt-1.5 truncate text-[12px] leading-tight text-gray-500">{meta}</p>
+        )}
       </div>
     </div>
   )
