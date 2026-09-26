@@ -60,9 +60,9 @@ export default function ProductCard({ product, rank, onAddToCart }: Props) {
   ].filter(Boolean).join('・')
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-shadow duration-200 hover:shadow-lg">
+    <div className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition-shadow duration-200 hover:shadow-lg">
       <Link href={`/products/${product.slug}`} className="relative block">
-        <div className="relative aspect-square overflow-hidden bg-gray-50">
+        <div className="relative aspect-square overflow-hidden bg-paper">
           {product.cover_image_url ? (
             <Image src={product.cover_image_url} alt={product.product_name} fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"

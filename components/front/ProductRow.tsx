@@ -29,9 +29,9 @@ export default function ProductRow({ product, onAddToCart }: Props) {
   const isMulti = buyableVariants(product).length > 1
 
   return (
-    <article className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 transition-shadow hover:shadow-md">
+    <article className="flex gap-3 rounded-2xl border border-line bg-white p-3 transition-shadow hover:shadow-md">
       <Link href={`/products/${product.slug}`}
-        className="relative block h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-gray-50 sm:h-28 sm:w-28">
+        className="relative block h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-paper sm:h-28 sm:w-28">
         {product.cover_image_url ? (
           <Image src={product.cover_image_url} alt={product.product_name} fill
             className="object-cover" sizes="112px" />

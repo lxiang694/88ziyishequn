@@ -17,7 +17,7 @@ export default function HomeHero({ products, onShop }: { products: HeroProduct[]
   const featured = products.filter(p => p.cover_image_url && p.product_variants.some(v => v.is_active && v.stock_qty > 0)).slice(0, 3)
 
   return (
-    <section aria-labelledby="home-hero-title" className="border-b border-[#e1e5d9] bg-[#f7f6ee] text-[#173e30]">
+    <section aria-labelledby="home-hero-title" className="border-b border-line bg-canvas text-[#173e30]">
       <div className="max-w-5xl mx-auto px-4 pt-5 pb-3 sm:py-10 lg:py-12">
         <div className={`grid gap-4 sm:gap-8 ${featured.length ? 'lg:grid-cols-[1.05fr_1fr] lg:items-center' : ''}`}>
           <div>
@@ -47,7 +47,7 @@ export default function HomeHero({ products, onShop }: { products: HeroProduct[]
           </div>
 
           {featured.length > 0 && (
-            <div className="min-w-0 lg:rounded-[28px] lg:bg-[#e9edde] lg:p-5">
+            <div className="min-w-0 lg:rounded-[28px] lg:bg-sage lg:p-5">
               <div className="mb-2 flex items-center justify-between lg:mb-4">
                 <h2 className="text-xs font-semibold tracking-widest text-[#536455]">從這幾款開始逛</h2>
                 <span aria-hidden="true" className="text-xs text-[#536455]">日常精選 / {String(featured.length).padStart(2, '0')}</span>
@@ -67,7 +67,7 @@ export default function HomeHero({ products, onShop }: { products: HeroProduct[]
                         底色用極淺的米色而不是白色：NAC、綜合維生素這類
                         去背白底的商品照放在白卡片上完全沒有邊界。
                       */}
-                      <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-lg bg-[#faf9f4] sm:aspect-[4/3] lg:aspect-square">
+                      <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-lg bg-paper sm:aspect-[4/3] lg:aspect-square">
                         <Image src={product.cover_image_url!} alt={product.product_name} fill priority={index === 0} sizes="(max-width: 640px) 30vw, 150px" className="object-contain p-1" />
                       </div>
                       {/*
@@ -85,7 +85,7 @@ export default function HomeHero({ products, onShop }: { products: HeroProduct[]
           )}
         </div>
 
-        <ul aria-label="購物服務" className="mt-5 grid grid-cols-3 gap-2 border-t border-[#dce2d4] pt-3 sm:mt-7 sm:pt-4">
+        <ul aria-label="購物服務" className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-3 sm:mt-7 sm:pt-4">
           {[
             { Icon: BuildingStorefrontIcon, label: '7-11 取貨付款' },
             { Icon: ShoppingBagIcon, label: '免註冊下單' },

@@ -146,10 +146,10 @@ export default function ShopBrowser({
         : 'border-transparent text-gray-600 hover:bg-white/60'}`
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-canvas">
       {/* ── 置頂固定搜尋 ──────────────────────────────────── */}
       {/* top-16 / sm:top-20 對齊 SiteHeader 的高度 */}
-      <div className="sticky top-16 z-30 border-b border-gray-100 bg-white sm:top-20">
+      <div className="sticky top-16 z-30 border-b border-line bg-white sm:top-20">
         <div className="mx-auto max-w-5xl px-4 py-3">
           <label className="relative block">
             <span className="sr-only">搜尋商品</span>
@@ -171,7 +171,7 @@ export default function ShopBrowser({
       <div className="mx-auto flex max-w-5xl">
         {/* ── 左側分類欄 ─────────────────────────────────── */}
         <nav ref={railRef} aria-label="商品分類"
-          className={`sticky ${RAIL_STICKY} w-[88px] flex-shrink-0 overflow-y-auto bg-gray-100 sm:w-28`}>
+          className={`sticky ${RAIL_STICKY} w-[88px] flex-shrink-0 overflow-y-auto bg-sage sm:w-28`}>
           <Link href="/shop" data-active={activeSlug === ''} className={railItem(activeSlug === '')}>
             全部商品
           </Link>

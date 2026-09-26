@@ -51,7 +51,7 @@ export default function AccountDashboard() {
   const completedOrders = orders.filter(o => !['已取消'].includes(o.order_status)).length
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-4xl mx-auto px-4 py-6 sm:py-10">
 
         {/* Greeting */}

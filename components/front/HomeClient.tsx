@@ -187,14 +187,14 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-canvas">
 
       <HomeHero products={initialProducts} onShop={() => isDefaultView ? scrollToId(hotProducts.length ? 'sec-hot' : 'home-product-search') : scrollToProducts()} />
 
       <div className="max-w-5xl mx-auto px-4">
 
         {/* ─── STICKY SEARCH ─── */}
-        <div id="home-product-search" className="sticky top-16 sm:top-20 z-30 -mx-4 px-4 pt-3 bg-gray-50/95 backdrop-blur scroll-mt-20">
+        <div id="home-product-search" className="sticky top-16 sm:top-20 z-30 -mx-4 px-4 pt-3 bg-canvas/95 backdrop-blur scroll-mt-20">
           <div className="relative">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-green-600 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -222,7 +222,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
                 </button>
               ))}
             </div>
-            <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-gray-50 to-transparent" aria-hidden />
+            <div className="pointer-events-none absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-canvas to-transparent" aria-hidden />
           </div>
           <div className="-mx-4 border-b border-gray-100" />
         </div>

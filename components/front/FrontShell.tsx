@@ -21,13 +21,13 @@ export default function FrontShell({ children }: { children: ReactNode }) {
       <BackHomeNav />
       {/* pt-16 / sm:pt-20 compensates for the fixed header height (h-16 / sm:h-20) */}
       <main className="min-h-screen pt-16 sm:pt-20">{children}</main>
-      <footer className="bg-white border-t border-gray-100 mt-12 py-8">
+      <footer className="bg-white border-t border-line mt-12 py-8">
         <div className="max-w-5xl mx-auto px-4 text-center text-gray-500">
           <p className="font-bold text-gray-700 mb-1 text-base">健康優選｜88自醫社群團購賣場</p>
           <p className="text-sm">如有任何問題，請透過右下角 LINE 聯絡我們的客服人員</p>
 
           {/* 商品分類 —— 頁尾是客人捲到底時最常找入口的地方 */}
-          <nav aria-label="商品分類" className="mt-6 border-t border-gray-100 pt-6">
+          <nav aria-label="商品分類" className="mt-6 border-t border-line pt-6">
             <h2 className="mb-3 text-sm font-bold text-gray-700">商品分類</h2>
             <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
               {SHOP_CATEGORIES.map(cat => (

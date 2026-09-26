@@ -68,7 +68,7 @@ export default function ProfilePage() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-canvas">
       <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10">
 
         <nav className="flex items-center gap-2 text-sm text-gray-500 mb-5">
