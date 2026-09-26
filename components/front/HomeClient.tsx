@@ -29,13 +29,6 @@ interface Props {
   openEvent?: HomeEvent | null
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'bone-joint': '🦴', 'cardiovascular': '❤️', 'digestive': '🫁',
-  'immune': '🛡️', 'beauty-skin': '✨', 'eye-care': '👁️',
-  'sleep-relax': '😴', 'weight-management': '⚖️', 'womens-health': '🌸',
-  'mens-health': '💪', 'children-growth': '🌱', 'senior-health': '🏆',
-}
-
 const HOT_TAGS = ['維生素C', '魚油', '葉黃素', '益生菌', '鈣', '維他命B群']
 
 export default function HomeClient({ initialProducts, initialTotal, categories, openEvent = null }: Props) {
@@ -190,8 +183,6 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
       product={product as any}
       rank={rank}
       onAddToCart={handleAddToCart as any}
-      tagSource="health"
-      healthIcons={CATEGORY_ICONS}
     />
   )
 

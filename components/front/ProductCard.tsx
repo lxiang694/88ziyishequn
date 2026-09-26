@@ -4,17 +4,18 @@
  * 商品卡 —— 首頁的方格版面。
  *
  * 高度是這張卡最重要的設計約束。改版前一張卡約 480px，在手機上一屏
- * 只看得到一列多一點，要找東西得一直捲。省下來的來源有三個：
+ * 只看得到一列多一點，要找東西得一直捲。現在約 330px，省下來的是：
  *
- *   1. 拿掉「查看詳情」那顆全寬按鈕（約 52px）
- *      整張卡的圖片與標題本來就是連到商品頁的連結，再放一顆按鈕做
- *      同一件事，只是把每張卡都撐高一截。
- *   2. 價格與加入購物車併成同一列（約 40px）
- *      原本價格一行、按鈕再一行。合併之後按鈕仍然是 48px 的圓鈕，
- *      符合「可點元素 ≥ 48px」的規範，但那一列同時放得下價格。
- *   3. 「共 N 種規格」與「已有 N 人購買」併成一行（約 20px）
+ *   • 「查看詳情」那顆全寬按鈕（約 52px）—— 圖片與標題本來就是連到
+ *     商品頁的連結，再放一顆按鈕做同一件事，只是把每張卡撐高一截
+ *   • 「共 N 種規格」與「已有 N 人購買」併成一行（約 38px）
+ *   • 標題從最多三行收成兩行（約 36px），字級維持 17px 不縮，
+ *     只把行高從 1.625 改成 leading-snug
+ *   • 分類標籤整條拿掉（約 26px）
  *
- * 加上標題從最多三行收成兩行，現在約 350px，一屏看得到將近兩列。
+ * 分類標籤（免疫力提升、體重管理…）是刻意移除的，不是漏掉：那是
+ * 健康訴求分類，給文章推薦與自測結果用的，客人在賣場逛的時候看的是
+ * 商品分類，兩套標籤混在同一張卡上只會讓人更難掃。
  *
  * 價格、庫存、規格數的判斷跟賣場的橫列（ProductRow）走同一組
  * lib/productPricing 的函式 —— 版面有兩種，那幾個數字只能有一套。
@@ -42,25 +43,14 @@ interface Props {
   /** 熱銷名次，只有前三名會顯示角標；不傳就不顯示 */
   rank?: number
   onAddToCart: (product: CardProduct) => void
-  /** 分類標籤顯示哪一套。賣場頁顯示商品分類，首頁沿用原本的健康方向 */
-  tagSource?: 'shop' | 'health'
-  healthIcons?: Record<string, string>
 }
 
-export default function ProductCard({
-  product, rank, onAddToCart, tagSource = 'shop', healthIcons = {},
-}: Props) {
+export default function ProductCard({ product, rank, onAddToCart }: Props) {
   const minPrice = lowestActivePrice(product)
   const inStock = isInStock(product)
   const isMulti = buyableVariants(product).length > 1
   const variantCount = activeVariantCount(product)
   const sales = product.sales_count || 0
-
-  const tags = tagSource === 'shop'
-    ? (product.shop_categories || []).map(c => ({ id: c.id, name: c.name, icon: c.emoji }))
-    : (product.product_category_relations || [])
-        .map(r => r.health_categories).filter(Boolean)
-        .map((c: any) => ({ id: c.id, name: c.name, icon: healthIcons[c.slug] || '' }))
 
   // 規格數與銷量併成一行（原本各佔一行）。兩個都沒有就整行不出現。
   // 銷量放前面：窄螢幕這行會被截斷，先保住比較能推一把的那個資訊。
@@ -95,12 +85,6 @@ export default function ProductCard({
       </Link>
 
       <div className="flex flex-1 flex-col p-3">
-        {tags.length > 0 && (
-          <span className="mb-1.5 inline-flex w-fit max-w-full items-center gap-1 truncate rounded-full border border-green-100 bg-green-50 px-2 py-0.5 text-[12px] font-semibold text-green-800">
-            {tags[0].icon} {tags[0].name}
-          </span>
-        )}
-
         <Link href={`/products/${product.slug}`}>
           {/* leading-snug 覆寫 t-product-title 的 1.625 行高：字級維持 17px
               不縮，但兩行只佔 47px（原本三行 83px） */}
