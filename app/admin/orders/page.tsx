@@ -118,7 +118,10 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
 
   return (
     <>
-      <tr className={'border-b border-gray-100 transition-colors cursor-pointer ' + (expanded ? 'bg-green-50' : 'hover:bg-gray-50')} onClick={handleExpand}>
+      {/* ── 桌機：表格列 ─────────────────────────────────
+          八欄表格在手機上只能左右拖，所以 md 以下換成下面那張卡片。
+          兩種版面共用同一個元件，展開狀態與明細抓取的邏輯只有一份。 */}
+      <tr className={'hidden md:table-row border-b border-gray-100 transition-colors cursor-pointer ' + (expanded ? 'bg-green-50' : 'hover:bg-gray-50')} onClick={handleExpand}>
         <td className="pl-4 pr-2 py-4 w-8" onClick={e => e.stopPropagation()}>
           <input type="checkbox" className="w-4 h-4 rounded accent-green-700 cursor-pointer" checked={selected} onChange={() => onToggleSelect(order.id)} />
         </td>
@@ -159,6 +162,60 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
           </button>
         </td>
       </tr>
+
+      {/* ── 手機：卡片 ───────────────────────────────── */}
+      <tr className="md:hidden">
+        <td colSpan={10} className="p-0">
+          <div
+            onClick={handleExpand}
+            className={'flex gap-3 border-b border-gray-100 px-3 py-3.5 ' + (expanded ? 'bg-green-50' : '')}
+          >
+            <input type="checkbox"
+              className="mt-1 h-5 w-5 flex-shrink-0 rounded accent-green-700"
+              checked={selected}
+              onClick={e => e.stopPropagation()}
+              onChange={() => onToggleSelect(order.id)} />
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-mono text-[13px] font-bold text-gray-800 break-all">{order.order_no}</span>
+                <span className={'status-badge flex-shrink-0 ' + getStatusColor(newStatus)}>{newStatus}</span>
+              </div>
+
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="font-semibold text-gray-800">{order.customer_name}</span>
+                {order.purchase_seq ? (
+                  <span className={'rounded-md border px-1.5 py-0.5 text-[12px] font-bold ' + (
+                    order.purchase_seq === 1 ? 'bg-gray-100 text-gray-500 border-gray-200'
+                      : order.purchase_seq === 2 ? 'bg-blue-50 text-blue-600 border-blue-200'
+                      : 'bg-orange-50 text-orange-600 border-orange-200')}>
+                    {order.purchase_seq === 1 ? '新客' : `第${order.purchase_seq}次`}
+                  </span>
+                ) : null}
+                {/* 手機上最常要做的事就是把電話複製去 Line 查人，所以複製鍵留著 */}
+                <span className="font-mono text-[13px] text-gray-600">{order.phone}</span>
+                <span onClick={e => e.stopPropagation()}>
+                  <CopyIconButton value={order.phone} label="手機" />
+                </span>
+              </div>
+
+              {order.store_name && (
+                <p className="mt-1 truncate text-[13px] text-gray-600">🏪 {order.store_name}</p>
+              )}
+
+              <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                <span className="font-bold text-green-700">{formatPrice(order.total_amount)}</span>
+                <span className="text-[12px] text-gray-500">{formatDateTime(order.created_at)}</span>
+              </div>
+            </div>
+
+            <div className={'mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center text-gray-400 transition-transform duration-200 ' + (expanded ? 'rotate-90 text-green-600' : '')}>
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
+            </div>
+          </div>
+        </td>
+      </tr>
+
       {expanded && (
         <tr className="bg-green-50/40">
           <td colSpan={10} className="px-4 pb-5 pt-1">
@@ -362,10 +419,10 @@ function OrdersContent() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">訂單管理</h1>
-          <p className="text-gray-600 text-sm mt-0.5">共 {total} 筆訂單・點擊列可展開查看詳情</p>
+          <h1 className="text-xl font-bold text-gray-800 sm:text-2xl">訂單管理</h1>
+          <p className="mt-0.5 text-sm text-gray-600">共 {total} 筆訂單・點一下可展開查看詳情</p>
         </div>
         {selectedIds.length > 0 && (
           <button onClick={handleBulkDelete} disabled={bulkDeleting}
@@ -423,9 +480,17 @@ function OrdersContent() {
         ) : orders.length === 0 ? (
           <div className="py-16 text-center"><div className="text-4xl mb-3">📋</div><p className="text-gray-600 text-lg">此條件下沒有訂單</p></div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* 手機版的全選 —— 表頭在 md 以下是隱藏的，不補一個就沒辦法批次操作 */}
+          <label className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-3 py-2.5 text-sm font-medium text-gray-600 md:hidden">
+            <input type="checkbox" className="h-5 w-5 rounded accent-green-700"
+              checked={allSelected} onChange={toggleSelectAll} />
+            {selectedIds.length > 0 ? `已選 ${selectedIds.length} 筆` : '全選本頁'}
+          </label>
+
+          <div className="md:overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="hidden md:table-header-group bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="w-8 pl-4 pr-2 py-3">
                     <input type="checkbox" className="w-4 h-4 rounded accent-green-700 cursor-pointer" checked={allSelected} onChange={toggleSelectAll} />
@@ -444,6 +509,7 @@ function OrdersContent() {
               </tbody>
             </table>
           </div>
+          </>
         )}
         {total > pageSize && (
           <div className="p-4 border-t border-gray-100 flex justify-between items-center">
