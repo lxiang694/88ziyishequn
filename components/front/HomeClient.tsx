@@ -1,5 +1,6 @@
 'use client'
 import { useState, useCallback, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from './CartContext'
@@ -8,6 +9,7 @@ import HomeHero from './HomeHero'
 import { HOME_SECTIONS, productSection } from '@/lib/homeSections'
 import type { HealthCategory } from '@/lib/types'
 import type { HomeEvent } from '@/lib/homeEvent'
+import { bannerLink, type HomeBanner } from '@/lib/homeBanner'
 import ProductCard from './ProductCard'
 
 interface Variant {
@@ -27,11 +29,13 @@ interface Props {
   categories: HealthCategory[]
   /** 目前開放報名的場次；沒有時整個活動區塊不顯示 */
   openEvent?: HomeEvent | null
+  /** 後台上傳的首頁橫幅；沒有時顯示原本的四步驟區塊 */
+  banner?: HomeBanner | null
 }
 
 const HOT_TAGS = ['維生素C', '魚油', '葉黃素', '益生菌', '鈣', '維他命B群']
 
-export default function HomeClient({ initialProducts, initialTotal, categories, openEvent = null }: Props) {
+export default function HomeClient({ initialProducts, initialTotal, categories, openEvent = null, banner = null }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { addItem } = useCart()
@@ -298,24 +302,49 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
           </section>
         )}
 
-        {/* ─── HOW IT WORKS ─── */}
+        {/* ─── 首頁橫幅 / 四步驟 ───
+            後台上傳了橫幅就顯示橫幅，否則用回原本寫死的四步驟區塊。
+            這塊的位置本來就放著「怎麼完成下單」，不該因為橫幅還沒設定
+            就變成一片空白。 */}
         <section className="py-6 mb-2">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <h2 className="text-base font-bold text-gray-700 mb-4 text-center">📋 四步驟完成購物</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                { step: '1', icon: '🛍️', text: '選商品' },
-                { step: '2', icon: '📦', text: '選規格' },
-                { step: '3', icon: '✍️', text: '填資料' },
-                { step: '4', icon: '🏪', text: '選 7-11 門市完成下單' },
-              ].map(s => (
-                <div key={s.step} className="flex flex-col items-center text-center gap-2">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-xl">{s.icon}</div>
-                  <div className="text-sm font-medium text-gray-600 leading-tight">{s.text}</div>
+          {banner ? (
+            (() => {
+              const href = bannerLink(banner)
+              const img = (
+                <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl border border-line bg-paper">
+                  <Image
+                    src={banner.image_url!}
+                    alt={banner.alt_text}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 1024px"
+                    // 這張圖在首屏下方就出現，排在 LCP 附近，先載比較好
+                    priority
+                  />
                 </div>
-              ))}
+              )
+              return href
+                ? <Link href={href} className="block transition-opacity hover:opacity-95">{img}</Link>
+                : img
+            })()
+          ) : (
+            <div className="bg-white rounded-2xl border border-line p-5">
+              <h2 className="text-base font-bold text-gray-700 mb-4 text-center">📋 四步驟完成購物</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { step: '1', icon: '🛍️', text: '選商品' },
+                  { step: '2', icon: '📦', text: '選規格' },
+                  { step: '3', icon: '✍️', text: '填資料' },
+                  { step: '4', icon: '🏪', text: '選 7-11 門市完成下單' },
+                ].map(s => (
+                  <div key={s.step} className="flex flex-col items-center text-center gap-2">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-xl">{s.icon}</div>
+                    <div className="text-sm font-medium text-gray-600 leading-tight">{s.text}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </section>
 
         {/* ─── 各賣場分區預覽（每類前 N 件 + 查看全部），平衡各分類曝光 ─── */}

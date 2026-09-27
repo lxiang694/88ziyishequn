@@ -3,12 +3,13 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { buildSalesMap } from '@/lib/salesUtils'
 import HomeClient from '@/components/front/HomeClient'
 import { pickOpenEvent, type HomeEventRow } from '@/lib/homeEvent'
+import { canDisplay, type HomeBanner } from '@/lib/homeBanner'
 import type { HealthCategory } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
 async function getInitialData() {
-  const [productsRes, categoriesRes, salesMap, eventsRes] = await Promise.all([
+  const [productsRes, categoriesRes, salesMap, eventsRes, bannerRes] = await Promise.all([
     supabaseAdmin
       .from('products')
       .select(`*,
@@ -30,6 +31,13 @@ async function getInitialData() {
       .select('slug, title, event_time, is_active, starts_at')
       .eq('is_active', true)
       .limit(20),
+    // 首頁橫幅。資料表還沒建好時這裡會拿到 error，下面就當成沒有橫幅，
+    // 首頁照常顯示原本的四步驟區塊 —— 不該因為一個還沒跑的遷移就壞掉。
+    supabaseAdmin
+      .from('home_banners')
+      .select('image_url, alt_text, link_path, is_active')
+      .eq('id', 1)
+      .maybeSingle(),
   ])
 
   // 把銷量直接附加到每件商品上
@@ -46,11 +54,12 @@ async function getInitialData() {
     initialTotal: productsRes.count ?? sorted.length,
     categories: (categoriesRes.data || []) as HealthCategory[],
     openEvent: pickOpenEvent(eventsRes.data as HomeEventRow[] | null),
+    banner: canDisplay(bannerRes.data as HomeBanner | null) ? (bannerRes.data as HomeBanner) : null,
   }
 }
 
 export default async function HomePage() {
-  const { initialProducts, initialTotal, categories, openEvent } = await getInitialData()
+  const { initialProducts, initialTotal, categories, openEvent, banner } = await getInitialData()
   return (
     <Suspense fallback={null}>
       <HomeClient
@@ -58,6 +67,7 @@ export default async function HomePage() {
         initialTotal={initialTotal}
         categories={categories}
         openEvent={openEvent}
+        banner={banner}
       />
     </Suspense>
   )
