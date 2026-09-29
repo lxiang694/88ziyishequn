@@ -19,7 +19,8 @@
       return responseData(await fetch(`/api/admin/myship/eligibility?marketplace_id=${encodeURIComponent(message.marketplace_id)}`, { cache: 'no-store' }))
     }
     if (!batchValid(batch)) throw new Error('批次編號錯誤')
-    if (command === 'create') return responseData(await fetch('/api/admin/myship/batches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ batch_id: batch, order_ids: message.order_ids }) }))
+    // 賣場代碼一定要帶：拆單的訂單在每個賣場各有一半，後端要靠它決定匯出哪一半
+    if (command === 'create') return responseData(await fetch('/api/admin/myship/batches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ batch_id: batch, order_ids: message.order_ids, marketplace_id: message.marketplace_id }) }))
     if (command === 'status') return responseData(await fetch(`/api/admin/myship/batches/${batch}/status`, { cache: 'no-store' }))
     if (command === 'file') {
       const response = await fetch(`/api/admin/myship/batches/${batch}`, { cache: 'no-store' })

@@ -126,6 +126,38 @@ test('批次只接受屬於所選賣場的訂單', async () => {
   await assert.rejects(createRunner(env.io).start(input), /訂單狀態或商品配對已變更/)
 })
 
+test('拆單訂單：清單裡另一個賣場的那半排在前面，也要找到自己賣場這一半', async () => {
+  // 0.2.7 用 order_id 找，會拿到排在前面的那一列 —— 那是別的賣場的一半，
+  // 於是誤判成「配對已變更」，拆單訂單怎樣都送不出去
+  const env = setup()
+  const created: any[] = []
+  const source = env.io.source
+  env.io.source = async (job: any, command: string, data?: any) => {
+    if (command === 'context') return { orders: [
+      { order_id: 1, reserved: false, errors: [], marketplace_id: 'GM2604107313905', part: 1, parts: 2 },
+      { order_id: 1, reserved: false, errors: [], marketplace_id: input.marketplace_id, part: 2, parts: 2 },
+    ] } as any
+    if (command === 'create') created.push(data)
+    return source(job, command)
+  }
+  await createRunner(env.io).start(input)
+  // 建立批次時一定要帶賣場，後端才知道要匯出哪一半
+  assert.deepEqual(created, [{ batch_id: '00000000-0000-4000-8000-000000000001', order_ids: [1], marketplace_id: input.marketplace_id }])
+})
+
+test('拆單訂單：自己賣場這一半已經匯出過，就不能再送', async () => {
+  const env = setup()
+  env.io.source = async (_job: any, command: string) => command === 'context'
+    ? { orders: [
+        { order_id: 1, reserved: false, errors: [], marketplace_id: 'GM2604107313905' },
+        { order_id: 1, reserved: true, errors: [], marketplace_id: input.marketplace_id },
+      ] } as any
+    : {} as any
+  // 另一個賣場那半還沒匯出（reserved: false）不能被拿來當成這一半
+  await assert.rejects(createRunner(env.io).start(input), /訂單狀態或商品配對已變更/)
+  assert.equal(env.calls.includes('create'), false)
+})
+
 test('初次限制1筆、未知賣場及錯誤來源不能建立批次', async () => {
   for (const args of [{ ...input, order_ids: [1, 2] }, { ...input, marketplace_id: 'other' }, { ...input, source_url: 'https://evil.example/admin/myship' }]) {
     const env = setup(); await assert.rejects(createRunner(env.io).start(args)); assert.equal(env.calls.includes('create'), false)

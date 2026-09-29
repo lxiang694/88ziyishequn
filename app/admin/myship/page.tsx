@@ -5,7 +5,7 @@ import type { Marketplace, Mapping, PreparedOrder } from '@/lib/myship/domain'
 import AssistantPanel from './AssistantPanel'
 
 type Item = { variant_id: number | null; name: string; variant: string; sku: string | null }
-type Row = PreparedOrder & { customer_name: string; total_amount: number; store_name: string; reserved: boolean; items: Item[] }
+type Row = PreparedOrder & { customer_name: string; total_amount: number; order_total: number; store_name: string; reserved: boolean; items: Item[] }
 type Transfer = { id: string; order_id: number | null; marketplace_id: string; batch_id: string; status: string; external_order_no: string | null; created_at: string; import_row: string[] }
 type Data = { orders: Row[]; markets: Marketplace[]; mappings: Mapping[]; transfers: Transfer[] }
 const money = (n: number) => `NT$${n.toLocaleString('zh-TW')}`
@@ -68,7 +68,7 @@ export default function MyshipPage() {
   const exportBatch = () => run(async () => {
     const batch = crypto.randomUUID()
     try {
-      await post('batches', { batch_id: batch, order_ids: selected })
+      await post('batches', { batch_id: batch, order_ids: selected, marketplace_id: market })
       await download(batch)
       setMessage('已產生官方匯入檔。請到賣貨便匯入，成功後在批次紀錄核對編號。')
     } finally {
@@ -108,7 +108,13 @@ export default function MyshipPage() {
     {data && tab === 'orders' && <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><p><strong>{available.length}</strong> 筆可匯出 · 已選 {selected.length} 筆 / 上限 500</p><div className="flex gap-2"><button className={outline} disabled={busy || !available.length} onClick={() => setSelected(available.slice(0, 500).map(o => o.order_id))}>選取可匯出訂單</button><button className={button} disabled={busy || !selected.length} onClick={exportBatch}>{busy ? '處理中…' : '建立並下載匯入檔'}</button></div></div>
       <div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-slate-600"><tr>{['選取','訂單／收件人','商品','門市','代收金額','檢查結果'].map(s => <th key={s} className="p-4">{s}</th>)}</tr></thead><tbody className="divide-y">
-        {unreserved.map(o => <tr key={o.order_id} className="align-top"><td className="p-4"><input aria-label={`選取 ${o.order_no}`} type="checkbox" checked={selected.includes(o.order_id)} disabled={busy || !available.some(a => a.order_id === o.order_id)} onChange={() => toggle(o.order_id)}/></td><td className="p-4 whitespace-nowrap"><p className="font-medium">{o.order_no}</p><p className="mt-1 text-slate-500">{o.customer_name}</p></td><td className="p-4">{o.items.map((i, n) => <p key={n}>{i.sku} {i.name} · {i.variant}</p>)}</td><td className="p-4 whitespace-nowrap">{o.store_name}</td><td className="p-4 whitespace-nowrap tabular-nums">{money(o.total_amount)}</td><td className="p-4 min-w-48">{o.errors.length ? o.errors.map(e => <p className="text-amber-800" key={e}>{e}</p>) : o.marketplace_id === market ? <span className="text-green-800">可匯出</span> : '屬於其他賣場'}</td></tr>)}
+        {/* 拆單的訂單在清單裡會有兩列、共用同一個 order_id，所以 key 與勾選都要
+            連同賣場一起判斷 —— 只看 order_id 的話 key 會重複，勾一列兩列一起勾。
+            勾選本身只存 order_id 沒問題：可勾的永遠只有目前賣場那一列。 */}
+        {unreserved.map(o => {
+          const selectable = o.marketplace_id === market && available.some(a => a.order_id === o.order_id && a.marketplace_id === o.marketplace_id)
+          return <tr key={`${o.order_id}:${o.marketplace_id}`} className="align-top"><td className="p-4"><input aria-label={`選取 ${o.order_no}`} type="checkbox" checked={selectable && selected.includes(o.order_id)} disabled={busy || !selectable} onChange={() => toggle(o.order_id)}/></td><td className="p-4 whitespace-nowrap"><p className="font-medium">{o.order_no}</p><p className="mt-1 text-slate-500">{o.customer_name}</p>{o.parts > 1 && <p className="mt-1.5 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">拆單 {o.part}/{o.parts}</p>}</td><td className="p-4">{o.items.map((i, n) => <p key={n}>{i.sku} {i.name} · {i.variant}</p>)}</td><td className="p-4 whitespace-nowrap">{o.store_name}</td><td className="p-4 whitespace-nowrap tabular-nums">{money(o.total_amount)}{o.parts > 1 && <p className="mt-1 text-xs text-slate-500">原訂單 {money(o.order_total)}</p>}</td><td className="p-4 min-w-48">{o.errors.length ? o.errors.map(e => <p className="text-amber-800" key={e}>{e}</p>) : o.marketplace_id === market ? <span className="text-green-800">可匯出</span> : o.parts > 1 ? `這一半屬於其他賣場（${(data?.markets || []).find(m => m.id === o.marketplace_id)?.name || o.marketplace_id}）` : '屬於其他賣場'}</td></tr>
+        })}
         {!unreserved.length && <tr><td colSpan={6} className="p-8 text-center text-slate-500">沒有尚未匯出的待確認訂單。已匯出的訂單請到批次紀錄核對。</td></tr>}
       </tbody></table></div>
     </section>}

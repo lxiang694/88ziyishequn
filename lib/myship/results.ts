@@ -7,7 +7,13 @@ export const RESULT_HEADERS = ['*取件人姓名', '*取件人手機', '*取件�
 const NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 const elements = (node: Element, name: string) => Array.from(node.getElementsByTagNameNS(NS, name))
 const cleanHeader = (s: string) => s.replace(/\s/g, '')
-const orderMarker = /^健康優選訂單：(TW[0-9]+)$/
+// 原單標記。拆單的訂單會多一個（1/2）序號 —— 見 domain.ts 的 orderMarker()。
+// 序號必須也收進來：同一張訂單的兩半在不同賣場的不同批次裡，同一批次內
+// 仍然只會出現一次，所以「每批次標記唯一」的檢查照樣成立。
+const ORDER_MARKER = /^健康優選訂單：(TW[0-9]+)(?:（([1-9])\/([1-9])）)?$/
+const MARKER_PREFIX = '健康優選訂單：'
+/** 給人看的標籤：TW2026…（1/2）。錯誤訊息要指出是哪一半，不然拆單時會找錯張 */
+const labelOf = (marker: string) => marker.slice(MARKER_PREFIX.length)
 export type ResultRow = { row: ImportRow; external_order_no: string; sheet_row: number }
 export type ResultTransfer = { id: string; order_id: number | null; import_row: string[]; status: string; external_order_no: string | null }
 
@@ -80,28 +86,29 @@ export function matchResultRows(rows: ResultRow[], transfers: ResultTransfer[]) 
   const byMarker = new Map<string, ResultTransfer>()
   for (const t of transfers) {
     const marker = t.import_row[9]
-    if (!orderMarker.test(marker) || byMarker.has(marker)) throw new Error('批次缺少唯一的健康優選原單號')
+    if (!ORDER_MARKER.test(marker) || byMarker.has(marker)) throw new Error('批次缺少唯一的健康優選原單號')
     byMarker.set(marker, t)
   }
   const seen = new Set<string>(), numbers = new Set<string>()
   const confirmed: { transfer_id: string; order_no: string; external_order_no: string }[] = []
   const unresolved: { order_no: string; reason: string }[] = []
   for (const result of rows) {
-    const marker = result.row[9], match = orderMarker.exec(marker), transfer = byMarker.get(marker)
+    const marker = result.row[9], match = ORDER_MARKER.exec(marker), transfer = byMarker.get(marker)
     if (!match || !transfer || seen.has(marker)) throw new Error('結果包含其他批次、重複或缺少原單號的訂單，尚未回寫')
     seen.add(marker)
-    if (!transfer.order_id || transfer.status === 'released') throw new Error(`${match[1]}：原訂單不存在或已解除保留，尚未回寫`)
-    if (validateRow(result.row).length || result.row.some((v, i) => field(v, i) !== field(transfer.import_row[i], i))) throw new Error(`${match[1]}：收件資料、商品或金額與原批次不符，尚未回寫`)
+    const label = labelOf(marker)
+    if (!transfer.order_id || transfer.status === 'released') throw new Error(`${label}：原訂單不存在或已解除保留，尚未回寫`)
+    if (validateRow(result.row).length || result.row.some((v, i) => field(v, i) !== field(transfer.import_row[i], i))) throw new Error(`${label}：收件資料、商品或金額與原批次不符，尚未回寫`)
     const external = result.external_order_no
     if (!/^CM\d{13}$/.test(external)) {
-      unresolved.push({ order_no: match[1], reason: '結果沒有有效的CM成功編號，保留待核對' })
+      unresolved.push({ order_no: label, reason: '結果沒有有效的CM成功編號，保留待核對' })
       continue
     }
     if (numbers.has(external)) throw new Error('結果出現重複的賣貨便編號，尚未回寫')
     numbers.add(external)
-    if (transfer.status === 'confirmed' && transfer.external_order_no !== external) throw new Error(`${match[1]}：已有不同的賣貨便編號，尚未回寫`)
+    if (transfer.status === 'confirmed' && transfer.external_order_no !== external) throw new Error(`${label}：已有不同的賣貨便編號，尚未回寫`)
     confirmed.push({ transfer_id: transfer.id, order_no: match[1], external_order_no: external })
   }
-  for (const t of transfers) if (t.status === 'exported' && !seen.has(t.import_row[9])) unresolved.push({ order_no: t.import_row[9].slice('健康優選訂單：'.length), reason: '本次結果沒有這筆訂單，保留待核對' })
+  for (const t of transfers) if (t.status === 'exported' && !seen.has(t.import_row[9])) unresolved.push({ order_no: labelOf(t.import_row[9]), reason: '本次結果沒有這筆訂單，保留待核對' })
   return { confirmed, unresolved }
 }

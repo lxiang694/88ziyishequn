@@ -72,9 +72,11 @@ export function createRunner(io) {
       if (!await io.hasPilot(input.marketplace_id) && input.order_ids.length !== 1) throw new Error('這個賣場首次請選1筆訂單驗收，成功後即可批次處理')
       const context = await io.source(input, 'context')
       for (const id of input.order_ids) {
-        const order = context.orders.find(o => o.order_id === id)
-        // 比對使用者選定的賣場，不是某個寫死的賣場
-        if (!order || order.reserved || order.errors.length || order.marketplace_id !== input.marketplace_id) throw new Error('訂單狀態或商品配對已變更，請重新整理')
+        // 拆單的訂單在清單裡有兩列（每個賣場一列）、共用同一個 order_id，
+        // 必須連賣場一起找。只用 order_id 找會拿到第一列，那可能是另一個
+        // 賣場的那一半，於是誤判成「配對已變更」。
+        const order = context.orders.find(o => o.order_id === id && o.marketplace_id === input.marketplace_id)
+        if (!order || order.reserved || order.errors.length) throw new Error('訂單狀態或商品配對已變更，請重新整理')
       }
       const target = await io.findTarget()
       let job = { source_tab: input.source_tab, source_url: input.source_url, target_tab: target.id, target_url: target.url,
@@ -82,7 +84,7 @@ export function createRunner(io) {
         batch_id: io.uuid(), phase: 'preparing', started_at: io.now(), count: input.order_ids.length, message: '正在建立轉單批次' }
       await io.save(job)
       try {
-        await io.source(job, 'create', { batch_id: job.batch_id, order_ids: input.order_ids })
+        await io.source(job, 'create', { batch_id: job.batch_id, order_ids: input.order_ids, marketplace_id: input.marketplace_id })
         job = { ...job, phase: 'reserved', message: '批次已保留，正在產生匯入檔' }; await io.save(job)
         const file = await io.source(job, 'file', { batch_id: job.batch_id })
         // Persist before *any* file-input event, which some sites automatically submit.

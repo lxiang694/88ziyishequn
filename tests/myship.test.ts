@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { unzipSync, strFromU8 } from 'fflate'
-import { prepareOrder, validateRow, parseIds, snapshot, type TransferOrder } from '../lib/myship/domain'
+import { prepareOrder, prepareOrderParts, validateRow, parseIds, snapshot, type TransferOrder } from '../lib/myship/domain'
 import { fillOfficialTemplate } from '../lib/myship/workbook'
 
 const market = { id: 'GM2601252733206', name: '小莊備用88', temperature: '常溫', enabled: true }
@@ -18,10 +18,25 @@ test('三袋規格一組、手機前導零、門市代碼及臺灣下單日期�
 test('沒有配對、空白店號、不同地址、停用賣場不匯出', () => {
   for (const p of [prepareOrder(order, [], [market], store), prepareOrder(order, mapping, [market], { ...store, store_code: null }), prepareOrder(order, mapping, [market], { ...store, address: '別處' }), prepareOrder(order, mapping, [{ ...market, enabled: false }], store)]) assert.equal(p.row, null)
 })
-test('跨賣場不可自動拆單重複代收', () => {
+// 原本這裡的規則是「跨賣場不可自動拆單」，防的是重複代收：天真地拆單，每張
+// 都填原訂單總額，客人就被收兩次錢。現在允許拆單，但那個擔心仍是這條測試的
+// 核心 —— 每張只能代收自己那個賣場的商品小計，全部加起來剛好等於原總額。
+test('跨賣場拆單時每張只代收自己的商品，不會重複代收', () => {
+  const other = { id: 'GM2', name: '第二賣場', temperature: '常溫', enabled: true }
   const o = { ...order, total_amount: 2200, order_items: [...order.order_items, { ...order.order_items[0], id: 2, variant_id: 21 }] }
-  const p = prepareOrder(o, [...mapping, { variant_id: 21, marketplace_id: 'GM2' }], [market], store)
-  assert.equal(p.row, null); assert.ok(p.errors.some(e => e.includes('不同賣場')))
+  const parts = prepareOrderParts(o, [...mapping, { variant_id: 21, marketplace_id: 'GM2' }], [market, other], store)
+  assert.equal(parts.length, 2)
+  assert.deepEqual(parts.map(p => p.errors), [[], []])
+  // 每張 1100，不是每張 2200
+  assert.deepEqual(parts.map(p => p.row![5]), ['1100', '1100'])
+  assert.equal(parts.reduce((sum, p) => sum + Number(p.row![5]), 0), o.total_amount)
+})
+test('跨賣場但另一個賣場沒設定時，整張都不匯出', () => {
+  const o = { ...order, total_amount: 2200, order_items: [...order.order_items, { ...order.order_items[0], id: 2, variant_id: 21 }] }
+  const parts = prepareOrderParts(o, [...mapping, { variant_id: 21, marketplace_id: 'GM2' }], [market], store)
+  // 只寄出一半、另一半永遠寄不出去，比整張卡住還難收拾
+  assert.ok(parts.every(p => p.row === null))
+  assert.ok(parts.every(p => p.errors.some(e => e.includes('賣場設定不存在'))))
 })
 test('金額不平、非整數數量及非待確認狀態拒絕匯出', () => {
   for (const o of [{ ...order, total_amount: 1000 }, { ...order, order_status: '已取消' }, { ...order, order_items: [{ ...order.order_items[0], quantity: 1.5 }] }]) assert.equal(prepare(o).row, null)
