@@ -10,33 +10,6 @@ export const PERMISSION_CATALOG: { key: string; label: string; hint?: string }[]
   { key: 'categories.all', label: '健康分類管理' },
   { key: 'events.view', label: '社群活動報名管理' },
   { key: 'site_popup.manage', label: '前台彈窗管理', hint: '可開關與新增全站彈窗' },
-  // ── 陪診營運（Sprint B）──────────────────────────────────
-  // 這四個與既有的 care.view（陪診預約頁）責任不同，不可互相沿用。
-  { key: 'care_operations.view', label: '陪診營運：檢視總覽與清單', hint: '不含補充需求等自由文字' },
-  { key: 'care_intake.manage', label: '陪診營運：初評審查', hint: '可看到補充需求與聯絡方式' },
-  { key: 'care_quote.manage', label: '陪診營運：報價草稿與確認' },
-  { key: 'care_case.manage', label: '陪診營運：案件狀態與人工收款確認' },
-  // ── 陪診履約（Sprint D）──────────────────────────────────
-  { key: 'care_record.review', label: '陪診履約：服務紀錄核對', hint: '可看到陪診員的內部客觀紀錄' },
-  { key: 'care_summary.review', label: '陪診履約：家屬小結審核與發布', hint: '唯一能對家屬發布內容的權限' },
-  { key: 'care_incident.manage', label: '陪診履約：異常事件處理與通知決策' },
-  { key: 'care_settlement.manage', label: '陪診履約：結算明細與批次', hint: '唯一能看到報酬金額的權限' },
-  // ── 陪診人力與媒合（Sprint C）────────────────────────────
-  { key: 'care_staff.manage', label: '陪診人力：名冊、僱用型態、服務區域' },
-  { key: 'care_staff_credential.manage', label: '陪診人力：能力驗證', hint: '陪診員不能自行標記為已驗證' },
-  { key: 'care_schedule.manage', label: '陪診人力：班表與可服務時段檢視' },
-  { key: 'care_staff_time_off.review', label: '陪診人力：請假／暫停接案審核' },
-  { key: 'care_dispatch.manage', label: '陪診人力：人工媒合與兼職邀請' },
-  // ── 營運閉環（Sprint E）────────────────────────────────
-  { key: 'care_notification.manage', label: '陪診營運：站內通知與 outbox', hint: '外部通知尚未啟用，只看得到狀態' },
-  { key: 'care_feedback.manage', label: '陪診營運：家屬回饋處理' },
-  { key: 'care_concern.manage', label: '陪診營運：意見／申訴處理' },
-  { key: 'care_quality.review', label: '陪診品質：服務品質覆核' },
-  { key: 'care_quality.manage', label: '陪診品質：改善事項指派與覆核' },
-  { key: 'care_insights.view', label: '陪診營運：去識別化營運指標' },
-  { key: 'care_release_readiness.view', label: '陪診營運：上線檢核' },
-  { key: 'care_policy.manage', label: '陪診營運：條款與隱私版本管理', hint: '正文需由法務確認後填入' },
-  { key: 'care_data_lifecycle.manage', label: '陪診營運：資料保留待辦清單', hint: '本輪不刪除任何資料' },
 ]
 
 export const ALL_PERMISSION = 'all'
@@ -57,6 +30,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'site_popup.update': '彈窗：修改',
   'site_popup.toggle': '彈窗：開關',
   'site_popup.delete': '彈窗：刪除',
+  // 陪診業務已移除，以下標籤保留給舊的稽核紀錄顯示用
   // 陪診營運（Sprint B）
   'care_intake.review_start': '陪診初評：開始審查',
   'care_intake.request_more_info': '陪診初評：要求補充資料',
