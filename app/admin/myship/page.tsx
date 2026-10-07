@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Marketplace, Mapping, PreparedOrder } from '@/lib/myship/domain'
 import AssistantPanel from './AssistantPanel'
+import LocalLabelAssistantPanel from './LocalLabelAssistantPanel'
 
 type Item = { variant_id: number | null; name: string; variant: string; sku: string | null }
 type Row = PreparedOrder & { customer_name: string; total_amount: number; order_total: number; store_name: string; reserved: boolean; items: Item[] }
@@ -94,6 +95,7 @@ export default function MyshipPage() {
     {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     {message && <div role="status" className="rounded-lg bg-green-50 p-4 text-green-800">{message}</div>}
     <AssistantPanel selected={selected} market={market} disabled={busy} onChange={load}/>
+    <LocalLabelAssistantPanel market={market}/>
     <div className="flex flex-wrap items-center gap-3">
       <label htmlFor="market" className="font-medium">處理賣場</label>
       <select id="market" className="rounded-lg border p-2.5" value={market} disabled={busy || !data} onChange={e => { setMarket(e.target.value); setSelected([]) }}>
@@ -133,3 +135,4 @@ export default function MyshipPage() {
     {confirming && <section role="dialog" aria-modal="true" aria-labelledby="confirm-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl space-y-4"><h2 id="confirm-title" className="text-xl font-bold">核對賣貨便已成立的訂單</h2><p>{confirming.import_row[9]}</p><p>{confirming.import_row[0]} · 店號 {confirming.import_row[2]} · {money(Number(confirming.import_row[5]))}</p><p className="text-sm">{confirming.import_row[4]}</p><label className="block">賣貨便訂單編號<input autoFocus className="mt-2 w-full rounded-lg border p-3" placeholder="CM開頭的訂單編號" value={external} onChange={e => setExternal(e.target.value.trim().toUpperCase())}/></label><label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={verified} onChange={e => setVerified(e.target.checked)} className="mt-1"/>我已在賣貨便核對此編號的收件人、商品、門市和代收金額，確認訂單成立。</label>{error && <p role="alert" className="text-red-700">{error}</p>}<div className="flex justify-end gap-3"><button className={outline} disabled={busy} onClick={() => setConfirming(null)}>取消</button><button className={button} disabled={busy || !verified || !/^CM\d{13}$/.test(external)} onClick={() => run(async () => { await post('confirm', { transfer_id: confirming.id, external_order_no: external, verified }); setConfirming(null); await load(); setMessage('已記錄賣貨便編號，健康優選訂單已更新為已出貨。') })}>記錄並更新已出貨</button></div><details className="border-t pt-3 text-sm"><summary className="cursor-pointer text-slate-600">未匯入或明確失敗，需要修正後重做</summary><p className="mt-3">已成立或結果不明的訂單，請關閉此視窗，在助手按「保留此批，繼續其他訂單」。只有確定賣貨便沒有成立此筆訂單才能解除。</p><label className="mt-3 flex gap-2"><input type="checkbox" checked={notCreated} onChange={e => setNotCreated(e.target.checked)}/>我已核對此筆未在賣貨便成立，且不再使用原批次檔案。</label><label className="mt-3 block">核對原因<textarea className="mt-2 w-full rounded border p-2" maxLength={200} value={reason} onChange={e => setReason(e.target.value)}/></label><button className={outline} disabled={busy || !notCreated || reason.trim().length < 5} onClick={() => run(async () => { await post('release', { transfer_id: confirming.id, reason, verified_not_created: true }); setConfirming(null); await load(); setMessage('已保留核對紀錄並解除匯出保留，可回待處理訂單修正後重做。') })}>解除保留</button></details></div></section>}
   </main>
 }
+
