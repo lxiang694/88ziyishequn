@@ -21,7 +21,6 @@ import { useMemo, useRef, useState } from 'react'
 import { zipSync } from 'fflate'
 import { parseOrderList, reconcile, MAX_ORDERS } from '@/lib/myship/labelOrders'
 import { splitLabelPdf, labelFileName, LabelPdfError } from '@/lib/myship/labelPdf'
-import LocalLabelAssistantPanel from '../LocalLabelAssistantPanel'
 
 const button = 'rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40 hover:bg-slate-700'
 const outline = 'rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-40'
@@ -137,8 +136,6 @@ export default function LabelsPage() {
           檔案只在你的瀏覽器裡處理，不會上傳到伺服器。
         </p>
       </header>
-
-      <LocalLabelAssistantPanel orderNos={requested}/>
 
       <section className="rounded-xl border p-4">
         <h2 className="font-semibold">1. 這批要出哪幾筆</h2>
@@ -270,4 +267,3 @@ export default function LabelsPage() {
     </div>
   )
 }
-
