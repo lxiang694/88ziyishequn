@@ -21,44 +21,62 @@ export default function FrontShell({ children }: { children: ReactNode }) {
       <BackHomeNav />
       {/* pt-16 / sm:pt-20 compensates for the fixed header height (h-16 / sm:h-20) */}
       <main className="min-h-screen pt-16 sm:pt-20">{children}</main>
-      <footer className="bg-white border-t border-line mt-12 py-8">
-        <div className="max-w-5xl mx-auto px-4 text-center text-gray-500">
-          <p className="font-bold text-gray-700 mb-1 text-base">健康優選｜88自醫社群團購賣場</p>
-          <p className="text-sm">如有任何問題，請透過右下角 LINE 聯絡我們的客服人員</p>
+      {/* 頁尾的客人以中高齡為主：每個入口都是一塊夠大的按鈕（至少 64px 高），
+          排成整齊的格子 —— 原本長短不一的膠囊自動換行，排出來參差不齊，
+          底下的快速連結又只是一行小字，看不出能點。 */}
+      <footer className="bg-sage/60 border-t border-line mt-12 pt-8 pb-6">
+        <div className="max-w-5xl mx-auto px-4">
 
-          {/* 商品分類 —— 頁尾是客人捲到底時最常找入口的地方 */}
-          <nav aria-label="商品分類" className="mt-6 border-t border-line pt-6">
-            <h2 className="mb-3 text-sm font-bold text-gray-700">商品分類</h2>
-            <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+          {/* 商品分類 —— 頁尾是客人捲到底時最常找入口的地方。
+              九個分類在手機上剛好排成 3×3。 */}
+          <nav aria-label="商品分類">
+            <h2 className="mb-3 text-center text-base font-bold text-gray-800">商品分類</h2>
+            <ul className="grid grid-cols-3 gap-2.5 md:grid-cols-9">
               {SHOP_CATEGORIES.map(cat => (
                 <li key={cat.slug}>
                   <a href={`/shop/${cat.slug}`}
-                    className="inline-block rounded-full border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-700 transition-colors hover:border-green-400 hover:text-green-700">
-                    {cat.emoji} {cat.name}
+                    className="flex h-full min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-line bg-white px-1 py-2.5 text-center shadow-sm transition-colors hover:border-green-400 active:bg-green-50">
+                    <span className="text-[26px] leading-none" aria-hidden="true">{cat.emoji}</span>
+                    <span className="text-[14px] font-bold leading-tight text-gray-800">{cat.name}</span>
                   </a>
                 </li>
               ))}
-              <li>
-                <a href="/shop"
-                  className="inline-block rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-sm font-semibold text-green-800 transition-colors hover:border-green-400">
-                  全部商品 →
-                </a>
-              </li>
+            </ul>
+            <a href="/shop"
+              className="mt-2.5 flex min-h-[48px] items-center justify-center rounded-2xl bg-green-700 md:mx-auto md:max-w-xs text-[15px] font-bold text-white transition-colors hover:bg-green-800">
+              瀏覽全部商品 →
+            </a>
+          </nav>
+
+          {/* 常用服務 —— 不用登入就能用的入口，做成有說明的按鈕，一眼看得出能點 */}
+          <nav aria-label="常用服務" className="mt-8">
+            <h2 className="mb-3 text-center text-base font-bold text-gray-800">常用服務</h2>
+            <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+              {[
+                { href: '/orders', icon: '📦', label: '訂單查詢', hint: '用手機號碼查進度' },
+                { href: '/health-articles', icon: '📚', label: '健康知識', hint: '保健觀念一次看懂' },
+                { href: '/sleep-quiz', icon: '🌙', label: '睡眠自測', hint: '了解你的睡眠狀況' },
+                { href: '/health-quiz', icon: '🩺', label: '健康自測', hint: '找適合的保養方向' },
+              ].map(link => (
+                <li key={link.href}>
+                  <a href={link.href}
+                    className="flex h-full min-h-[64px] items-center gap-2.5 rounded-2xl border border-line bg-white px-3 py-2.5 shadow-sm transition-colors hover:border-green-400 active:bg-green-50">
+                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-canvas text-[22px]" aria-hidden="true">{link.icon}</span>
+                    <span className="min-w-0">
+                      <span className="block text-[15px] font-bold leading-tight text-gray-800">{link.label}</span>
+                      <span className="mt-0.5 block text-[12px] leading-snug text-gray-600">{link.hint}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
             </ul>
           </nav>
 
-          {/* Quick links — easy access without login */}
-          <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2 mt-6 text-sm">
-            <a href="/orders" className="text-gray-600 hover:text-green-700 font-semibold">📦 訂單查詢</a>
-            <span className="text-gray-300">·</span>
-            <a href="/health-articles" className="text-gray-600 hover:text-green-700 font-semibold">📚 健康知識</a>
-            <span className="text-gray-300">·</span>
-            <a href="/sleep-quiz" className="text-gray-600 hover:text-green-700 font-semibold">🌙 睡眠自測</a>
-            <span className="text-gray-300">·</span>
-            <a href="/health-quiz" className="text-gray-600 hover:text-green-700 font-semibold">🩺 健康自測</a>
+          <div className="mt-8 border-t border-line pt-5 text-center">
+            <p className="text-base font-bold text-gray-800">健康優選｜88自醫社群團購賣場</p>
+            <p className="mt-1 text-sm text-gray-600">有任何問題，請點右下角 LINE 聯絡客服</p>
+            <p className="mt-3 text-[13px] text-gray-500">© {new Date().getFullYear()} 健康優選. All rights reserved.</p>
           </div>
-
-          <p className="mt-4 text-[13px] text-gray-600">© {new Date().getFullYear()} 健康優選. All rights reserved.</p>
         </div>
       </footer>
       {/* 底部導覽列高度的墊片，避免內容被固定列遮住（手機，含瀏海機安全區） */}
