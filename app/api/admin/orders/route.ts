@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
 import {
   sanitizeOrderSearch, shouldApplyDateFilter, isDateFilterOverridden,
+  productKeywordTerms, productKeywordFilters,
 } from '@/lib/adminOrderSearch'
 
 function twDayToUTC(dateStr: string, isEnd: boolean): string {
@@ -31,16 +32,27 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '20')
   const offset = (page - 1) * limit
 
+  const productTerms = productKeywordTerms(searchParams.get('product'))
+
   const todayTW = getTWToday()
 
+  // 有商品關鍵字時用 !inner 嵌入商品明細：下面對 order_items 的條件會連帶
+  // 篩掉沒有符合商品的訂單，count 也只算符合的訂單。嵌入回來的明細只剩
+  // 比對到的那幾項，畫面拿來顯示「為什麼這筆會出現」。
+  const columns = 'id, order_no, customer_name, phone, store_name, order_status, items_count, total_amount, created_at'
   let query = supabaseAdmin
     .from('orders')
-    .select('id, order_no, customer_name, phone, store_name, order_status, items_count, total_amount, created_at', { count: 'exact' })
+    .select(productTerms.length
+      ? `${columns}, order_items!inner(product_name_snapshot, variant_name_snapshot, quantity)`
+      : columns, { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
   if (search) query = query.or(`order_no.ilike.%${search}%,customer_name.ilike.%${search}%,phone.ilike.%${search}%`)
   if (status) query = query.eq('order_status', status)
+  for (const filter of productKeywordFilters(productTerms)) {
+    query = query.or(filter, { referencedTable: 'order_items' })
+  }
 
   // 搜尋訂單號／姓名／手機時不套用期間篩選 —— 那是「找特定一筆」，
   // 不是瀏覽某個期間。從儀表板「本月訂單」進來時 dateRange=month 會留著，
@@ -71,7 +83,7 @@ export async function GET(req: NextRequest) {
 
   const dateFilterOverridden = isDateFilterOverridden(search, dateRange)
 
-  const rows = data || []
+  const rows: any[] = data || []
 
   // 以手機號為客戶識別，算出「這筆是該客戶第幾次購買」與「累計購買次數」（不計已取消）
   const phones = Array.from(new Set(rows.map((r: any) => r.phone).filter(Boolean)))
@@ -91,8 +103,9 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const withSeq = rows.map((r: any) => ({
+  const withSeq = rows.map(({ order_items, ...r }: any) => ({
     ...r,
+    matched_items: order_items ?? null,               // 商品關鍵字比對到的明細（沒用商品篩選時為 null）
     purchase_seq: seqByOrderId[r.id] ?? null,        // 這筆是第幾次購買（已取消的訂單為 null）
     customer_orders: totalByPhone[r.phone] ?? 0,      // 該客戶累計購買次數
   }))

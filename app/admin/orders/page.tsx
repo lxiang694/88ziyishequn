@@ -26,6 +26,13 @@ function CopyIconButton({ value, label }: { value: string; label: string }) {
 }
 
 const ORDER_STATUSES = ['待確認','已確認','備貨中','已出貨','已到店','已取消']
+/** 商品關鍵字比對到的明細，讓人一眼看出這筆訂單為什麼會出現在篩選結果裡 */
+function matchedText(order: any): string {
+  return (order.matched_items || [])
+    .map((i: any) => `${i.product_name_snapshot}（${i.variant_name_snapshot}）×${i.quantity}`)
+    .join('、')
+}
+
 const DATE_RANGES = [
   { value: '', label: '全部' },
   { value: 'today', label: '今日' },
@@ -42,6 +49,7 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
   const [newStatus, setNewStatus] = useState(order.order_status)
   const [updating, setUpdating] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const matched = matchedText(order)
 
   const handleDelete = async () => {
     const stockNote = order.order_status !== '已取消'
@@ -130,7 +138,10 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
           </div>
         </td>
-        <td className="px-3 py-4"><span className="font-mono font-bold text-gray-800 text-[13px]">{order.order_no}</span></td>
+        <td className="px-3 py-4">
+          <span className="font-mono font-bold text-gray-800 text-[13px]">{order.order_no}</span>
+          {matched && <p className="mt-1 max-w-[16rem] truncate text-[12px] font-medium text-amber-700" title={matched}>📦 {matched}</p>}
+        </td>
         <td className="px-3 py-4 text-gray-500 text-[13px] whitespace-nowrap">{formatDateTime(order.created_at)}</td>
         <td className="px-3 py-4">
           <div className="flex items-center gap-1.5 whitespace-nowrap">
@@ -202,6 +213,7 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
               {order.store_name && (
                 <p className="mt-1 truncate text-[13px] text-gray-600">🏪 {order.store_name}</p>
               )}
+              {matched && <p className="mt-1 line-clamp-2 text-[13px] font-medium text-amber-700">📦 {matched}</p>}
 
               <div className="mt-1.5 flex items-baseline justify-between gap-2">
                 <span className="font-bold text-green-700">{formatPrice(order.total_amount)}</span>
@@ -340,6 +352,7 @@ function OrdersContent() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [product, setProduct] = useState(searchParams.get('product') || '')
   const [status, setStatus] = useState(searchParams.get('status') || '')
   const [dateRange, setDateRange] = useState(searchParams.get('dateRange') || '')
   const [startDate, setStartDate] = useState('')
@@ -354,6 +367,7 @@ function OrdersContent() {
     setLoading(true)
     const params = new URLSearchParams({ page: String(page), limit: String(pageSize) })
     if (search) params.set('search', search)
+    if (product.trim()) params.set('product', product.trim())
     if (status) params.set('status', status)
     if (dateRange) params.set('dateRange', dateRange)
     if (dateRange === 'custom' && startDate && endDate) { params.set('startDate', startDate); params.set('endDate', endDate) }
@@ -364,7 +378,7 @@ function OrdersContent() {
       setDateOverridden(!!data.date_filter_overridden)
     }
     setLoading(false)
-  }, [search, status, dateRange, startDate, endDate, page, pageSize])
+  }, [search, product, status, dateRange, startDate, endDate, page, pageSize])
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
   useEffect(() => { setSelectedIds([]) }, [orders])
@@ -436,14 +450,17 @@ function OrdersContent() {
       </div>
 
       <div className="card p-4 mb-5 space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input className="form-input flex-1 py-2" style={{ height: '44px' }} placeholder="搜尋訂單號、姓名、手機..."
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_9rem_8rem]">
+          <input className="form-input py-2" style={{ height: '44px' }} placeholder="搜尋訂單號、姓名、手機..."
             value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
-          <select className="form-input sm:w-36" style={{ height: '44px' }} value={status} onChange={e => { setStatus(e.target.value); setPage(1) }}>
+          {/* 商品關鍵字跟期間篩選可以同時用：「這個月誰買了紫蘇油」是常見的問法 */}
+          <input type="search" className="form-input py-2" style={{ height: '44px' }} placeholder="商品關鍵字，如：紫蘇油 3瓶"
+            value={product} onChange={e => { setProduct(e.target.value); setPage(1) }} />
+          <select className="form-input" style={{ height: '44px' }} value={status} onChange={e => { setStatus(e.target.value); setPage(1) }}>
             <option value="">全部狀態</option>
             {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <select className="form-input sm:w-32" style={{ height: '44px' }} value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}>
+          <select className="form-input" style={{ height: '44px' }} value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}>
             {[20, 50, 100, 200].map(n => <option key={n} value={n}>每頁 {n} 筆</option>)}
           </select>
         </div>

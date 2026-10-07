@@ -8,8 +8,8 @@
  * 百分比與底線則是 LIKE 的萬用字元 —— 輸入一個 % 就會撈出全部訂單。
  */
 
-/** 會破壞 or() 結構的字元 */
-const STRUCTURAL = /[,()]/g
+/** 會破壞 or() 結構的字元（雙引號在 PostgREST 裡是值的引號） */
+const STRUCTURAL = /[,()"]/g
 /** LIKE 萬用字元與跳脫字元 */
 const WILDCARD = /[%_\\*]/g
 
@@ -37,6 +37,33 @@ export function sanitizeOrderSearch(raw: string | null | undefined): string {
 export function shouldApplyDateFilter(search: string, dateRange: string): boolean {
   if (search) return false
   return !!dateRange
+}
+
+/** 商品關鍵字最多幾個詞 —— 每多一個詞就多一組 ilike 條件 */
+export const MAX_PRODUCT_TERMS = 3
+
+/**
+ * 商品關鍵字拆成詞。
+ *
+ * 商品名稱與規格是 order_items 的兩個欄位，輸入「紫蘇油 3瓶」若整串去比
+ * 一定比不到。所以用空白拆開，每個詞各自比對名稱、規格或貨號。
+ */
+export function productKeywordTerms(raw: string | null | undefined): string[] {
+  const cleaned = sanitizeOrderSearch(raw)
+  if (!cleaned) return []
+  return Array.from(new Set(cleaned.split(' '))).slice(0, MAX_PRODUCT_TERMS)
+}
+
+/**
+ * 每個詞一組 or() 條件，套在 order_items 上。
+ *
+ * 多組條件之間是 AND，而且是對「同一筆商品明細」成立 —— 「紫蘇油 3瓶」
+ * 找的是有一項商品叫紫蘇油、規格是 3 瓶的訂單，不是買了紫蘇油、另一項
+ * 商品剛好是 3 瓶的訂單。
+ */
+export function productKeywordFilters(terms: string[]): string[] {
+  return terms.map(t =>
+    `product_name_snapshot.ilike.%${t}%,variant_name_snapshot.ilike.%${t}%,sku_snapshot.ilike.%${t}%`)
 }
 
 /** 期間篩選是否因為搜尋而被略過 —— 用來在畫面上提示使用者 */

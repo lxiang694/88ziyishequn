@@ -2,6 +2,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   sanitizeOrderSearch, shouldApplyDateFilter, isDateFilterOverridden,
+  productKeywordTerms, productKeywordFilters, MAX_PRODUCT_TERMS,
 } from '../lib/adminOrderSearch.ts'
 
 describe('搜尋字串整理', () => {
@@ -17,6 +18,10 @@ describe('搜尋字串整理', () => {
 
   test('括號同樣會破壞結構', () => {
     assert.equal(sanitizeOrderSearch('陳(如玉)'), '陳 如玉')
+  })
+
+  test('雙引號在 PostgREST 裡是值的引號，同樣換成空白', () => {
+    assert.equal(sanitizeOrderSearch('紫蘇油"3瓶'), '紫蘇油 3瓶')
   })
 
   test('LIKE 萬用字元被移除 —— 否則輸入一個 % 就撈出全部訂單', () => {
@@ -48,7 +53,7 @@ describe('搜尋字串整理', () => {
   test('整理後不含任何結構或萬用字元', () => {
     for (const raw of ['a,b(c)%d_e\\f', '%%%', 'TW,2026(08)%']) {
       const out = sanitizeOrderSearch(raw)
-      for (const bad of [',', '(', ')', '%', '_', '\\']) {
+      for (const bad of [',', '(', ')', '"', '%', '_', '\\']) {
         assert.equal(out.includes(bad), false, `${raw} → ${out} 仍含有 ${bad}`)
       }
     }
@@ -86,5 +91,39 @@ describe('實際踩到的情境', () => {
     const search = sanitizeOrderSearch('TW20260715123456')
     assert.equal(shouldApplyDateFilter(search, dateRange), false)
     assert.equal(isDateFilterOverridden(search, dateRange), true)
+  })
+})
+
+describe('商品關鍵字篩選', () => {
+  test('用空白拆成詞，重複的詞只留一個', () => {
+    assert.deepEqual(productKeywordTerms('紫蘇油 3瓶'), ['紫蘇油', '3瓶'])
+    assert.deepEqual(productKeywordTerms('  紫蘇油   紫蘇油 '), ['紫蘇油'])
+  })
+
+  test('空值、只有萬用字元時不篩選', () => {
+    for (const raw of [null, undefined, '', '   ', '%', '_%_']) assert.deepEqual(productKeywordTerms(raw), [])
+  })
+
+  test(`最多 ${MAX_PRODUCT_TERMS} 個詞`, () => {
+    assert.equal(productKeywordTerms('a b c d e').length, MAX_PRODUCT_TERMS)
+  })
+
+  test('每個詞比對商品名稱、規格、貨號三個欄位', () => {
+    assert.deepEqual(productKeywordFilters(['紫蘇油']), [
+      'product_name_snapshot.ilike.%紫蘇油%,variant_name_snapshot.ilike.%紫蘇油%,sku_snapshot.ilike.%紫蘇油%',
+    ])
+  })
+
+  test('幾個詞就幾組條件（組與組之間是 AND）', () => {
+    assert.equal(productKeywordFilters(productKeywordTerms('紫蘇油 3瓶')).length, 2)
+    assert.deepEqual(productKeywordFilters([]), [])
+  })
+
+  test('輸入的符號不會破壞 or() 結構', () => {
+    for (const filter of productKeywordFilters(productKeywordTerms('紫蘇,油(3瓶)" %'))) {
+      // 每組固定三個條件：多出來的逗號或括號都代表使用者輸入跑進了語法裡
+      assert.equal(filter.split(',').length, 3, filter)
+      assert.equal(/[()"]/.test(filter), false, filter)
+    }
   })
 })
