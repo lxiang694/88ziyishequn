@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import ShopBrowser from '@/components/front/ShopBrowser'
 import { fetchShopCategories, fetchShopProducts } from '@/lib/shopQuery'
 import { SITE_URL } from '@/lib/siteUrl'
+import { SHOP_CATEGORIES } from '@/lib/shopCategories'
 
 // 前台頁面每 60 秒重新產生一次，期間的訪客直接拿快取（從離客人最近的
 // 節點送出），不再每次打開都查資料庫。後台改商品時會呼叫
@@ -10,6 +11,12 @@ import { SITE_URL } from '@/lib/siteUrl'
 // 本頁的查詢必須走 supabaseStorefront：改回 supabaseAdmin（no-store）
 // 這頁就會變回每次都查資料庫，revalidate 不再有作用。
 export const revalidate = 60
+
+// 帶網址參數的頁面在 Next 14 要有 generateStaticParams 才會被快取；
+// 沒有的話不管 revalidate 設多少，每次都重新產生。九個分類在 build 時就先產好。
+export function generateStaticParams() {
+  return SHOP_CATEGORIES.map(c => ({ slug: c.slug }))
+}
 
 async function findCategory(slug: string) {
   const categories = await fetchShopCategories()

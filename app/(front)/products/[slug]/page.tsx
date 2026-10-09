@@ -16,6 +16,13 @@ import { SITE_URL } from '@/lib/siteUrl'
 // 還會呼叫 refreshStorefront() 讓快取立刻更新（lib/storefrontCache.ts）。
 export const revalidate = 60
 
+// 帶網址參數的頁面在 Next 14 要有 generateStaticParams 才會被快取；沒有的話
+// 不管 revalidate 設多少，每次都重新產生。回傳空陣列：build 時不預先產生，
+// 每個商品第一次被打開時產生，之後 60 秒內的訪客拿快取。
+export function generateStaticParams() {
+  return []
+}
+
 export async function generateMetadata(
   { params }: { params: { slug: string } }
 ): Promise<Metadata> {
