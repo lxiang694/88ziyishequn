@@ -1,4 +1,5 @@
-import { supabaseAdmin } from '@/lib/supabase'
+// 只給前台頁面用，所以走會快取 60 秒的用戶端（見 lib/supabase.ts）
+import { supabaseStorefront as supabaseAdmin } from '@/lib/supabase'
 import { buildSalesMap } from '@/lib/salesUtils'
 import { SHOP_CATEGORIES } from '@/lib/shopCategories'
 import { shopCategoriesByProduct, type ShopCategoryRow } from '@/lib/shopCategoryRepo'
@@ -69,10 +70,10 @@ export async function fetchShopProducts(slug: string, limit = 200) {
     .limit(limit)
   if (productIds !== null) query = query.in('id', productIds)
 
-  const [{ data, error }, salesMap] = await Promise.all([query, buildSalesMap()])
+  const [{ data, error }, salesMap] = await Promise.all([query, buildSalesMap(supabaseAdmin)])
   if (error || !data) return []
 
-  const shopByProduct = await shopCategoriesByProduct(data.map((p: any) => p.id))
+  const shopByProduct = await shopCategoriesByProduct(data.map((p: any) => p.id), supabaseAdmin)
 
   return data
     .map((p: any) => ({

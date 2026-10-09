@@ -5,6 +5,7 @@ import { generateSlug, normalizeSlug } from '@/lib/utils'
 import { HOME_SECTION_KEYS } from '@/lib/homeSections'
 import { normalizeCategoryIds } from '@/lib/shopCategories'
 import { saveShopCategories, shopCategoriesByProduct } from '@/lib/shopCategoryRepo'
+import { refreshStorefront } from '@/lib/storefrontCache'
 
 export async function GET(req: NextRequest) {
   const auth = requireAdmin(req)
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
         product_id: product.id, image_url: typeof img === 'string' ? img : img.image_url, sort_order: i,
       })))
     }
+    refreshStorefront()
     return NextResponse.json({ success: true, data: product })
   } catch {
     return NextResponse.json({ success: false, error: '新增商品失敗' }, { status: 500 })

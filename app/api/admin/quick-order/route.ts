@@ -7,6 +7,7 @@ import {
   parseResolvedItems, isValidSource, QuickOrderInputError,
   QUICK_ORDER_PERMISSION, DEFAULT_QUICK_ORDER_SOURCE,
 } from '@/lib/quickOrder/domain'
+import { refreshStorefront } from '@/lib/storefrontCache'
 
 /**
  * POST /api/admin/quick-order —— 後台代客下單。
@@ -189,6 +190,7 @@ export async function POST(req: NextRequest) {
     '出貨後會再通知您一次，感謝訂購 🙏',
   ].join('\n')
 
+  refreshStorefront()
   return NextResponse.json({
     success: true,
     data: {

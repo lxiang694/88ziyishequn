@@ -1,4 +1,5 @@
-import { supabaseAdmin } from '@/lib/supabase'
+// 只給前台頁面用，所以走會快取 60 秒的用戶端（見 lib/supabase.ts）
+import { supabaseStorefront as supabaseAdmin } from '@/lib/supabase'
 import { getSalesCountForProduct } from '@/lib/salesUtils'
 import { rankProductArticles } from '@/lib/productArticleMatcher'
 
@@ -39,7 +40,7 @@ export async function fetchPublishedProduct(slug: string) {
   if (data.product_images) {
     data.product_images.sort((a: any, b: any) => a.sort_order - b.sort_order)
   }
-  data.sales_count = await getSalesCountForProduct(data.id)
+  data.sales_count = await getSalesCountForProduct(data.id, supabaseAdmin)
 
   return data
 }

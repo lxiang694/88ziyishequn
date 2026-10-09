@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin, requirePermission } from '@/lib/adminMiddleware'
+import { refreshStorefront } from '@/lib/storefrontCache'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = requirePermission(req, 'events.view')
@@ -36,6 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { error } = await supabaseAdmin
       .from('community_events').update(updateData).eq('id', params.id)
     if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    refreshStorefront()
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ success: false, error: '更新失敗' }, { status: 500 })
@@ -53,5 +55,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   const { error } = await supabaseAdmin.from('community_events').delete().eq('id', params.id)
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  refreshStorefront()
   return NextResponse.json({ success: true })
 }

@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
 import { writeAuditLog } from '@/lib/audit'
 import { isSafeLinkPath } from '@/lib/homeBanner'
+import { refreshStorefront } from '@/lib/storefrontCache'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,6 +92,7 @@ export async function PUT(req: NextRequest) {
     await writeAuditLog(req, auth.admin, 'home_banner.update',
       `active=${isActive};image=${imageUrl ? 'yes' : 'no'};link=${rawLink || '-'}`)
 
+    refreshStorefront()
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ success: false, error: '儲存失敗' }, { status: 500 })

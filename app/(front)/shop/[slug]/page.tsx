@@ -4,7 +4,12 @@ import ShopBrowser from '@/components/front/ShopBrowser'
 import { fetchShopCategories, fetchShopProducts } from '@/lib/shopQuery'
 import { SITE_URL } from '@/lib/siteUrl'
 
-export const dynamic = 'force-dynamic'
+// 前台頁面每 60 秒重新產生一次，期間的訪客直接拿快取（從離客人最近的
+// 節點送出），不再每次打開都查資料庫。後台改商品時會呼叫
+// refreshStorefront() 讓快取立刻更新（lib/storefrontCache.ts）。
+// 本頁的查詢必須走 supabaseStorefront：改回 supabaseAdmin（no-store）
+// 這頁就會變回每次都查資料庫，revalidate 不再有作用。
+export const revalidate = 60
 
 async function findCategory(slug: string) {
   const categories = await fetchShopCategories()

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requirePermission } from '@/lib/adminMiddleware'
+import { refreshStorefront } from '@/lib/storefrontCache'
 
 function slugify(input: string): string {
   return input.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9一-鿿-]/g, '').slice(0, 60)
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       if (error.code === '23505') return NextResponse.json({ success: false, error: '此網址代稱已被使用，請換一個' }, { status: 400 })
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
+    refreshStorefront()
     return NextResponse.json({ success: true, data })
   } catch {
     return NextResponse.json({ success: false, error: '建立失敗' }, { status: 500 })

@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/adminMiddleware'
 import { normalizeCategoryIds, suggestShopCategories } from '@/lib/shopCategories'
 import { saveShopCategories, shopCategoriesByProduct, allShopCategories } from '@/lib/shopCategoryRepo'
 import { writeAuditLog } from '@/lib/audit'
+import { refreshStorefront } from '@/lib/storefrontCache'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,6 +114,7 @@ export async function PUT(req: NextRequest) {
         error: `${saved} 件已存，${failed.length} 件失敗（商品 ${failed.slice(0, 5).join('、')}）`,
       }, { status: 500 })
     }
+    refreshStorefront()
     return NextResponse.json({ success: true, saved })
   } catch {
     return NextResponse.json({ success: false, error: '儲存失敗' }, { status: 500 })

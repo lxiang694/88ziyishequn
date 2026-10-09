@@ -1,17 +1,20 @@
 import type { Metadata } from 'next'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseStorefront as supabaseAdmin } from '@/lib/supabase'
 import ProductDetailClient from '@/components/front/ProductDetailClient'
 import { fetchPublishedProduct, fetchRelatedArticles } from '@/lib/productQuery'
 import { lowestActivePrice, isInStock } from '@/lib/productPricing'
 import { SITE_URL } from '@/lib/siteUrl'
 
 
-// ⚠️ 關鍵：強制動態渲染。
-// 商品的 metadata 用 supabaseAdmin 查庫（Next 無法追蹤的外部請求），
-// 若不加這行，Next 會把整條路由當靜態頁，把「首次渲染的結果」永久快取住——
-// 導致首次渲染時尚未建立/查不到的商品，OG 標籤被凍結成「找不到商品」的兜底，
-// LINE / FB 分享就只剩全站預設圖文。加這行後每次請求都重新產生正確的 OG。
-export const dynamic = 'force-dynamic'
+// ⚠️ 不可拿掉 revalidate。
+// 商品的 metadata 用 supabaseAdmin 查庫，若什麼都不設，Next 會把整條路由當靜態頁，
+// 把「首次渲染的結果」永久快取住——首次渲染時查不到的商品，OG 標籤會被凍結成
+// 「找不到商品」的兜底，LINE / FB 分享就只剩全站預設圖文。
+//
+// 以前用 force-dynamic 解決（每次請求都查庫），代價是每個訪客都要等資料庫。
+// 現在查詢改走 supabaseStorefront（快取 60 秒），頁面每 60 秒重新產生：快取最多舊 60 秒，不會再被永久凍結；後台改商品時
+// 還會呼叫 refreshStorefront() 讓快取立刻更新（lib/storefrontCache.ts）。
+export const revalidate = 60
 
 export async function generateMetadata(
   { params }: { params: { slug: string } }

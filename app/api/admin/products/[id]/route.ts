@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/adminMiddleware'
 import { HOME_SECTION_KEYS } from '@/lib/homeSections'
 import { normalizeCategoryIds } from '@/lib/shopCategories'
 import { saveShopCategories, shopCategoriesByProduct } from '@/lib/shopCategoryRepo'
+import { refreshStorefront } from '@/lib/storefrontCache'
 
 function requireProductPerm(req: NextRequest) {
   const result = requireAdmin(req)
@@ -132,6 +133,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       }
     }
 
+    refreshStorefront()
     return NextResponse.json({ success: true, message: '商品更新成功' })
   } catch (err) {
     console.error('Update product error:', err)
@@ -144,5 +146,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (auth instanceof NextResponse) return auth
   const { error } = await supabaseAdmin.from('products').delete().eq('id', params.id)
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  refreshStorefront()
   return NextResponse.json({ success: true, message: '商品已刪除' })
 }

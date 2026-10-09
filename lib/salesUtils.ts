@@ -10,10 +10,10 @@ import { supabaseAdmin } from './supabase'
  *   • product detail page (single product display)
  *   • sleep / article smart product matchers
  */
-export async function buildSalesMap(): Promise<Record<number, number>> {
+export async function buildSalesMap(db: typeof supabaseAdmin = supabaseAdmin): Promise<Record<number, number>> {
   const [{ data: items }, { data: orders }] = await Promise.all([
-    supabaseAdmin.from('order_items').select('product_id, quantity, order_id'),
-    supabaseAdmin.from('orders').select('id, order_status'),
+    db.from('order_items').select('product_id, quantity, order_id'),
+    db.from('orders').select('id, order_status'),
   ])
 
   const cancelledOrderIds = new Set(
@@ -34,13 +34,13 @@ export async function buildSalesMap(): Promise<Record<number, number>> {
 /**
  * Get the total sold count for a single product (post-cancellation filter).
  */
-export async function getSalesCountForProduct(productId: number): Promise<number> {
+export async function getSalesCountForProduct(productId: number, db: typeof supabaseAdmin = supabaseAdmin): Promise<number> {
   const [{ data: items }, { data: orders }] = await Promise.all([
-    supabaseAdmin
+    db
       .from('order_items')
       .select('quantity, order_id')
       .eq('product_id', productId),
-    supabaseAdmin.from('orders').select('id, order_status'),
+    db.from('orders').select('id, order_status'),
   ])
 
   const cancelledOrderIds = new Set(

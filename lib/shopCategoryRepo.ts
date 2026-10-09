@@ -19,11 +19,12 @@ export interface ShopCategoryRow {
 /** 商品 id → 它掛著的商品分類 */
 export async function shopCategoriesByProduct(
   productIds: number[],
+  db: typeof supabaseAdmin = supabaseAdmin,
 ): Promise<Map<number, ShopCategoryRow[]>> {
   const out = new Map<number, ShopCategoryRow[]>()
   if (productIds.length === 0) return out
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await db
     .from('product_shop_category_relations')
     .select('product_id, shop_categories(id, name, slug, emoji)')
     .in('product_id', productIds)
