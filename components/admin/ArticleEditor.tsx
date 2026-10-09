@@ -3,6 +3,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
+import { compressImage } from '@/lib/imageCompress'
 
 interface ArticleData {
   id?: number
@@ -98,7 +99,7 @@ export default function ArticleEditor({ initial }: { initial?: ArticleData }) {
     if (!file) return
     setUploading(true)
     const fd = new FormData()
-    fd.append('file', file)
+    fd.append('file', await compressImage(file))
     fd.append('bucket', 'articles')
     try {
       const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })

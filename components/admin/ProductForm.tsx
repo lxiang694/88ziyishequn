@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { TIMING_OPTIONS } from '@/lib/productMeta'
 import { HOME_SECTIONS, HOME_SECTION_KEYS } from '@/lib/homeSections'
 import { suggestShopCategories } from '@/lib/shopCategories'
+import { compressImage } from '@/lib/imageCompress'
 
 interface Props { initialData?: any; productId?: number; onSuccess: () => void }
 
@@ -73,7 +74,8 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
   }, [initialData])
 
   const uploadImage = async (file: File): Promise<string | null> => {
-    const fd = new FormData(); fd.append('file', file)
+    // 先在瀏覽器縮小、轉 WebP，客人才不必下載好幾 MB 的原圖（lib/imageCompress.ts）
+    const fd = new FormData(); fd.append('file', await compressImage(file))
     const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
     const d = await res.json()
     return d.success ? d.url : null

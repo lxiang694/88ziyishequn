@@ -26,6 +26,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   export_event_registrations: '下載活動報名名單',
   export_orders: '下載訂單資料',
   export_members: '下載會員資料',
+  'product_images.compress': '商品圖片：換成壓縮版',
   'site_popup.create': '彈窗：新增',
   'site_popup.update': '彈窗：修改',
   'site_popup.toggle': '彈窗：開關',

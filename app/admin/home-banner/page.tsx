@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { compressImage } from '@/lib/imageCompress'
 import toast from 'react-hot-toast'
 import {
   checkAspect, checkResolution, isSafeLinkPath,
@@ -71,8 +72,9 @@ export default function HomeBannerPage() {
       const res = checkResolution(width)
       setImageNote([aspect.ok ? '' : aspect.message, res].filter(Boolean).join(' '))
 
+      // 解析度檢查用原檔；上傳的是壓縮版。橫幅是滿版大圖，長邊留到 1920
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', await compressImage(file, 1920))
       const r = await fetch('/api/admin/upload', { method: 'POST', body: fd })
       const d = await r.json()
       if (!d.success) throw new Error(d.error || '上傳失敗')
