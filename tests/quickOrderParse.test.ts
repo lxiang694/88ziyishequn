@@ -130,3 +130,70 @@ describe('快速下單：字串正規化', () => {
     assert.equal(joinPhoneDigits('500-ml'), '500-ml')
   })
 })
+
+describe('快速下單：有標籤、順序亂的訊息', () => {
+  test('實際案例：門市在最前面、帶地址，收件人與電話有標籤', () => {
+    const r = parseQuickOrder('7-11  科建門市　：　台北市大安區建國南路一段28、　30號\n收件人：　黃國榮\n電話：0938960511')
+    assert.equal(r.customer_name, '黃國榮')
+    assert.equal(r.phone, '0938960511')
+    assert.equal(r.store_query, '科建')
+    assert.equal(r.store_address, '台北市大安區建國南路一段28、 30號')
+    assert.deepEqual(r.items, [])
+    assert.ok(r.warnings.some(w => w.includes('手動加商品')))
+  })
+
+  test('同一行好幾個標籤', () => {
+    const r = parseQuickOrder('收件人：王小明 電話：0912-345-678 門市：慶平門市\n商品：葉黃素X2、紫蘇油1瓶')
+    assert.equal(r.customer_name, '王小明')
+    assert.equal(r.phone, '0912345678')
+    assert.equal(r.store_query, '慶平')
+    assert.deepEqual(r.items, [{ raw: '葉黃素', quantity: 2 }, { raw: '紫蘇油', quantity: 1 }])
+    assert.deepEqual(r.warnings, [])
+  })
+
+  test('標籤後面只有空白、店號寫 6 碼', () => {
+    const r = parseQuickOrder('姓名 林大華\n手機 0911222333\n取貨門市：123456\n紫蘇油X1')
+    assert.equal(r.customer_name, '林大華')
+    assert.equal(r.phone, '0911222333')
+    assert.equal(r.store_query, '123456')
+    assert.deepEqual(r.items, [{ raw: '紫蘇油', quantity: 1 }])
+  })
+
+  test('沒標籤但順序亂、夾著客套話：客套話丟掉，姓名要人確認', () => {
+    const r = parseQuickOrder('老師您好，我要訂\n葉黃素軟膠囊X2\n陳美玲\n0987654321\n7-11 松江門市')
+    assert.equal(r.customer_name, '陳美玲')
+    assert.equal(r.phone, '0987654321')
+    assert.equal(r.store_query, '松江')
+    assert.deepEqual(r.items, [{ raw: '葉黃素軟膠囊', quantity: 2 }])
+    assert.ok(r.warnings.some(w => w.includes('請確認')))
+  })
+
+  test('「○○門市」跟姓名、手機、商品在同一行', () => {
+    const r = parseQuickOrder('張三 0972720032 慶平門市 葉黃素X2')
+    assert.equal(r.customer_name, '張三')
+    assert.equal(r.store_query, '慶平')
+    assert.deepEqual(r.items, [{ raw: '葉黃素', quantity: 2 }])
+    assert.deepEqual(r.warnings, [])   // 姓名緊貼手機前面，不必再確認
+  })
+
+  test('「電話0938…」標籤黏著號碼、「寄到○○門市」', () => {
+    const r = parseQuickOrder('電話0938960511\n黃國榮\n寄到科建門市\n沙棘籽油x3')
+    assert.equal(r.phone, '0938960511')
+    assert.equal(r.customer_name, '黃國榮')
+    assert.equal(r.store_query, '科建')
+    assert.deepEqual(r.items, [{ raw: '沙棘籽油', quantity: 3 }])
+  })
+
+  test('沒有任何標籤時維持原本的固定順序解析', () => {
+    const r = parseQuickOrder('張三 0972720032 慶平 20mg 葉黃素軟膠囊X2')
+    assert.equal(r.store_query, '慶平')
+    assert.equal(r.store_address, '')
+    assert.deepEqual(r.items, [{ raw: '20mg 葉黃素軟膠囊', quantity: 2 }])
+  })
+
+  test('有標籤但缺手機：明確提醒，不硬猜', () => {
+    const r = parseQuickOrder('收件人：黃國榮\n門市：科建')
+    assert.equal(r.phone, '')
+    assert.ok(r.warnings.some(w => w.includes('找不到手機號碼')))
+  })
+})

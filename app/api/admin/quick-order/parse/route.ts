@@ -5,6 +5,7 @@ import { sanitizeOrderSearch } from '@/lib/adminOrderSearch'
 import { parseQuickOrder } from '@/lib/quickOrder/parse'
 import {
   matchVariants, matchStores, isConfident, stripStoreNoise,
+  rankStoresByAddress, matchStoresByAddress, extractRoad,
   MIN_AUTO_SCORE,
   type ProductRow, type StoreRow,
 } from '@/lib/quickOrder/match'
@@ -90,6 +91,20 @@ export async function POST(req: NextRequest) {
         .or(`store_name.ilike.%${keyword}%,store_code.eq.${/^\d+$/.test(keyword) ? keyword : '-1'}`)
         .limit(60)
       storeCandidates = matchStores(parsed.store_query, (stores || []) as StoreRow[], 8)
+      // 訊息有附門市地址時，同名門市裡地址對得上的排前面
+      if (parsed.store_address) storeCandidates = rankStoresByAddress(storeCandidates, parsed.store_address)
+    }
+  } else if (parsed.store_address) {
+    // 只有地址、沒有門市名稱：用路名找，再用門牌號碼挑
+    const road = sanitizeOrderSearch(extractRoad(parsed.store_address).road)
+    if (road) {
+      const { data: stores } = await supabaseAdmin
+        .from('stores_711')
+        .select('id, store_code, store_name, county, district, address')
+        .eq('is_active', true)
+        .ilike('address', `%${road}%`)
+        .limit(60)
+      storeCandidates = matchStoresByAddress(parsed.store_address, (stores || []) as StoreRow[], 8)
     }
   }
 
@@ -100,6 +115,8 @@ export async function POST(req: NextRequest) {
   const warnings = [...parsed.warnings]
   if (parsed.store_query && storeCandidates.length === 0) {
     warnings.push(`找不到門市「${parsed.store_query}」，請手動選擇`)
+  } else if (!parsed.store_query && parsed.store_address && storeCandidates.length === 0) {
+    warnings.push(`用地址「${parsed.store_address}」找不到門市，請手動選擇`)
   }
 
   return NextResponse.json({

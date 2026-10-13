@@ -300,9 +300,10 @@ export default function QuickOrderPage() {
           }}
         />
         <p className="text-[13px] text-gray-500 mt-2 leading-relaxed">
-          順序：<b>姓名 → 手機 → 門市 → 商品規格與數量</b>。
-          換行或空白分隔都可以，數量寫 <code className="font-mono">X2</code> 或
-          <code className="font-mono"> 2瓶</code>。
+          從 Line 直接整段貼上即可：有「收件人：」「電話：」「○○門市」這類標示的，
+          <b>順序不拘</b>，門市後面附的地址會用來挑對門市。
+          沒有標示時請照 <b>姓名 → 手機 → 門市 → 商品</b> 的順序。
+          數量寫 <code className="font-mono">X2</code> 或<code className="font-mono"> 2瓶</code>。
         </p>
         <div className="flex gap-2 mt-3">
           <button onClick={doParse} disabled={parsing}

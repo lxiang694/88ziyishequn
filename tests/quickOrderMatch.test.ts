@@ -170,3 +170,42 @@ describe('快速下單：相似度', () => {
     assert.equal(similarity('20mg葉黃素', '20MG 葉黃素'), 1)
   })
 })
+
+import { extractRoad, rankStoresByAddress, matchStoresByAddress, normalizeAddress } from '../lib/quickOrder/match.ts'
+
+describe('快速下單：用門市地址挑門市', () => {
+  test('從地址取路名、段與門牌號碼', () => {
+    assert.deepEqual(extractRoad('台北市大安區建國南路一段28、 30號'), { road: '建國南路一段', number: '28' })
+    assert.deepEqual(extractRoad('臺中市西屯區臺灣大道三段99號'), { road: '台灣大道三段', number: '99' })
+    assert.deepEqual(extractRoad('新北市板橋區文化路一段188巷44號'), { road: '文化路一段', number: '44' })
+    assert.deepEqual(extractRoad('沒有地址'), { road: '', number: '' })
+  })
+
+  test('臺／台、空白、全形數字都視為相同', () => {
+    assert.equal(normalizeAddress('臺北市 大安區 建國南路一段２８號'), '台北市大安區建國南路一段28號')
+  })
+
+  const stores = [
+    { id: 1, store_code: '111111', store_name: '中山', county: '台北市', district: '中山區', address: '台北市中山區中山北路二段10號' },
+    { id: 2, store_code: '222222', store_name: '中山', county: '台中市', district: '西區', address: '台中市西區中山路100號' },
+    { id: 3, store_code: '333333', store_name: '科建', county: '台北市', district: '大安區', address: '臺北市大安區建國南路一段28號30號' },
+    { id: 4, store_code: '444444', store_name: '建南', county: '台北市', district: '大安區', address: '台北市大安區建國南路一段150號' },
+  ]
+
+  test('同名門市：地址對得上的排第一', () => {
+    const ranked = rankStoresByAddress(stores.slice(0, 2).map(s => ({ ...s, score: 1 })), '台中市西區中山路100號')
+    assert.equal(ranked[0].id, 2)
+    assert.ok(ranked[0].score > ranked[1].score)
+  })
+
+  test('只有地址：同一條路上用門牌號碼挑出那一家', () => {
+    const found = matchStoresByAddress('台北市大安區建國南路一段28、30號', stores)
+    assert.equal(found[0].id, 3)
+    assert.ok(!found.some(s => s.id === 4))   // 同一條路但門牌不同，不列為候選
+  })
+
+  test('地址沒有路名時不亂排', () => {
+    const c = stores.map(s => ({ ...s, score: 0.5 }))
+    assert.deepEqual(rankStoresByAddress(c, '台北市').map(s => s.id), c.map(s => s.id))
+  })
+})

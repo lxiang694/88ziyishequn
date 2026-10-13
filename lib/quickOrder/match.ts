@@ -195,3 +195,60 @@ export function matchStores(
     .sort((a, b) => b.score - a.score || a.store_name.localeCompare(b.store_name))
     .slice(0, limit)
 }
+
+// ── 用門市地址挑門市 ─────────────────────────────────────
+
+/**
+ * 地址比對前的整理：臺→台、去掉空白與括號、全形數字轉半形。
+ * 「、」「，」換成統一的「、」而不是刪掉 —— 刪掉的話「28、30號」會黏成「2830號」。
+ */
+export function normalizeAddress(input: string): string {
+  return (input || '')
+    .replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+    .replace(/臺/g, '台')
+    .replace(/[,，]/g, '、')
+    .replace(/[\s.。()（）]/g, '')
+}
+
+/**
+ * 從地址取出「路名＋段」與門牌號碼，例如
+ * 「台北市大安區建國南路一段28、30號」→ { road: '建國南路一段', number: '28' }。
+ * 用路名搜尋，門牌號碼用來在同一條路上的好幾家門市中挑對的。
+ */
+export function extractRoad(address: string): { road: string; number: string } {
+  const a = normalizeAddress(address).replace(/^.{1,3}[縣市](?:.{1,4}?[區鄉鎮市])?/, '')
+  const m = /([^\d]{1,8}?(?:路|街|大道))([一二三四五六七八九十]+段)?/.exec(a)
+  if (!m) return { road: '', number: '' }
+  const road = m[1].replace(/^.*?[里村鄰]/, '') + (m[2] || '')
+  const after = a.slice(m.index + m[0].length)
+  const num = /(\d+)(?:[-之]\d+)?號?/.exec(after.replace(/^\d+巷|^\d+弄/g, ''))
+  return { road, number: num ? num[1] : '' }
+}
+
+/**
+ * 訊息裡有附門市地址時，把地址對得上的候選往前排。
+ * 例如全台有好幾家「中山」門市，客人的訊息又寫了地址，就能挑對那一家。
+ */
+export function rankStoresByAddress<T extends StoreRow & { score: number }>(candidates: T[], address: string): T[] {
+  const { road, number } = extractRoad(address)
+  if (!road) return candidates
+  return candidates
+    .map(c => {
+      const ca = normalizeAddress(c.address)
+      let bonus = 0
+      if (ca.includes(road)) bonus += 0.1
+      if (ca.includes(road) && number && new RegExp(`${road.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\d+巷)?(?:\\d+弄)?${number}(?!\\d)`).test(ca)) bonus += 0.1
+      return { ...c, score: c.score + bonus }
+    })
+    .sort((a, b) => b.score - a.score || a.store_name.localeCompare(b.store_name))
+}
+
+/** 訊息只有門市地址、沒有門市名稱時：用地址替門市打分數 */
+export function matchStoresByAddress(address: string, stores: readonly StoreRow[], limit = 8): StoreCandidate[] {
+  const { road, number } = extractRoad(address)
+  if (!road) return []
+  return rankStoresByAddress(
+    stores.filter(s => normalizeAddress(s.address).includes(road)).map(s => ({ ...s, score: 0.7 })),
+    address,
+  ).filter(s => s.score >= 0.8 || !number).slice(0, limit)
+}
