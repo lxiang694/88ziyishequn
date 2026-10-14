@@ -107,12 +107,13 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
       </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 mb-10">
-        {/* Images —— 手機用 4:3 並完整顯示商品（多半是白底瓶身照，四周本來就是留白），
-            比正方形矮約四分之一，價格與規格才擠得進第一個畫面 */}
+        {/* Images —— 正方形。商品圖幾乎都是正方形的宣傳圖，容器改成 4:3 時左右會多出
+            兩條白邊，看起來很空。購買按鈕已經固定在畫面底部，不必再壓縮圖片高度。
+            object-contain：少數非正方形的圖完整顯示，不裁掉圖上的文字。 */}
         <div>
-          <div className="aspect-[4/3] md:aspect-square bg-white rounded-2xl overflow-hidden relative mb-3 shadow-sm">
+          <div className="aspect-square bg-white rounded-2xl overflow-hidden relative mb-3 shadow-sm">
             {activeImage ? (
-              <Image src={activeImage} alt={product.product_name} fill className="object-contain md:object-cover"
+              <Image src={activeImage} alt={product.product_name} fill className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw" priority />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-7xl text-gray-200">💊</div>
