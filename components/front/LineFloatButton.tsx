@@ -26,8 +26,12 @@ export default function LineFloatButton() {
 
   // 購物車 / 結帳頁底部有固定結帳條 → 手機時把浮鈕升到結帳條上方，避免遮住主要按鈕
   const hasBottomBar = pathname === '/cart' || pathname === '/checkout'
+  // 商品頁底部是固定購買列（約 100px 高），浮鈕升到它上方
+  const onProductPage = pathname.startsWith('/products/')
   const mobileBottom = hasBottomBar
     ? 'bottom-[calc(210px+env(safe-area-inset-bottom))]'
+    : onProductPage
+    ? 'bottom-[calc(116px+env(safe-area-inset-bottom))]'
     : 'bottom-[calc(72px+env(safe-area-inset-bottom))]'
 
   return (

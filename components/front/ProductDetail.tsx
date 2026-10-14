@@ -57,7 +57,7 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
   relatedArticles?: ScoredArticle[]
 }) {
   const router = useRouter()
-  const { addItem } = useCart()
+  const { addItem, totalItems } = useCart()
 
   const firstAvailable = product.product_variants?.find(v => v.is_active && v.stock_qty > 0)
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
@@ -98,20 +98,21 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-5">
+    <div className="max-w-5xl mx-auto px-4 pt-14 pb-6 md:py-6">
+      {/* Breadcrumb —— 手機上有浮動的「上一頁／首頁」，不再多佔一行 */}
+      <nav className="hidden md:flex items-center gap-2 text-sm text-gray-500 mb-5">
         <Link href="/" className="hover:text-green-700 transition-colors">首頁</Link>
         <span>›</span>
         <span className="text-gray-700 line-clamp-1">{product.product_name}</span>
       </nav>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        {/* Images */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 mb-10">
+        {/* Images —— 手機用 4:3 並完整顯示商品（多半是白底瓶身照，四周本來就是留白），
+            比正方形矮約四分之一，價格與規格才擠得進第一個畫面 */}
         <div>
-          <div className="aspect-square bg-gray-100 rounded-2xl overflow-hidden relative mb-3 shadow-sm">
+          <div className="aspect-[4/3] md:aspect-square bg-white rounded-2xl overflow-hidden relative mb-3 shadow-sm">
             {activeImage ? (
-              <Image src={activeImage} alt={product.product_name} fill className="object-cover"
+              <Image src={activeImage} alt={product.product_name} fill className="object-contain md:object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw" priority />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-7xl text-gray-200">💊</div>
@@ -130,17 +131,10 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
           )}
         </div>
 
-        {/* Product info */}
+        {/* Product info —— 先給買東西需要的：名稱、價格、規格、數量、按鈕；
+            介紹與分類標籤放在按鈕後面 */}
         <div className="flex flex-col">
-          <div className="flex flex-wrap gap-2 mb-3">
-            {cats.map((cat: any) => (
-              <span key={cat.id} className="text-sm bg-green-50 text-green-700 px-3 py-1 rounded-full font-semibold border border-green-100">
-                {cat.name}
-              </span>
-            ))}
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 leading-snug">{product.product_name}</h1>
+          <h1 className="text-[22px] sm:text-3xl font-bold text-gray-900 mb-2 leading-snug">{product.product_name}</h1>
 
           {/*
             預售商品的出貨時間跟一般商品不同。從首頁或搜尋進到這一頁的人
@@ -158,25 +152,9 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
               </Link>
             </div>
           )}
-          {product.short_intro && (
-            <p className="text-gray-600 text-base leading-relaxed mb-4 bg-gray-50 rounded-xl p-3 border border-gray-100">
-              {product.short_intro}
-            </p>
-          )}
-
-          {/* Sales count — social proof, only if >= 5 */}
-          {(product.sales_count || 0) >= 5 && (
-            <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 text-orange-700 px-3 py-2 rounded-xl mb-4 text-sm font-bold">
-              <span className="text-lg leading-none">🔥</span>
-              <span>
-                {(product.sales_count || 0) >= 100 ? '熱銷商品 · ' : ''}
-                已售出 <span className="text-orange-800 text-base">{product.sales_count}</span> 件
-              </span>
-            </div>
-          )}
 
           {selectedVariant && (
-            <div className="flex items-baseline gap-3 mb-5">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
               <span className="text-3xl font-bold text-green-700">{formatPrice(selectedVariant.sale_price)}</span>
               {selectedVariant.original_price && selectedVariant.original_price > selectedVariant.sale_price && (
                 <>
@@ -186,11 +164,17 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
                   </span>
                 </>
               )}
+              {/* 已售數量 —— 社會證明，滿 5 件才顯示，跟價格放同一行省一整列 */}
+              {(product.sales_count || 0) >= 5 && (
+                <span className="text-sm font-bold text-orange-700">
+                  🔥 {(product.sales_count || 0) >= 100 ? '熱銷・' : ''}已售 {product.sales_count} 件
+                </span>
+              )}
             </div>
           )}
 
           {product.product_variants?.length > 0 && (
-            <div className="mb-5">
+            <div id="variant-picker" className="mb-5 scroll-mt-24">
               <p className="text-sm font-bold text-gray-700 mb-2">選擇規格</p>
               <div className="flex flex-wrap gap-2">
                 {product.product_variants.filter(v => v.is_active).map(v => {
@@ -231,7 +215,7 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="hidden md:flex flex-row gap-3">
             <button onClick={handleAddToCart} disabled={!inStock}
               className="flex-1 border-2 border-green-700 text-green-700 hover:bg-green-700 hover:text-white font-bold py-3.5 rounded-xl text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
               {inStock ? '加入購物車' : '已售完'}
@@ -241,6 +225,21 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
               {inStock ? '立即購買' : '已售完'}
             </button>
           </div>
+
+          {product.short_intro && (
+            <p className="text-gray-600 text-base leading-relaxed mt-1 md:mt-5 bg-gray-50 rounded-xl p-3 border border-gray-100">
+              {product.short_intro}
+            </p>
+          )}
+          {cats.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {cats.map((cat: any) => (
+                <span key={cat.id} className="text-[13px] bg-green-50 text-green-700 px-2.5 py-0.5 rounded-full font-semibold border border-green-100">
+                  {cat.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -374,6 +373,52 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
         subtext="覺得不錯的話，傳給可能用得上的人"
         theme="green"
       />
+
+      {/* 底部固定購買列的墊片：FrontShell 已經墊了導覽列的 60px，這裡補上購買列多出來的高度 */}
+      <div className="md:hidden h-12" aria-hidden />
+
+      {/*
+        手機底部固定購買列。商品頁打開時，購買按鈕原本要往下捲過圖片、介紹、
+        規格才看得到；改成一直固定在畫面底部，任何位置都能直接買。
+        這一頁的底部導覽列（MobileBottomNav）會讓位給它。
+        上面一行寫出目前選的規格與價格，避免客人沒注意就買到預設規格。
+      */}
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white px-3 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
+        style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+        {selectedVariant && (
+          <div className="mb-1.5 flex items-center justify-between gap-2 text-[13px]">
+            <span className="min-w-0 truncate text-gray-600">
+              已選：<b className="text-gray-800">{selectedVariant.variant_name}</b>{qty > 1 && <> × {qty}</>}
+            </span>
+            <span className="flex flex-shrink-0 items-center gap-2">
+              <b className="text-base text-green-700">{formatPrice(selectedVariant.sale_price * qty)}</b>
+              {product.product_variants.filter(v => v.is_active).length > 1 && (
+                <button type="button" className="font-bold text-green-700 underline underline-offset-2"
+                  onClick={() => document.getElementById('variant-picker')?.scrollIntoView({ behavior: 'smooth' })}>
+                  更換規格
+                </button>
+              )}
+            </span>
+          </div>
+        )}
+        <div className="flex items-stretch gap-2">
+          <Link href="/cart" aria-label="購物車"
+            className="relative flex w-12 flex-shrink-0 flex-col items-center justify-center rounded-xl border border-gray-200 text-gray-600">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+            {totalItems > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[12px] font-bold text-white">{totalItems > 9 ? '9+' : totalItems}</span>
+            )}
+          </Link>
+          <button onClick={handleAddToCart} disabled={!inStock}
+            className="min-h-[48px] flex-1 rounded-xl border-2 border-green-700 text-[15px] font-bold text-green-700 active:bg-green-50 disabled:opacity-40">
+            {inStock ? '加入購物車' : '已售完'}
+          </button>
+          <button onClick={handleBuyNow} disabled={!inStock}
+            className="min-h-[48px] flex-1 rounded-xl bg-green-700 text-[15px] font-bold text-white active:bg-green-800 disabled:opacity-40">
+            {inStock ? '立即購買' : '已售完'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
