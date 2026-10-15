@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * 新增檔期。body.copy_from = 檔期 id 時，複製那一檔（含上架中的商品）到下個月：
- * 開團、截單時間各往後一個月，設成草稿，網址代稱用新的開團月份。
+ * 開團、截單時間各往後一個月，先維持關閉，網址代稱用新的開團月份。
  */
 export async function POST(req: NextRequest) {
   const auth = authorizeGroupBuy(req)
@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
   if (error) {
     if (error.code === '23505') return NextResponse.json({ success: false, error: '網址代稱已被其他檔期使用' }, { status: 400 })
     if (missingTable(error.code)) return NextResponse.json({ success: false, error: '請先執行 migrations/group_buy_schema.sql' }, { status: 400 })
+    if (error.code === 'PGRST204') return NextResponse.json({ success: false, error: '資料庫還沒更新：請先在 Supabase SQL Editor 執行 migrations/group_buy_711_normal.sql' }, { status: 400 })
     return NextResponse.json({ success: false, error: '新增檔期失敗' }, { status: 500 })
   }
   await writeAuditLog(req, auth.admin, 'group_buy.create', value.slug)

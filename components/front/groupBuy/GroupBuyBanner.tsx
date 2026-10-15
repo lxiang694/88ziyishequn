@@ -18,8 +18,8 @@ function remaining(ms: number) {
  *
  * 用網站主色的深綠底、白字置中，在米色底的首頁上一眼就看得到，但仍是同一套
  * 顏色，不會像外掛廣告。狀態（開團中剩幾天／幾號開團）在客人手機上即時算，
- * 首頁快取 60 秒也不會顯示過期的倒數。沒有任何檔期時仍顯示，點進去是
- * 「目前沒有開團、加 LINE 收通知」。
+ * 首頁快取 60 秒也不會顯示過期的倒數。後台把團購關閉（沒有任何開啟中的檔期）
+ * 時整條不顯示。
  */
 export default function GroupBuyBanner({ campaign }: { campaign: CampaignTeaser | null }) {
   const [now, setNow] = useState<Date | null>(null)
@@ -29,9 +29,9 @@ export default function GroupBuyBanner({ campaign }: { campaign: CampaignTeaser 
     return () => clearInterval(t)
   }, [])
 
-  const phase = campaign && now ? campaignPhase(campaign, now) : null
-  const status = !campaign ? '限時開團・截單後統一出貨'
-    : phase === 'open' ? `🔥 開團中・${remaining(new Date(campaign.ends_at).getTime() - now!.getTime())}`
+  if (!campaign) return null
+  const phase = now ? campaignPhase(campaign, now) : null
+  const status = phase === 'open' ? `🔥 開團中・${remaining(new Date(campaign.ends_at).getTime() - now!.getTime())}`
     : phase === 'upcoming' ? `⏰ ${formatTwDateTime(campaign.starts_at)} 開團`
     : phase === 'closed' ? '本期已截單・下期開團 LINE 通知'
     : '限時開團・截單後統一出貨'
@@ -49,7 +49,7 @@ export default function GroupBuyBanner({ campaign }: { campaign: CampaignTeaser 
       </span>
       <p className="mt-2 text-[28px] font-extrabold leading-tight tracking-[0.2em]">每月團購</p>
       <p className="mt-1 line-clamp-1 text-[15px] text-green-50/90">
-        {campaign ? campaign.title : '品牌直送好物・一個月開一次'}
+        {campaign.title}
       </p>
       <span className="mt-3 inline-flex min-h-[40px] items-center gap-1 rounded-full bg-white px-5 text-[15px] font-bold text-green-800 shadow-sm transition-colors group-hover:bg-green-50">
         {cta} <span aria-hidden>→</span>

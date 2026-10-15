@@ -30,13 +30,24 @@ export default function GroupBuyAdminPage() {
   useEffect(() => { load() }, [load])
 
   const copy = async (row: Row) => {
-    if (!confirm(`把「${row.title}」複製成下個月的檔期？\n\n會一起複製上架中的商品，時間各往後一個月，先存成草稿。`)) return
+    if (!confirm(`把「${row.title}」複製成下個月的檔期？\n\n會一起複製上架中的商品，時間各往後一個月，先維持關閉，確認好再開啟。`)) return
     setBusy(true)
     const d = await (await fetch('/api/admin/group-buy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ copy_from: row.id }) })).json()
     setBusy(false)
     if (!d.success) return toast.error(d.error || '複製失敗')
-    toast.success('已複製，請確認日期與價格後發布')
+    toast.success('已複製，請確認日期與價格後開啟')
     router.push(`/admin/group-buy/${d.data.id}`)
+  }
+
+  const toggle = async (row: Row) => {
+    const open = !row.is_published
+    if (!open && !confirm(`關閉「${row.title}」？\n\n關閉後前台看不到這一檔（首頁入口也會收起來），已成立的訂單不受影響，之後可以隨時再開啟。`)) return
+    setBusy(true)
+    const d = await (await fetch(`/api/admin/group-buy/${row.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_published: open }) })).json()
+    setBusy(false)
+    if (!d.success) return toast.error(d.error || '更新失敗')
+    toast.success(open ? '已開啟，前台約 1 分鐘內看得到' : '已關閉，前台不再顯示')
+    setRows(rs => rs.map(x => x.id === row.id ? { ...x, is_published: open } : x))
   }
 
   const now = new Date()
@@ -72,7 +83,15 @@ export default function GroupBuyAdminPage() {
                     <p className="mt-1 text-sm text-gray-600">{formatTwDateTime(r.starts_at)} 開團 ～ {formatTwDateTime(r.ends_at)} 截單</p>
                     <p className="mt-0.5 text-sm text-gray-600">訂單 <b>{r.orders}</b> 筆・金額 <b>${r.revenue.toLocaleString('zh-TW')}</b>（不含已取消）</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* 開關：隨時開啟／關閉，前台立即跟著出現／消失 */}
+                    <button type="button" role="switch" aria-checked={r.is_published} disabled={busy} onClick={() => toggle(r)}
+                      className={`flex min-h-[40px] items-center gap-2 rounded-full border px-3 text-sm font-bold disabled:opacity-40 ${r.is_published ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-300 bg-gray-50 text-gray-600'}`}>
+                      <span className={`relative inline-block h-6 w-11 rounded-full transition-colors ${r.is_published ? 'bg-green-600' : 'bg-gray-300'}`}>
+                        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${r.is_published ? 'left-[22px]' : 'left-0.5'}`} />
+                      </span>
+                      {r.is_published ? '開啟中' : '已關閉'}
+                    </button>
                     <Link href={`/admin/group-buy/${r.id}/orders`} className="rounded-lg bg-green-700 px-3 py-2 text-sm font-bold text-white">訂單與叫貨</Link>
                     <Link href={`/admin/group-buy/${r.id}`} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold">編輯檔期與商品</Link>
                     <button disabled={busy} onClick={() => copy(r)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold disabled:opacity-40">複製成下個月</button>

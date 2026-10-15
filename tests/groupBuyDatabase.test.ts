@@ -35,6 +35,10 @@ describe('團購下單（place_group_buy_order）', () => {
     const sql = await readFile(new URL('../migrations/group_buy_schema.sql', import.meta.url), 'utf8')
     await db.exec(sql)
     await db.exec(sql) // 可重複執行
+    // 7-11 常溫取貨（後加的遷移，同樣可重複執行）
+    const normal = await readFile(new URL('../migrations/group_buy_711_normal.sql', import.meta.url), 'utf8')
+    await db.exec(normal)
+    await db.exec(normal)
     await db.exec(`
       INSERT INTO group_buy_campaigns (slug, title, starts_at, ends_at, ship_711_enabled, ship_home_enabled, fee_711, fee_home, free_shipping_threshold, is_published)
       VALUES ('2026-11', '11 月團購', now() - interval '1 day', now() + interval '5 days', true, true, 150, 230, 3000, true),
@@ -49,6 +53,7 @@ describe('團購下單（place_group_buy_order）', () => {
         (2, '別檔商品', '', 500, NULL, NULL, NULL);
       INSERT INTO group_buy_items (campaign_id, name, price, is_active) VALUES (1, '已下架', 300, false);
     `)
+    await db.exec(`UPDATE group_buy_campaigns SET ship_711_normal_enabled = true, fee_711_normal = 80 WHERE slug = '2026-11'`)
   })
 
   test('7-11 取貨：金額在資料庫算，門市資料快照下來', async () => {
@@ -67,6 +72,20 @@ describe('團購下單（place_group_buy_order）', () => {
     assert.deepEqual([home.shipping_fee, home.total_amount], [230, 2790])
     const o = (await db.query<any>(`SELECT home_address, delivery_time, store_id FROM group_buy_orders WHERE order_no = $1`, [home.order_no])).rows[0]
     assert.deepEqual(o, { home_address: '台北市大安區建國南路一段28號', delivery_time: '13點前', store_id: null })
+  })
+
+  test('7-11 常溫取貨：自己的運費、要選門市、沒開放就擋下', async () => {
+    const r = await place({ method: '711_normal', items: [{ item_id: 1, quantity: 1 }] })
+    assert.deepEqual([r.shipping_fee, r.total_amount], [80, 1360])
+    const o = (await db.query<any>(`SELECT shipping_method, store_code FROM group_buy_orders WHERE order_no = $1`, [r.order_no])).rows[0]
+    assert.deepEqual(o, { shipping_method: '711_normal', store_code: '293116' })
+    await rejects({ method: '711_normal', store: null }, /重新選擇 7-11 門市/)
+    await rejects({ slug: '711only', method: '711_normal' }, /沒有開放 7-11 常溫/)
+    // 資料庫層也擋：常溫取貨一定要有門市
+    await assert.rejects(db.query(`INSERT INTO group_buy_orders (order_no, campaign_id, customer_name, phone, shipping_method, subtotal, shipping_fee, total_amount)
+      VALUES ('GB20261101999999', 1, 'x', '0912345678', '711_normal', 100, 0, 100)`))
+    // 三種都關掉不行
+    await assert.rejects(db.query(`UPDATE group_buy_campaigns SET ship_711_enabled = false, ship_711_normal_enabled = false, ship_home_enabled = false WHERE slug = '711only'`))
   })
 
   test('時間與發布狀態：沒開始、已截單、草稿都不能下單', async () => {

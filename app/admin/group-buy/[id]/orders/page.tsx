@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { csvCell, csvDigits, formatTwDateTime, ORDER_STATUSES, SHIPPING_LABEL, supplierSummary, type ShippingMethod } from '@/lib/groupBuy/domain'
+import { csvCell, csvDigits, formatTwDateTime, isStorePickup, ORDER_STATUSES, SHIPPING_LABEL, SHIPPING_METHODS, SHIPPING_SHORT, supplierSummary, type ShippingMethod } from '@/lib/groupBuy/domain'
 
 type OrderItem = { item_id: number; name_snapshot: string; spec_snapshot: string; unit_price: number; quantity: number; subtotal: number }
 type Order = {
@@ -76,8 +76,8 @@ export default function GroupBuyOrdersPage({ params }: { params: { id: string } 
     download(`團購訂單_${campaign?.slug}.csv`, rows)
   }
   const exportSummary = () => {
-    const rows = [['商品', '規格', '總數量', '7-11', '宅配', '商品金額']]
-    for (const r of summary.items) rows.push([csvCell(r.name), csvCell(r.spec), String(r.quantity), String(r.qty711), String(r.qtyHome), String(r.amount)])
+    const rows = [['商品', '規格', '總數量', ...SHIPPING_METHODS.map(m => SHIPPING_SHORT[m]), '商品金額']]
+    for (const r of summary.items) rows.push([csvCell(r.name), csvCell(r.spec), String(r.quantity), ...SHIPPING_METHODS.map(m => String(r.byMethod[m])), String(r.amount)])
     download(`叫貨匯總_${campaign?.slug}.csv`, rows)
   }
   const copySummary = async () => {
@@ -106,17 +106,17 @@ export default function GroupBuyOrdersPage({ params }: { params: { id: string } 
         <p className="mt-1 text-sm text-gray-600">共 <b>{summary.orderCount}</b> 筆訂單・應收合計 <b>{money(summary.revenue)}</b></p>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b text-left text-gray-600 [&>th]:whitespace-nowrap"><th className="py-2">商品</th><th className="py-2 pl-3 text-right">數量</th><th className="py-2 pl-3 text-right">7-11</th><th className="py-2 pl-3 text-right">宅配</th><th className="hidden py-2 pl-3 text-right sm:table-cell">金額</th></tr></thead>
+            <thead><tr className="border-b text-left text-gray-600 [&>th]:whitespace-nowrap"><th className="py-2">商品</th><th className="py-2 pl-3 text-right">數量</th>{SHIPPING_METHODS.map(m => <th key={m} className="py-2 pl-3 text-right">{SHIPPING_SHORT[m]}</th>)}<th className="hidden py-2 pl-3 text-right sm:table-cell">金額</th></tr></thead>
             <tbody>
               {summary.items.map(r => (
                 <tr key={r.item_id} className="border-b last:border-0">
                   <td className="py-2 font-semibold">{r.name}{r.spec && <span className="ml-1 font-normal text-gray-500">{r.spec}</span>}</td>
                   <td className="py-2 pl-3 text-right text-lg font-bold">{r.quantity}</td>
-                  <td className="py-2 pl-3 text-right">{r.qty711}</td><td className="py-2 pl-3 text-right">{r.qtyHome}</td>
+                  {SHIPPING_METHODS.map(m => <td key={m} className="py-2 pl-3 text-right">{r.byMethod[m] || <span className="text-gray-300">0</span>}</td>)}
                   <td className="hidden whitespace-nowrap py-2 pl-3 text-right sm:table-cell">{money(r.amount)}</td>
                 </tr>
               ))}
-              {!summary.items.length && <tr><td colSpan={5} className="py-6 text-center text-gray-500">還沒有訂單</td></tr>}
+              {!summary.items.length && <tr><td colSpan={6} className="py-6 text-center text-gray-500">還沒有訂單</td></tr>}
             </tbody>
           </table>
         </div>
@@ -130,7 +130,7 @@ export default function GroupBuyOrdersPage({ params }: { params: { id: string } 
             <option value="">全部狀態</option>{ORDER_STATUSES.map(s => <option key={s}>{s}</option>)}
           </select>
           <select className="rounded-lg border px-3 py-2" value={method} onChange={e => setMethod(e.target.value)}>
-            <option value="">全部取貨方式</option><option value="711">7-11 取貨</option><option value="home">黑貓宅配</option>
+            <option value="">全部取貨方式</option>{SHIPPING_METHODS.map(m => <option key={m} value={m}>{SHIPPING_SHORT[m]}</option>)}
           </select>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -161,8 +161,8 @@ export default function GroupBuyOrdersPage({ params }: { params: { id: string } 
               </div>
               <p className="mt-1 text-[15px]"><b>{o.customer_name}</b> · <span className="font-mono">{o.phone}</span></p>
               <p className="mt-0.5 text-sm text-gray-700">
-                {o.shipping_method === '711'
-                  ? <>🏪 7-11 {o.store_name}門市（{o.store_code}）<span className="text-gray-500"> {o.store_address}</span></>
+                {isStorePickup(o.shipping_method)
+                  ? <>🏪 {SHIPPING_SHORT[o.shipping_method]}・{o.store_name}門市（{o.store_code}）<span className="text-gray-500"> {o.store_address}</span></>
                   : <>🚚 黑貓宅配：{o.home_address}<span className="text-gray-500">（{o.delivery_time}）</span></>}
               </p>
               <p className="mt-1 text-sm text-gray-600">{o.items.map(i => `${i.name_snapshot}${i.spec_snapshot ? `（${i.spec_snapshot}）` : ''} ×${i.quantity}`).join('、')}</p>

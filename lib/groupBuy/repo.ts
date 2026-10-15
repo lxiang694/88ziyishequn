@@ -3,7 +3,9 @@ import { campaignPhase, type Campaign, type Item } from './domain'
 
 type Db = typeof supabaseAdmin
 
-const CAMPAIGN_COLUMNS = 'id, slug, title, subtitle, description, cover_image_url, starts_at, ends_at, ship_note, ship_711_enabled, ship_home_enabled, fee_711, fee_home, free_shipping_threshold, is_published'
+// 用 *：檔期表沒有敏感欄位，而且新增欄位（例如 7-11 常溫）的 SQL 還沒執行時，
+// 前台照樣能顯示，不會因為選了不存在的欄位整頁 404
+const CAMPAIGN_COLUMNS = '*'
 const ITEM_COLUMNS = 'id, campaign_id, name, spec, description, image_url, price, original_price, per_person_limit, total_quota, sort_order, is_active'
 
 export type PublicItem = Item & { sold: number; remaining: number | null }

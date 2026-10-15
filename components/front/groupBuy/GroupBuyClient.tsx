@@ -6,7 +6,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import StorePickerModal, { type Store } from '@/components/front/StorePickerModal'
 import {
-  campaignPhase, checkoutProblem, enabledMethods, formatTwDateTime, shippingFee,
+  campaignPhase, checkoutProblem, enabledMethods, formatTwDateTime, isStorePickup, methodFee, shippingFee,
   DELIVERY_TIMES, SHIPPING_LABEL, type ShippingMethod,
 } from '@/lib/groupBuy/domain'
 import type { PublicCampaign, PublicItem } from '@/lib/groupBuy/repo'
@@ -101,7 +101,7 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
           <ul className="mt-4 space-y-1.5 text-[15px] text-gray-700">
             {campaign.ship_note && <li>📦 {campaign.ship_note}</li>}
             {methods.map(m => (
-              <li key={m}>🧊 {SHIPPING_LABEL[m]}，運費 {money(m === '711' ? campaign.fee_711 : campaign.fee_home)}</li>
+              <li key={m}>{m === '711_normal' ? '🏪' : '🧊'} {SHIPPING_LABEL[m]}，運費 {money(methodFee(campaign, m))}</li>
             ))}
             {campaign.free_shipping_threshold != null && <li>🎁 滿 {money(campaign.free_shipping_threshold)} 免運</li>}
             {buyers >= 3 && <li className="font-bold text-red-600">👥 已有 {buyers} 人跟團</li>}
@@ -191,7 +191,7 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
           <div><dt className="font-bold text-gray-800">什麼時候出貨？</dt>
             <dd className="text-gray-600">{formatTwDateTime(campaign.ends_at)} 截單後統一向品牌叫貨，到貨後依序出貨。{campaign.ship_note}</dd></div>
           <div><dt className="font-bold text-gray-800">怎麼付款？</dt>
-            <dd className="text-gray-600">{methods.includes('711') && '7-11 取貨時付款'}{methods.length > 1 && '；'}{methods.includes('home') && '黑貓宅配到府時付款（貨到付款）'}。不需要先轉帳。</dd></div>
+            <dd className="text-gray-600">{[methods.some(isStorePickup) && '7-11 取貨時付款', methods.includes('home') && '黑貓宅配到府時付款（貨到付款）'].filter(Boolean).join('；')}。不需要先轉帳。</dd></div>
           <div><dt className="font-bold text-gray-800">冷凍商品要注意什麼？</dt>
             <dd className="text-gray-600">收到通知請盡快取貨或在家收件，取回後立即冷凍保存。</dd></div>
           <div><dt className="font-bold text-gray-800">想取消或修改訂單？</dt>
@@ -268,7 +268,7 @@ function CheckoutSheet({ campaign, lines, subtotal, methods, onClose, onPlaced }
   const fee = shippingFee(campaign, method, subtotal)
   const input = useMemo(() => ({
     customer_name: name, phone: phone.replace(/[\s-]/g, ''), shipping_method: method,
-    store_id: method === '711' ? store?.id ?? null : null,
+    store_id: isStorePickup(method) ? store?.id ?? null : null,
     home_address: address, delivery_time: deliveryTime, note,
     items: lines.map(l => ({ item_id: l.item.id, quantity: l.quantity })),
   }), [name, phone, method, store, address, deliveryTime, note, lines])
@@ -318,14 +318,14 @@ function CheckoutSheet({ campaign, lines, subtotal, methods, onClose, onPlaced }
                 <input type="radio" name="method" checked={method === m} onChange={() => setMethod(m)} className="h-5 w-5 accent-green-700" />
                 <span className="flex-1">
                   <span className="block font-bold text-gray-900">{SHIPPING_LABEL[m]}</span>
-                  <span className="text-[13px] text-gray-600">運費 {money(shippingFee(campaign, m, subtotal))}{m === '711' ? '・取貨時付款' : '・送達時付款'}</span>
+                  <span className="text-[13px] text-gray-600">運費 {money(shippingFee(campaign, m, subtotal))}{isStorePickup(m) ? '・取貨時付款' : '・送達時付款'}</span>
                 </span>
               </label>
             ))}
           </div>
         </fieldset>
 
-        {method === '711' ? (
+        {isStorePickup(method) ? (
           <div className="mt-4">
             <p className="font-bold text-gray-800">取貨門市</p>
             <button onClick={() => setPicking(true)}
@@ -360,7 +360,7 @@ function CheckoutSheet({ campaign, lines, subtotal, methods, onClose, onPlaced }
             </div>
           ))}
           <div className="mt-2 flex justify-between border-t border-line pt-2 text-gray-600"><span>運費</span><span className="tabular-nums">{money(fee)}</span></div>
-          <div className="mt-1 flex justify-between text-lg font-bold"><span>{method === '711' ? '取貨時付款' : '送達時付款'}</span><span className="text-red-600 tabular-nums">{money(subtotal + fee)}</span></div>
+          <div className="mt-1 flex justify-between text-lg font-bold"><span>{isStorePickup(method) ? '取貨時付款' : '送達時付款'}</span><span className="text-red-600 tabular-nums">{money(subtotal + fee)}</span></div>
         </div>
 
         {error && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 font-semibold text-red-700">{error}</p>}
@@ -387,10 +387,10 @@ function OrderPlaced({ placed, campaign }: {
       <div className="mt-5 rounded-3xl bg-white p-5 text-left shadow-sm">
         <p className="text-[15px] text-gray-600">訂單編號</p>
         <p className="font-mono text-2xl font-bold tracking-wide text-gray-900">{placed.order_no}</p>
-        <p className="mt-3 text-[15px] text-gray-600">{placed.method === '711' ? '取貨時付款' : '送達時付款'}</p>
+        <p className="mt-3 text-[15px] text-gray-600">{isStorePickup(placed.method) ? '取貨時付款' : '送達時付款'}</p>
         <p className="text-2xl font-bold text-red-600">{money(placed.total_amount)}</p>
         <p className="mt-4 rounded-xl bg-canvas p-3 text-[15px] leading-relaxed text-gray-700">
-          {formatTwDateTime(campaign.ends_at)} 截單後統一出貨，{placed.method === '711' ? '到店時會收到 7-11 簡訊通知' : '黑貓會在出貨後配送'}。
+          {formatTwDateTime(campaign.ends_at)} 截單後統一出貨，{isStorePickup(placed.method) ? '到店時會收到 7-11 簡訊通知' : '黑貓會在出貨後配送'}。
           請截圖保存這個畫面，有問題傳 LINE 給我們。
         </p>
       </div>

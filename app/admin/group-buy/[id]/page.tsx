@@ -18,8 +18,8 @@ type ItemForm = {
 type CampaignForm = {
   title: string; slug: string; subtitle: string; description: string; cover_image_url: string
   starts_at_local: string; ends_at_local: string; ship_note: string
-  ship_711_enabled: boolean; ship_home_enabled: boolean
-  fee_711: string; fee_home: string; free_shipping_threshold: string
+  ship_711_enabled: boolean; ship_711_normal_enabled: boolean; ship_home_enabled: boolean
+  fee_711: string; fee_711_normal: string; fee_home: string; free_shipping_threshold: string
   is_published: boolean
 }
 
@@ -36,7 +36,7 @@ function defaultCampaign(): CampaignForm {
   return {
     title: `${Number(ym.slice(5))} 月團購`, slug: ym, subtitle: '', description: '', cover_image_url: '',
     starts_at_local: `${ym}-01T10:00`, ends_at_local: `${ym}-10T23:59`, ship_note: '截單後約 7～10 天出貨',
-    ship_711_enabled: true, ship_home_enabled: false, fee_711: '0', fee_home: '0', free_shipping_threshold: '',
+    ship_711_enabled: true, ship_711_normal_enabled: false, ship_home_enabled: false, fee_711: '0', fee_711_normal: '0', fee_home: '0', free_shipping_threshold: '',
     is_published: false,
   }
 }
@@ -68,8 +68,8 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
       setC({
         title: x.title, slug: x.slug, subtitle: x.subtitle, description: x.description, cover_image_url: x.cover_image_url || '',
         starts_at_local: isoToTwLocal(x.starts_at), ends_at_local: isoToTwLocal(x.ends_at), ship_note: x.ship_note,
-        ship_711_enabled: x.ship_711_enabled, ship_home_enabled: x.ship_home_enabled,
-        fee_711: str(x.fee_711), fee_home: str(x.fee_home), free_shipping_threshold: str(x.free_shipping_threshold),
+        ship_711_enabled: x.ship_711_enabled, ship_711_normal_enabled: !!x.ship_711_normal_enabled, ship_home_enabled: x.ship_home_enabled,
+        fee_711: str(x.fee_711), fee_711_normal: str(x.fee_711_normal ?? 0), fee_home: str(x.fee_home), free_shipping_threshold: str(x.free_shipping_threshold),
         is_published: x.is_published,
       })
       setItems(d.data.items.map((i: any) => ({
@@ -129,7 +129,7 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
         if (isNew) router.replace(`/admin/group-buy/${id}`)
         return
       }
-      toast.success(campaign.is_published ? '已儲存並發布' : '已儲存（草稿）')
+      toast.success(campaign.is_published ? '已儲存，團購開啟中' : '已儲存（團購關閉中）')
       if (isNew) router.replace(`/admin/group-buy/${id}`)
       else { setC(campaign); router.refresh() }
     } finally { setSaving(false) }
@@ -174,11 +174,15 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
         </div>
 
         <div className="rounded-xl bg-gray-50 p-3">
-          <p className={label}>取貨方式（可只開一種或兩種都開）</p>
-          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+          <p className={label}>取貨方式（勾選要開放的，至少一種）</p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-3">
             <div className="rounded-lg border bg-white p-3">
               <label className="flex items-center gap-2 font-bold"><input type="checkbox" className="h-5 w-5 accent-green-700" checked={c.ship_711_enabled} onChange={e => set('ship_711_enabled', e.target.checked)} />7-11 冷凍取貨付款</label>
               <label className="mt-2 block text-sm text-gray-700">運費<input className={input} inputMode="numeric" value={c.fee_711} onChange={e => set('fee_711', e.target.value)} disabled={!c.ship_711_enabled} /></label>
+            </div>
+            <div className="rounded-lg border bg-white p-3">
+              <label className="flex items-center gap-2 font-bold"><input type="checkbox" className="h-5 w-5 accent-green-700" checked={c.ship_711_normal_enabled} onChange={e => set('ship_711_normal_enabled', e.target.checked)} />7-11 常溫取貨付款</label>
+              <label className="mt-2 block text-sm text-gray-700">運費<input className={input} inputMode="numeric" value={c.fee_711_normal} onChange={e => set('fee_711_normal', e.target.value)} disabled={!c.ship_711_normal_enabled} /></label>
             </div>
             <div className="rounded-lg border bg-white p-3">
               <label className="flex items-center gap-2 font-bold"><input type="checkbox" className="h-5 w-5 accent-green-700" checked={c.ship_home_enabled} onChange={e => set('ship_home_enabled', e.target.checked)} />黑貓冷凍宅配（貨到付款）</label>
@@ -241,12 +245,12 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
       {/* ── 儲存列 ─────────────────────────────── */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] lg:left-60">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-end gap-2">
-          <span className="mr-auto text-sm text-gray-600">{c.is_published ? '🟢 已發布：前台看得到' : '⚪ 草稿：前台看不到'}</span>
+          <span className="mr-auto text-sm text-gray-600">{c.is_published ? '🟢 開啟中：前台看得到' : '⚪ 已關閉：前台看不到'}</span>
           {!isNew && c.is_published && <a href={`/group-buy/${c.slug}`} target="_blank" rel="noopener" className="rounded-lg border px-3 py-2 text-sm font-semibold">看前台 ↗</a>}
           <button disabled={saving} onClick={() => save()} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold disabled:opacity-40">儲存</button>
           <button disabled={saving} onClick={() => save(!c.is_published)}
             className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-40 ${c.is_published ? 'bg-gray-600' : 'bg-green-700'}`}>
-            {c.is_published ? '改回草稿' : '儲存並發布'}
+            {c.is_published ? '儲存並關閉團購' : '儲存並開啟團購'}
           </button>
         </div>
       </div>

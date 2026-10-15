@@ -15,8 +15,10 @@ export interface CampaignInput {
   ends_at: string
   ship_note: string
   ship_711_enabled: boolean
+  ship_711_normal_enabled: boolean
   ship_home_enabled: boolean
   fee_711: number
+  fee_711_normal: number
   fee_home: number
   free_shipping_threshold: number | null
   is_published: boolean
@@ -58,12 +60,14 @@ export function parseCampaignInput(body: any): { value?: CampaignInput; error?: 
   if (!starts_at || !ends_at) return { error: '請填寫開團與截單時間' }
   if (ends_at <= starts_at) return { error: '截單時間要晚於開團時間' }
   const ship_711_enabled = body?.ship_711_enabled === true
+  const ship_711_normal_enabled = body?.ship_711_normal_enabled === true
   const ship_home_enabled = body?.ship_home_enabled === true
-  if (!ship_711_enabled && !ship_home_enabled) return { error: '至少要開一種取貨方式' }
+  if (!ship_711_enabled && !ship_711_normal_enabled && !ship_home_enabled) return { error: '至少要開一種取貨方式' }
   const fee_711 = optInt(body?.fee_711, 0, 5000)
+  const fee_711_normal = optInt(body?.fee_711_normal, 0, 5000)
   const fee_home = optInt(body?.fee_home, 0, 5000)
   const free = optInt(body?.free_shipping_threshold, 0, 1_000_000)
-  if (fee_711 === 'bad' || fee_home === 'bad') return { error: '運費要是 0～5000 的整數' }
+  if (fee_711 === 'bad' || fee_711_normal === 'bad' || fee_home === 'bad') return { error: '運費要是 0～5000 的整數' }
   if (free === 'bad') return { error: '免運門檻要是整數，不需要就留空' }
   return {
     value: {
@@ -73,8 +77,8 @@ export function parseCampaignInput(body: any): { value?: CampaignInput; error?: 
       cover_image_url: url(body?.cover_image_url),
       starts_at, ends_at,
       ship_note: str(body?.ship_note, 200),
-      ship_711_enabled, ship_home_enabled,
-      fee_711: fee_711 ?? 0, fee_home: fee_home ?? 0, free_shipping_threshold: free,
+      ship_711_enabled, ship_711_normal_enabled, ship_home_enabled,
+      fee_711: fee_711 ?? 0, fee_711_normal: fee_711_normal ?? 0, fee_home: fee_home ?? 0, free_shipping_threshold: free,
       is_published: body?.is_published === true,
     },
   }

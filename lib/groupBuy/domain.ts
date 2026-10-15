@@ -6,11 +6,17 @@
  * 就給客人看得懂的提示，不是唯一防線。
  */
 
-export type ShippingMethod = '711' | 'home'
+/** 711 = 7-11 冷凍（最早就有，代碼不改，舊訂單不受影響）；711_normal = 7-11 常溫 */
+export type ShippingMethod = '711' | '711_normal' | 'home'
+export const SHIPPING_METHODS: ShippingMethod[] = ['711', '711_normal', 'home']
 export const SHIPPING_LABEL: Record<ShippingMethod, string> = {
   '711': '7-11 冷凍取貨付款',
+  '711_normal': '7-11 常溫取貨付款',
   home: '黑貓冷凍宅配（貨到付款）',
 }
+export const SHIPPING_SHORT: Record<ShippingMethod, string> = { '711': '7-11 冷凍', '711_normal': '7-11 常溫', home: '黑貓宅配' }
+/** 兩種 7-11 都要選門市、取貨時付款 */
+export const isStorePickup = (m: ShippingMethod) => m === '711' || m === '711_normal'
 export const DELIVERY_TIMES = ['不指定', '13點前', '14-18點'] as const
 export const ORDER_STATUSES = ['待出貨', '已出貨', '已完成', '已取消'] as const
 export type GroupBuyOrderStatus = typeof ORDER_STATUSES[number]
@@ -26,8 +32,10 @@ export interface Campaign {
   ends_at: string
   ship_note: string
   ship_711_enabled: boolean
+  ship_711_normal_enabled: boolean
   ship_home_enabled: boolean
   fee_711: number
+  fee_711_normal: number
   fee_home: number
   free_shipping_threshold: number | null
   is_published: boolean
@@ -60,17 +68,25 @@ export function campaignPhase(c: Pick<Campaign, 'is_published' | 'starts_at' | '
 }
 
 export const PHASE_LABEL: Record<Phase, string> = {
-  draft: '草稿', upcoming: '預告中', open: '開團中', closed: '已截單',
+  draft: '已關閉', upcoming: '預告中', open: '開團中', closed: '已截單',
 }
 
 /** 運費：與資料庫同一套規則（滿額免運套用在兩種運送方式） */
-export function shippingFee(c: Pick<Campaign, 'fee_711' | 'fee_home' | 'free_shipping_threshold'>, method: ShippingMethod, subtotal: number) {
-  if (c.free_shipping_threshold != null && subtotal >= c.free_shipping_threshold) return 0
-  return method === '711' ? c.fee_711 : c.fee_home
+type FeeFields = Pick<Campaign, 'fee_711' | 'fee_home' | 'free_shipping_threshold'> & { fee_711_normal?: number | null }
+
+/** 這種取貨方式的基本運費（未套免運） */
+export function methodFee(c: FeeFields, method: ShippingMethod) {
+  return method === '711' ? c.fee_711 : method === '711_normal' ? (c.fee_711_normal ?? 0) : c.fee_home
 }
 
-export function enabledMethods(c: Pick<Campaign, 'ship_711_enabled' | 'ship_home_enabled'>): ShippingMethod[] {
-  return [...(c.ship_711_enabled ? ['711' as const] : []), ...(c.ship_home_enabled ? ['home' as const] : [])]
+export function shippingFee(c: FeeFields, method: ShippingMethod, subtotal: number) {
+  if (c.free_shipping_threshold != null && subtotal >= c.free_shipping_threshold) return 0
+  return methodFee(c, method)
+}
+
+export function enabledMethods(c: Pick<Campaign, 'ship_711_enabled' | 'ship_home_enabled'> & { ship_711_normal_enabled?: boolean | null }): ShippingMethod[] {
+  return SHIPPING_METHODS.filter(m =>
+    m === '711' ? c.ship_711_enabled : m === '711_normal' ? !!c.ship_711_normal_enabled : c.ship_home_enabled)
 }
 
 /** 團購單號：GB + 台灣日期 8 碼 + 6 碼亂數（資料庫限制 ^GB[0-9]{14}$） */
@@ -144,7 +160,7 @@ export function checkoutProblem(input: Partial<CheckoutInput>, methods: Shipping
   if (Array.from(name).length > 20) return '姓名太長'
   if (!/^09\d{8}$/.test((input.phone || '').trim())) return '請填寫正確的手機號碼（09 開頭 10 碼）'
   if (!input.shipping_method || !methods.includes(input.shipping_method)) return '請選擇取貨方式'
-  if (input.shipping_method === '711' && !(Number.isSafeInteger(input.store_id) && (input.store_id as number) > 0)) return '請選擇 7-11 取貨門市'
+  if (isStorePickup(input.shipping_method) && !(Number.isSafeInteger(input.store_id) && (input.store_id as number) > 0)) return '請選擇 7-11 取貨門市'
   if (input.shipping_method === 'home') {
     const addr = (input.home_address || '').trim()
     if (Array.from(addr).length < 8) return '請填寫完整的收件地址（含縣市、區、路、門牌）'
@@ -185,19 +201,18 @@ export interface SummaryOrder {
   items: { item_id: number; name_snapshot: string; spec_snapshot: string; quantity: number; subtotal: number }[]
 }
 
-/** 截單後給品牌方的叫貨數量：每個商品總共幾件（不含已取消），並分出 7-11／宅配 */
+/** 截單後給品牌方的叫貨數量：每個商品總共幾件（不含已取消），並依取貨方式分開 */
 export function supplierSummary(orders: readonly SummaryOrder[]) {
-  const rows = new Map<number, { item_id: number; name: string; spec: string; quantity: number; qty711: number; qtyHome: number; amount: number }>()
+  const rows = new Map<number, { item_id: number; name: string; spec: string; quantity: number; byMethod: Record<ShippingMethod, number>; amount: number }>()
   let orderCount = 0, revenue = 0
   for (const o of orders) {
     if (o.status === '已取消') continue
     orderCount++
     revenue += o.total_amount
     for (const it of o.items) {
-      const r = rows.get(it.item_id) || { item_id: it.item_id, name: it.name_snapshot, spec: it.spec_snapshot, quantity: 0, qty711: 0, qtyHome: 0, amount: 0 }
+      const r = rows.get(it.item_id) || { item_id: it.item_id, name: it.name_snapshot, spec: it.spec_snapshot, quantity: 0, byMethod: { '711': 0, '711_normal': 0, home: 0 }, amount: 0 }
       r.quantity += it.quantity
-      if (o.shipping_method === '711') r.qty711 += it.quantity
-      else r.qtyHome += it.quantity
+      r.byMethod[o.shipping_method] = (r.byMethod[o.shipping_method] || 0) + it.quantity
       r.amount += it.subtotal
       rows.set(it.item_id, r)
     }

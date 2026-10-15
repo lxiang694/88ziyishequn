@@ -24,6 +24,13 @@ describe('運費與運送方式', () => {
     assert.equal(shippingFee(c, 'home', 3000), 0)
     assert.equal(shippingFee({ ...c, free_shipping_threshold: null }, '711', 99999), 150)
   })
+  test('7-11 常溫有自己的運費，也適用滿額免運；也要選門市', () => {
+    const c2 = { fee_711: 150, fee_711_normal: 60, fee_home: 230, free_shipping_threshold: 3000 }
+    assert.equal(shippingFee(c2, '711_normal', 100), 60)
+    assert.equal(shippingFee(c2, '711_normal', 3000), 0)
+    assert.match(checkoutProblem({ customer_name: '王', phone: '0912345678', shipping_method: '711_normal', items: [{ item_id: 1, quantity: 1 }] }, ['711_normal'])!, /門市/)
+    assert.deepEqual(enabledMethods({ ship_711_enabled: false, ship_711_normal_enabled: true, ship_home_enabled: true }), ['711_normal', 'home'])
+  })
   test('後台可以只開一種', () => {
     assert.deepEqual(enabledMethods({ ship_711_enabled: true, ship_home_enabled: false }), ['711'])
     assert.deepEqual(enabledMethods({ ship_711_enabled: true, ship_home_enabled: true }), ['711', 'home'])
@@ -89,7 +96,7 @@ describe('叫貨匯總與匯出', () => {
       { status: '已取消', shipping_method: '711', total_amount: 900, items: [line(1, 9)] },
     ])
     assert.equal(s.orderCount, 2); assert.equal(s.revenue, 800)
-    assert.deepEqual(s.items.map(i => [i.item_id, i.quantity, i.qty711, i.qtyHome]), [[1, 7, 2, 5], [2, 1, 1, 0]])
+    assert.deepEqual(s.items.map(i => [i.item_id, i.quantity, i.byMethod['711'], i.byMethod.home]), [[1, 7, 2, 5], [2, 1, 1, 0]])
   })
   test('CSV：逗號與引號跳脫、公式開頭被中和、數字保留開頭的 0', () => {
     assert.equal(csvCell('a,b'), '"a,b"')
@@ -120,6 +127,13 @@ describe('後台檔期資料檢查', () => {
     assert.match(parseCampaignInput({ ...base, ship_711_enabled: false }).error!, /至少要開一種/)
     assert.match(parseCampaignInput({ ...base, fee_711: '-1' }).error!, /運費/)
     assert.equal(parseCampaignInput({ ...base, cover_image_url: 'javascript:alert(1)' }).value!.cover_image_url, null)
+  })
+  test('只開 7-11 常溫也可以，常溫運費另外存', () => {
+    const { value, error } = parseCampaignInput({ ...base, ship_711_enabled: false, ship_711_normal_enabled: true, fee_711_normal: '60' })
+    assert.equal(error, undefined)
+    assert.deepEqual([value!.ship_711_enabled, value!.ship_711_normal_enabled, value!.fee_711_normal], [false, true, 60])
+    assert.equal(parseCampaignInput(base).value!.ship_711_normal_enabled, false)
+    assert.match(parseCampaignInput({ ...base, ship_711_normal_enabled: true, fee_711_normal: '9999' }).error!, /運費/)
   })
   test('商品：價格必填、選填欄位留空為不限、排序照順序', () => {
     const { value } = parseItemsInput([
