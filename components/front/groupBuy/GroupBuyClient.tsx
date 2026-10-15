@@ -227,7 +227,7 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
         <CheckoutSheet
           campaign={campaign} lines={lines} subtotal={subtotal} methods={methods}
           onClose={() => setCheckingOut(false)}
-          onPlaced={(p) => { setQty({}); setCheckingOut(false); setPlaced(p); window.scrollTo({ top: 0 }) }}
+          onPlaced={(p) => { setQty({}); setCheckingOut(false); setPlaced(p) }}
         />
       )}
     </div>
@@ -380,6 +380,16 @@ function OrderPlaced({ placed, campaign }: {
   placed: { order_no: string; total_amount: number; shipping_fee: number; method: ShippingMethod }
   campaign: PublicCampaign['campaign']
 }) {
+  // 成功頁比團購頁短很多：要等它畫出來後再「直接跳」到最上面。
+  // 全站開了平滑捲動，若在換頁前慢慢捲，頁面一變短 iPhone 就會中斷捲動，
+  // 客人停在頁尾，以為沒有下單成功。
+  useEffect(() => {
+    const toTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior })
+    toTop()
+    const raf = requestAnimationFrame(toTop)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
   return (
     <div className="mx-auto max-w-lg px-4 pb-16 pt-16 text-center">
       <p className="text-6xl" aria-hidden>🎉</p>
