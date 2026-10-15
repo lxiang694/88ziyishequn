@@ -10,6 +10,7 @@ export const PERMISSION_CATALOG: { key: string; label: string; hint?: string }[]
   { key: 'categories.all', label: '健康分類管理' },
   { key: 'events.view', label: '社群活動報名管理' },
   { key: 'site_popup.manage', label: '前台彈窗管理', hint: '可開關與新增全站彈窗' },
+  { key: 'group_buy.manage', label: '團購管理', hint: '檔期與團購商品上架、團購訂單（含客人姓名、手機、地址）' },
 ]
 
 export const ALL_PERMISSION = 'all'
@@ -27,6 +28,11 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   export_orders: '下載訂單資料',
   export_members: '下載會員資料',
   'product_images.compress': '商品圖片：換成壓縮版',
+  'group_buy.create': '團購：新增檔期',
+  'group_buy.copy': '團購：複製上一檔',
+  'group_buy.update': '團購：儲存檔期與商品',
+  'group_buy.delete': '團購：刪除檔期',
+  'group_buy.order_update': '團購：更新訂單',
   'site_popup.create': '彈窗：新增',
   'site_popup.update': '彈窗：修改',
   'site_popup.toggle': '彈窗：開關',

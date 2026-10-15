@@ -51,14 +51,16 @@ export default function FrontShell({ children }: { children: ReactNode }) {
           {/* 常用服務 —— 不用登入就能用的入口，做成有說明的按鈕，一眼看得出能點 */}
           <nav aria-label="常用服務" className="mt-8">
             <h2 className="mb-3 text-center text-base font-bold text-gray-800">常用服務</h2>
-            <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+            <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
               {[
+                // 團購放第一個、手機上占滿一整排：每月只開一次，要讓人看得到
+                { href: '/group-buy', icon: '🧊', label: '每月團購', hint: '限時開團・截單後統一出貨', wide: true },
                 { href: '/orders', icon: '📦', label: '訂單查詢', hint: '用手機號碼查進度' },
                 { href: '/health-articles', icon: '📚', label: '健康知識', hint: '保健觀念一次看懂' },
                 { href: '/sleep-quiz', icon: '🌙', label: '睡眠自測', hint: '了解你的睡眠狀況' },
                 { href: '/health-quiz', icon: '🩺', label: '健康自測', hint: '找適合的保養方向' },
               ].map(link => (
-                <li key={link.href}>
+                <li key={link.href} className={'wide' in link ? 'col-span-2 md:col-span-1' : ''}>
                   <a href={link.href}
                     className="flex h-full min-h-[64px] items-center gap-2.5 rounded-2xl border border-line bg-white px-3 py-2.5 shadow-sm transition-colors hover:border-green-400 active:bg-green-50">
                     <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-canvas text-[22px]" aria-hidden="true">{link.icon}</span>

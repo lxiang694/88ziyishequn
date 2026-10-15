@@ -23,6 +23,8 @@ export default function LineFloatButton() {
 
   // 後台不顯示
   if (pathname.startsWith('/admin')) return null
+  // 團購頁的商品數量按鈕在畫面右側，浮鈕會蓋住「＋」；團購頁的常見問題裡已有 LINE 連結
+  if (pathname.startsWith('/group-buy')) return null
 
   // 購物車 / 結帳頁底部有固定結帳條 → 手機時把浮鈕升到結帳條上方，避免遮住主要按鈕
   const hasBottomBar = pathname === '/cart' || pathname === '/checkout'

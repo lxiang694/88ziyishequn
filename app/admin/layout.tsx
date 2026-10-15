@@ -15,6 +15,7 @@ const NAV = [
   { href: '/admin/orders', label: '📦 訂單管理', perms: ['orders.view','orders.status','orders.status.ship','orders.edit','all'] },
   { href: '/admin/myship', label: '🚚 賣貨便轉單', perms: ['orders.transfer','all'] },
   { href: '/admin/myship/labels', label: '　└ 面單處理', perms: ['orders.transfer','all'] },
+  { href: '/admin/group-buy', label: '🧊 團購管理', perms: ['group_buy.manage','all'] },
   { href: '/admin/products', label: '🛍️ 商品管理', perms: ['products.all','all'] },
   { href: '/admin/products/categories', label: '　└ 批次指派分類', perms: ['products.all','all'] },
   { href: '/admin/products/images', label: '　└ 圖片壓縮', perms: ['products.all','all'] },

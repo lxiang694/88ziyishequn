@@ -26,8 +26,8 @@ export default function MobileBottomNav() {
 
   // 後台不顯示
   if (pathname.startsWith('/admin')) return null
-  // 商品頁底部是固定購買列（ProductDetail），兩條疊在一起會擋住半個畫面
-  if (pathname.startsWith('/products/')) return null
+  // 商品頁、團購頁底部有自己的固定購買列，兩條疊在一起會擋住半個畫面
+  if (pathname.startsWith('/products/') || pathname.startsWith('/group-buy/')) return null
 
   const isHome = pathname === '/'
   const isShop = pathname.startsWith('/shop')
