@@ -47,14 +47,21 @@ export async function loadPublicCampaign(slug: string, db: Db = supabaseStorefro
  * /group-buy 要導去哪一檔：開團中的優先（多檔同時開時取最早截單的），
  * 沒有就取最近要開的預告，再沒有就取最近一檔已截單的（讓人看得到「下次開團」的說明）。
  */
-export async function currentCampaignSlug(db: Db = supabaseStorefront, now = new Date()): Promise<string | null> {
-  const { data } = await db.from('group_buy_campaigns').select('slug, starts_at, ends_at, is_published')
+export type CampaignTeaser = Pick<Campaign, 'slug' | 'title' | 'starts_at' | 'ends_at' | 'is_published'>
+
+export async function currentCampaign(db: Db = supabaseStorefront, now = new Date()): Promise<CampaignTeaser | null> {
+  const { data, error } = await db.from('group_buy_campaigns').select('slug, title, starts_at, ends_at, is_published')
     .eq('is_published', true).order('starts_at', { ascending: false }).limit(50)
-  const list = (data || []) as Pick<Campaign, 'slug' | 'starts_at' | 'ends_at' | 'is_published'>[]
+  if (error) return null   // 資料表還沒建立時當成沒有團購，頁面照常顯示
+  const list = (data || []) as CampaignTeaser[]
   const by = (phase: string) => list.filter(c => campaignPhase(c, now) === phase)
   const open = by('open').sort((a, b) => a.ends_at.localeCompare(b.ends_at))[0]
-  if (open) return open.slug
+  if (open) return open
   const upcoming = by('upcoming').sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0]
-  if (upcoming) return upcoming.slug
-  return by('closed')[0]?.slug ?? null
+  if (upcoming) return upcoming
+  return by('closed')[0] ?? null
+}
+
+export async function currentCampaignSlug(db: Db = supabaseStorefront, now = new Date()): Promise<string | null> {
+  return (await currentCampaign(db, now))?.slug ?? null
 }

@@ -11,6 +11,8 @@ import type { HealthCategory } from '@/lib/types'
 import type { HomeEvent } from '@/lib/homeEvent'
 import { bannerLink, type HomeBanner } from '@/lib/homeBanner'
 import ProductCard from './ProductCard'
+import GroupBuyBanner from './groupBuy/GroupBuyBanner'
+import type { CampaignTeaser } from '@/lib/groupBuy/repo'
 
 interface Variant {
   id: number; variant_name: string; sale_price: number
@@ -31,11 +33,13 @@ interface Props {
   openEvent?: HomeEvent | null
   /** 後台上傳的首頁橫幅；沒有時顯示原本的四步驟區塊 */
   banner?: HomeBanner | null
+  /** 目前的團購檔期（開團中／預告／最近一檔）；沒有時橫幅仍顯示，點進去是「目前沒有開團」 */
+  groupBuy?: CampaignTeaser | null
 }
 
 const HOT_TAGS = ['維生素C', '魚油', '葉黃素', '益生菌', '鈣', '維他命B群']
 
-export default function HomeClient({ initialProducts, initialTotal, categories, openEvent = null, banner = null }: Props) {
+export default function HomeClient({ initialProducts, initialTotal, categories, openEvent = null, banner = null, groupBuy = null }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { addItem } = useCart()
@@ -196,6 +200,9 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
       <HomeHero products={initialProducts} onShop={() => isDefaultView ? scrollToId(hotProducts.length ? 'sec-hot' : 'home-product-search') : scrollToProducts()} />
 
       <div className="max-w-5xl mx-auto px-4">
+
+        {/* ─── 每月團購入口：放在搜尋框上方、跟著頁面捲走（不黏在頂端） ─── */}
+        <GroupBuyBanner campaign={groupBuy} />
 
         {/* ─── STICKY SEARCH ─── */}
         <div id="home-product-search" className="sticky top-16 sm:top-20 z-30 -mx-4 px-4 pt-3 bg-canvas/95 backdrop-blur scroll-mt-20">

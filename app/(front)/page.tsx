@@ -4,6 +4,7 @@ import { buildSalesMap } from '@/lib/salesUtils'
 import HomeClient from '@/components/front/HomeClient'
 import { pickOpenEvent, type HomeEventRow } from '@/lib/homeEvent'
 import { canDisplay, type HomeBanner } from '@/lib/homeBanner'
+import { currentCampaign } from '@/lib/groupBuy/repo'
 import type { HealthCategory } from '@/lib/types'
 
 // 前台頁面每 60 秒重新產生一次，期間的訪客直接拿快取（從離客人最近的
@@ -14,7 +15,7 @@ import type { HealthCategory } from '@/lib/types'
 export const revalidate = 60
 
 async function getInitialData() {
-  const [productsRes, categoriesRes, salesMap, eventsRes, bannerRes] = await Promise.all([
+  const [productsRes, categoriesRes, salesMap, eventsRes, bannerRes, groupBuy] = await Promise.all([
     db
       .from('products')
       .select(`*,
@@ -42,6 +43,8 @@ async function getInitialData() {
       .select('image_url, alt_text, link_path, is_active')
       .eq('id', 1)
       .maybeSingle(),
+    // 首頁搜尋框上方的「每月團購」橫幅要顯示這一檔的狀態
+    currentCampaign(db).catch(() => null),
   ])
 
   // 把銷量直接附加到每件商品上
@@ -59,11 +62,12 @@ async function getInitialData() {
     categories: (categoriesRes.data || []) as HealthCategory[],
     openEvent: pickOpenEvent(eventsRes.data as HomeEventRow[] | null),
     banner: canDisplay(bannerRes.data as HomeBanner | null) ? (bannerRes.data as HomeBanner) : null,
+    groupBuy,
   }
 }
 
 export default async function HomePage() {
-  const { initialProducts, initialTotal, categories, openEvent, banner } = await getInitialData()
+  const { initialProducts, initialTotal, categories, openEvent, banner, groupBuy } = await getInitialData()
   return (
     <Suspense fallback={null}>
       <HomeClient
@@ -72,6 +76,7 @@ export default async function HomePage() {
         categories={categories}
         openEvent={openEvent}
         banner={banner}
+        groupBuy={groupBuy}
       />
     </Suspense>
   )
