@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
 import {
-  checkoutProblem, enabledMethods, friendlyOrderError, generateGroupBuyOrderNo, type CheckoutInput,
+  checkoutProblem, enabledMethods, friendlyOrderError, generateGroupBuyOrderNo, isStorePickup, type CheckoutInput,
 } from '@/lib/groupBuy/domain'
 
 /**
@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
 
   const slug = typeof body?.slug === 'string' ? body.slug : ''
   const { data: campaign } = await supabaseAdmin.from('group_buy_campaigns')
-    .select('slug, ship_711_enabled, ship_home_enabled').eq('slug', slug).eq('is_published', true).maybeSingle()
+    // 用 *：取貨方式開關會增加（例如 7-11 常溫），列舉欄位容易漏掉新的那一個
+    .select('*').eq('slug', slug).eq('is_published', true).maybeSingle()
   if (!campaign) return NextResponse.json({ success: false, error: '團購不存在' }, { status: 404 })
 
   const input: CheckoutInput = {
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       p_customer_name: input.customer_name.trim(),
       p_phone: input.phone,
       p_shipping_method: input.shipping_method,
-      p_store_id: input.shipping_method === '711' ? input.store_id : null,
+      p_store_id: isStorePickup(input.shipping_method) ? input.store_id : null,
       p_home_address: input.shipping_method === 'home' ? input.home_address!.trim() : null,
       p_delivery_time: input.shipping_method === 'home' ? (input.delivery_time || '不指定') : null,
       p_note: (input.note || '').trim(),
