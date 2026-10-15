@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -10,6 +10,7 @@ import {
   DELIVERY_TIMES, SHIPPING_LABEL, SHIPPING_SHORT, type ShippingMethod,
 } from '@/lib/groupBuy/domain'
 import type { PublicCampaign, PublicItem } from '@/lib/groupBuy/repo'
+import { Collapsible, GroupBuyText } from './GroupBuyText'
 
 const money = (n: number) => `$${n.toLocaleString('zh-TW')}`
 const LINE_URL = 'https://line.me/ti/p/yJdrshwviU'
@@ -69,6 +70,24 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
     return <OrderPlaced placed={placed} campaign={campaign} />
   }
 
+  // 運費提示：有運費的取貨方式時才提「再買多少免運」
+  const maxFee = Math.max(0, ...methods.map(m => methodFee(campaign, m)))
+  const freeAt = campaign.free_shipping_threshold
+  const freeHint = freeAt != null && maxFee > 0 && count > 0
+    ? (subtotal >= freeAt ? '🎉 已達免運' : `再買 ${money(freeAt - subtotal)} 免運`) : null
+  const hasFrozen = methods.includes('711') || methods.includes('home')
+  const payText = [methods.some(isStorePickup) && '7-11 取貨時付款', methods.includes('home') && '黑貓宅配到府時付款'].filter(Boolean).join('、')
+
+  const infoRows: { icon: string; label: string; value: React.ReactNode }[] = [
+    ...(campaign.ship_note ? [{ icon: '📦', label: '出貨', value: campaign.ship_note }] : []),
+    ...methods.map(m => {
+      const fee = methodFee(campaign, m)
+      return { icon: m === 'home' ? '🚚' : m === '711' ? '🧊' : '🏪', label: '取貨', value: <>{SHIPPING_LABEL[m]}<span className="ml-1.5 text-gray-500">{fee ? `運費 ${money(fee)}` : '免運費'}</span></> }
+    }),
+    ...(freeAt != null && maxFee > 0 ? [{ icon: '🎁', label: '免運', value: `滿 ${money(freeAt)} 免運` }] : []),
+    { icon: '💰', label: '付款', value: `${payText}，不用先轉帳` },
+  ]
+
   return (
     <div className="mx-auto max-w-3xl px-4 pb-8 pt-14 md:pt-6">
       {/* ── 檔期標題與倒數 ───────────────────────────── */}
@@ -79,99 +98,150 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
           </div>
         )}
         <div className="p-5">
-          <span className={`inline-block rounded-full px-3 py-1 text-[13px] font-bold ${
-            phase === 'open' ? 'bg-red-50 text-red-600' : phase === 'upcoming' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
-            {phase === 'open' ? '🔥 開團中' : phase === 'upcoming' ? '⏰ 即將開團' : '本檔已截單'}
-          </span>
-          <h1 className="mt-2 text-2xl font-bold leading-snug text-gray-900 sm:text-3xl">{campaign.title}</h1>
-          {campaign.subtitle && <p className="mt-1.5 text-[15px] leading-relaxed text-gray-600">{campaign.subtitle}</p>}
+          {now !== null && (
+            <span className={`inline-block rounded-full px-3 py-1 text-[13px] font-bold ${
+              phase === 'open' ? 'bg-red-50 text-red-600' : phase === 'upcoming' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+              {phase === 'open' ? '🔥 開團中' : phase === 'upcoming' ? '⏰ 即將開團' : '本檔已截單'}
+            </span>
+          )}
+          <h1 className="mt-2 text-[24px] font-bold leading-snug text-gray-900 sm:text-3xl">{campaign.title}</h1>
+          {campaign.subtitle && <p className="mt-2 text-[16px] leading-[1.8] text-gray-600">{campaign.subtitle}</p>}
 
-          <div className={`mt-4 rounded-2xl px-4 py-3 ${phase === 'open' ? 'bg-red-600 text-white' : 'bg-sage text-gray-800'}`}>
-            {phase === 'open' && <p className="text-sm font-semibold opacity-90">距離截單</p>}
-            {phase === 'upcoming' && <p className="text-sm font-semibold">距離開團</p>}
+          <div className={`mt-4 rounded-2xl px-4 py-3 ${now === null || phase === 'open' ? 'bg-red-600 text-white' : 'bg-sage text-gray-800'}`}>
+            <p className="text-sm font-semibold opacity-90">{phase === 'upcoming' ? '距離開團' : phase === 'closed' ? '團購狀態' : '距離截單'}</p>
             <p className="text-2xl font-bold tabular-nums">
               {now === null ? '—' : phase === 'open' ? countdown(new Date(campaign.ends_at).getTime() - now.getTime())
                 : phase === 'upcoming' ? countdown(new Date(campaign.starts_at).getTime() - now.getTime()) : '已截單，感謝跟團'}
             </p>
-            <p className={`mt-0.5 text-[13px] ${phase === 'open' ? 'opacity-90' : 'text-gray-600'}`}>
+            <p className="mt-0.5 text-[13px] opacity-90">
               開團 {formatTwDateTime(campaign.starts_at)} ～ 截單 {formatTwDateTime(campaign.ends_at)}
             </p>
           </div>
 
-          <ul className="mt-4 space-y-1.5 text-[15px] text-gray-700">
-            {campaign.ship_note && <li>📦 {campaign.ship_note}</li>}
-            {methods.map(m => (
-              <li key={m}>{m === '711_normal' ? '🏪' : '🧊'} {SHIPPING_LABEL[m]}，運費 {money(methodFee(campaign, m))}</li>
+          {/* 出貨、取貨、付款：左邊固定寬度的標籤，掃一眼就找到 */}
+          <dl className="mt-4 divide-y divide-gray-100 rounded-2xl border border-gray-100 text-[15px]">
+            {infoRows.map((r, i) => (
+              <div key={i} className="flex items-start gap-3 px-3.5 py-2.5">
+                <dt className="flex w-[4.5rem] flex-shrink-0 items-center gap-1.5 font-bold text-gray-500"><span aria-hidden>{r.icon}</span>{r.label}</dt>
+                <dd className="min-w-0 flex-1 leading-relaxed text-gray-900">{r.value}</dd>
+              </div>
             ))}
-            {campaign.free_shipping_threshold != null && <li>🎁 滿 {money(campaign.free_shipping_threshold)} 免運</li>}
-            {buyers >= 3 && <li className="font-bold text-red-600">👥 已有 {buyers} 人跟團</li>}
-          </ul>
+          </dl>
+          {buyers >= 3 && <p className="mt-3 text-center text-[15px] font-bold text-red-600">👥 已有 {buyers} 人跟團</p>}
         </div>
       </section>
 
+      {/* ── 怎麼跟團 ─────────────────────────────── */}
+      <section className="mt-4 rounded-3xl bg-white px-4 py-4 shadow-sm" aria-label="怎麼跟團">
+        <h2 className="text-center text-[15px] font-bold text-gray-500">跟團只要 3 步</h2>
+        <ol className="mt-3 grid grid-cols-3 gap-2 text-center">
+          {[['🛒', '選商品數量'], ['📝', '填收件資料'], [methods.some(isStorePickup) ? '🏪' : '🚚', '取貨時付款']].map(([icon, t], i) => (
+            <li key={t} className="relative rounded-2xl bg-canvas px-1 py-3">
+              <span className="absolute left-2 top-1.5 text-[12px] font-bold text-green-700">{i + 1}</span>
+              <span className="block text-[26px] leading-none" aria-hidden>{icon}</span>
+              <span className="mt-1.5 block text-[14px] font-bold text-gray-800">{t}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       {/* ── 商品 ───────────────────────────────────── */}
-      <section className="mt-5 space-y-4" aria-label="團購商品">
+      <section className="mt-5 space-y-5" aria-label="團購商品">
         {items.map(item => {
           const soldOut = item.remaining === 0
           const q = qty[item.id] || 0
+          const cap = Math.min(item.remaining ?? 999, item.per_person_limit ?? 999, 999)
+          const save = item.original_price != null && item.original_price > item.price ? item.original_price - item.price : 0
           return (
-            <article key={item.id} className="overflow-hidden rounded-3xl bg-white shadow-sm">
+            <article key={item.id} className={`overflow-hidden rounded-3xl bg-white shadow-sm transition-shadow ${q > 0 ? 'ring-2 ring-green-600' : ''}`}>
               {item.image_url && (
                 <div className="relative aspect-square bg-white">
                   <Image src={item.image_url} alt={item.name} fill className="object-contain" sizes="(max-width: 768px) 100vw, 768px" />
                   {soldOut && <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-2xl font-bold text-gray-700">已搶購一空</span>}
+                  {q > 0 && <span className="absolute left-3 top-3 rounded-full bg-green-700 px-3 py-1 text-sm font-bold text-white shadow">✓ 已選 {q} 件</span>}
                 </div>
               )}
               <div className="p-5">
-                <h2 className="text-xl font-bold leading-snug text-gray-900">{item.name}</h2>
-                {item.spec && <p className="mt-0.5 text-[15px] text-gray-600">{item.spec}</p>}
-                <div className="mt-2 flex flex-wrap items-baseline gap-x-2">
-                  <span className="text-sm font-bold text-red-600">團購價</span>
-                  <span className="text-3xl font-bold text-red-600">{money(item.price)}</span>
-                  {item.original_price != null && item.original_price > item.price && (
-                    <span className="text-gray-500 line-through">原價 {money(item.original_price)}</span>
+                <h2 className="text-[21px] font-bold leading-snug text-gray-900">{item.name}</h2>
+                {item.spec && <p className="mt-1.5 inline-block rounded-lg bg-gray-100 px-2.5 py-1 text-[14px] text-gray-700">規格：{item.spec}</p>}
+
+                {/* 價格 */}
+                <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <div>
+                    <span className="block text-[13px] font-bold text-red-600">團購價</span>
+                    <span className="text-[32px] font-extrabold leading-none text-red-600 tabular-nums">{money(item.price)}</span>
+                  </div>
+                  {save > 0 && (
+                    <div className="pb-0.5">
+                      <span className="block text-[14px] text-gray-400 line-through">原價 {money(item.original_price!)}</span>
+                      <span className="inline-block rounded-md bg-red-50 px-1.5 py-0.5 text-[13px] font-bold text-red-600">現省 {money(save)}</span>
+                    </div>
                   )}
                 </div>
 
-                {item.total_quota != null && (
-                  <div className="mt-3">
-                    <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
-                      <div className="h-full rounded-full bg-red-500" style={{ width: `${Math.min(100, (item.sold / item.total_quota) * 100)}%` }} />
-                    </div>
-                    <p className="mt-1 text-[13px] font-semibold text-gray-600">
-                      限量 {item.total_quota}，{soldOut ? '已售完' : `剩 ${item.remaining} 件`}
-                    </p>
+                {/* 限量、限購 */}
+                {(item.total_quota != null || item.per_person_limit != null) && (
+                  <div className="mt-3 space-y-2">
+                    {item.total_quota != null && (
+                      <div>
+                        <div className="flex justify-between text-[13px] font-bold">
+                          <span className="text-gray-600">限量 {item.total_quota} 件</span>
+                          <span className={soldOut ? 'text-gray-500' : 'text-red-600'}>{soldOut ? '已售完' : `剩 ${item.remaining} 件`}</span>
+                        </div>
+                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-gray-100">
+                          <div className="h-full rounded-full bg-red-500" style={{ width: `${Math.max(3, Math.min(100, (item.sold / item.total_quota) * 100))}%` }} />
+                        </div>
+                      </div>
+                    )}
+                    {item.per_person_limit != null && <p className="text-[13px] font-semibold text-gray-500">每人限購 {item.per_person_limit} 件</p>}
                   </div>
                 )}
-                {item.per_person_limit != null && <p className="mt-1 text-[13px] text-gray-500">每人限購 {item.per_person_limit} 件</p>}
 
-                {item.description && (
-                  <details className="mt-3 rounded-xl bg-canvas px-3 py-2">
-                    <summary className="cursor-pointer text-[15px] font-bold text-green-800">商品介紹</summary>
-                    <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-gray-700">{item.description}</p>
-                  </details>
-                )}
-
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  {isOpen && !soldOut ? (
+                {/* 跟團按鈕／數量 */}
+                <div className="mt-4">
+                  {now === null ? (
+                    <div className="h-[56px] rounded-2xl bg-gray-100" aria-hidden />
+                  ) : isOpen && !soldOut ? (
                     q === 0 ? (
                       <button onClick={() => setItemQty(item, 1)}
-                        className="min-h-[48px] w-full rounded-2xl bg-green-700 text-base font-bold text-white active:bg-green-800">
-                        + 我要跟團
+                        className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-green-700 text-[18px] font-bold text-white shadow-sm active:scale-[0.99] active:bg-green-800">
+                        <span className="text-2xl leading-none" aria-hidden>＋</span>我要跟團
                       </button>
                     ) : (
-                      <div className="flex w-full items-center justify-between rounded-2xl border-2 border-green-700 px-2">
-                        <button aria-label="減少" onClick={() => setItemQty(item, q - 1)} className="h-12 w-12 text-2xl font-bold text-green-800">−</button>
-                        <span className="text-lg font-bold">已選 {q} 件</span>
-                        <button aria-label="增加" onClick={() => setItemQty(item, q + 1)} className="h-12 w-12 text-2xl font-bold text-green-800">+</button>
+                      <div className="rounded-2xl bg-green-50 p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center overflow-hidden rounded-xl border-2 border-green-700 bg-white">
+                            <button aria-label={q === 1 ? '移除' : '減少'} onClick={() => setItemQty(item, q - 1)}
+                              className="flex h-12 w-12 items-center justify-center text-2xl font-bold text-green-800 active:bg-green-100">−</button>
+                            <span className="w-12 text-center text-[22px] font-extrabold tabular-nums text-gray-900" aria-live="polite">{q}</span>
+                            <button aria-label="增加" onClick={() => setItemQty(item, q + 1)} disabled={q >= cap}
+                              className="flex h-12 w-12 items-center justify-center text-2xl font-bold text-green-800 active:bg-green-100 disabled:text-gray-300">+</button>
+                          </div>
+                          <div className="min-w-0 flex-1 text-right">
+                            <p className="text-[13px] text-gray-600">小計</p>
+                            <p className="text-[20px] font-bold text-gray-900 tabular-nums">{money(item.price * q)}</p>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-[13px] text-green-800">
+                          {q >= cap && item.per_person_limit != null && cap === item.per_person_limit ? `已達每人限購 ${cap} 件` : '✓ 已加入，選好後按下方「下一步」'}
+                        </p>
                       </div>
                     )
                   ) : (
-                    <p className="w-full rounded-2xl bg-gray-100 py-3 text-center font-bold text-gray-500">
+                    <p className="w-full rounded-2xl bg-gray-100 py-4 text-center text-[16px] font-bold text-gray-500">
                       {soldOut ? '已售完' : phase === 'upcoming' ? `${formatTwDateTime(campaign.starts_at)} 開團` : '本檔已截單'}
                     </p>
                   )}
                 </div>
+
+                {item.description && (
+                  <div className="mt-5 border-t border-gray-100 pt-4">
+                    <h3 className="mb-2 text-[16px] font-bold text-gray-900">商品介紹</h3>
+                    <Collapsible collapsedHeight={190} moreLabel="看完整商品介紹 ▼">
+                      <GroupBuyText text={item.description} size="md" />
+                    </Collapsible>
+                  </div>
+                )}
               </div>
             </article>
           )
@@ -180,31 +250,36 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
 
       {campaign.description && (
         <section className="mt-5 rounded-3xl bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900">團購說明</h2>
-          <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-gray-700">{campaign.description}</p>
+          <h2 className="mb-4 text-center text-[20px] font-bold text-gray-900">團購說明</h2>
+          <Collapsible collapsedHeight={520} moreLabel="展開完整說明 ▼">
+            <GroupBuyText text={campaign.description} />
+          </Collapsible>
         </section>
       )}
 
       <section className="mt-5 rounded-3xl bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-bold text-gray-900">常見問題</h2>
-        <dl className="mt-3 space-y-3 text-[15px] leading-relaxed">
-          <div><dt className="font-bold text-gray-800">什麼時候出貨？</dt>
-            <dd className="text-gray-600">{formatTwDateTime(campaign.ends_at)} 截單後統一向品牌叫貨，到貨後依序出貨。{campaign.ship_note}</dd></div>
-          <div><dt className="font-bold text-gray-800">怎麼付款？</dt>
-            <dd className="text-gray-600">{[methods.some(isStorePickup) && '7-11 取貨時付款', methods.includes('home') && '黑貓宅配到府時付款（貨到付款）'].filter(Boolean).join('；')}。不需要先轉帳。</dd></div>
-          <div><dt className="font-bold text-gray-800">冷凍商品要注意什麼？</dt>
-            <dd className="text-gray-600">收到通知請盡快取貨或在家收件，取回後立即冷凍保存。</dd></div>
-          <div><dt className="font-bold text-gray-800">想取消或修改訂單？</dt>
-            <dd className="text-gray-600">截單前請直接傳 LINE 給我們，截單後已向品牌叫貨，恕無法取消。</dd></div>
-        </dl>
+        <h2 className="mb-1 text-center text-[20px] font-bold text-gray-900">常見問題</h2>
+        <div className="divide-y divide-gray-100">
+          {[
+            ['什麼時候出貨？', `${formatTwDateTime(campaign.ends_at)} 截單後統一向品牌叫貨，到貨後依序出貨。${campaign.ship_note}`],
+            ['怎麼付款？', `${payText}，不需要先轉帳。`],
+            ...(hasFrozen ? [['冷凍商品要注意什麼？', '收到通知請盡快取貨或在家收件，取回後立即冷凍保存。']] : []),
+            ['想取消或修改訂單？', '截單前請直接傳 LINE 給我們，截單後已向品牌叫貨，恕無法取消。'],
+          ].map(([qText, a]) => (
+            <div key={qText} className="py-3.5">
+              <p className="flex gap-2 text-[16px] font-bold text-gray-900"><span className="text-green-700">Q</span>{qText}</p>
+              <p className="mt-1 flex gap-2 text-[15px] leading-[1.8] text-gray-600"><span className="font-bold text-gray-400">A</span><span>{a}</span></p>
+            </div>
+          ))}
+        </div>
         <a href={LINE_URL} target="_blank" rel="noopener noreferrer"
-          className="mt-4 flex min-h-[48px] items-center justify-center rounded-2xl border-2 border-[#06C755] font-bold text-[#06A447]">
+          className="mt-3 flex min-h-[48px] items-center justify-center rounded-2xl border-2 border-[#06C755] font-bold text-[#06A447]">
           有問題？加 LINE 問我們
         </a>
       </section>
 
       {/* 底部固定列的墊片 */}
-      <div className="h-20" aria-hidden />
+      <div className="h-24" aria-hidden />
 
       {/* ── 底部固定列 ───────────────────────────────── */}
       {isOpen && (
@@ -213,11 +288,12 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
           <div className="mx-auto flex max-w-3xl items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-[13px] text-gray-600">{count > 0 ? `已選 ${count} 件` : '還沒選商品'}</p>
-              <p className="text-xl font-bold text-red-600">{money(subtotal)}</p>
+              <p className="text-[22px] font-bold leading-tight text-red-600 tabular-nums">{money(subtotal)}</p>
+              {freeHint && <p className="text-[12px] font-bold text-green-700">{freeHint}</p>}
             </div>
             <button disabled={count === 0} onClick={() => setCheckingOut(true)}
-              className="min-h-[52px] flex-[1.4] rounded-2xl bg-green-700 text-base font-bold text-white disabled:opacity-40">
-              填寫收件資料 →
+              className="min-h-[56px] flex-[1.5] rounded-2xl bg-green-700 px-3 text-[17px] font-bold text-white shadow-sm active:bg-green-800 disabled:bg-gray-300 disabled:text-gray-600 disabled:shadow-none">
+              {count === 0 ? '請先選擇商品' : '下一步：填收件資料 →'}
             </button>
           </div>
         </div>
