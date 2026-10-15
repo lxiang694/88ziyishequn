@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 import StorePickerModal, { type Store } from '@/components/front/StorePickerModal'
 import {
   campaignPhase, checkoutProblem, enabledMethods, formatTwDateTime, isStorePickup, methodFee, shippingFee,
-  DELIVERY_TIMES, SHIPPING_LABEL, type ShippingMethod,
+  DELIVERY_TIMES, SHIPPING_LABEL, SHIPPING_SHORT, type ShippingMethod,
 } from '@/lib/groupBuy/domain'
 import type { PublicCampaign, PublicItem } from '@/lib/groupBuy/repo'
 
@@ -51,7 +51,7 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
 
   const [qty, setQty] = useBasket(campaign.slug)
   const [checkingOut, setCheckingOut] = useState(false)
-  const [placed, setPlaced] = useState<null | { order_no: string; total_amount: number; shipping_fee: number; method: ShippingMethod }>(null)
+  const [placed, setPlaced] = useState<Placed | null>(null)
 
   const lines = items.filter(i => (qty[i.id] || 0) > 0).map(i => ({ item: i, quantity: qty[i.id] }))
   const count = lines.reduce((s, l) => s + l.quantity, 0)
@@ -238,13 +238,20 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
 
 const CUSTOMER_KEY = 'gb-customer'
 
+/** 下單成功後顯示用：金額以伺服器回傳為準，商品明細與收件資料是送出當下的內容 */
+type Placed = {
+  order_no: string; subtotal: number; shipping_fee: number; total_amount: number; method: ShippingMethod
+  lines: { item_id: number; name: string; spec: string; image_url: string | null; price: number; quantity: number }[]
+  customer: { name: string; phone: string; store: Store | null; address: string; deliveryTime: string; note: string }
+}
+
 function CheckoutSheet({ campaign, lines, subtotal, methods, onClose, onPlaced }: {
   campaign: PublicCampaign['campaign']
   lines: { item: PublicItem; quantity: number }[]
   subtotal: number
   methods: ShippingMethod[]
   onClose: () => void
-  onPlaced: (p: { order_no: string; total_amount: number; shipping_fee: number; method: ShippingMethod }) => void
+  onPlaced: (p: Placed) => void
 }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -285,7 +292,11 @@ function CheckoutSheet({ campaign, lines, subtotal, methods, onClose, onPlaced }
       const d = await res.json()
       if (!d.success) { setError(d.error || '下單失敗'); return }
       try { localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ name, phone, address, store })) } catch {}
-      onPlaced({ ...d.data, method })
+      onPlaced({
+        order_no: d.data.order_no, subtotal: d.data.subtotal, shipping_fee: d.data.shipping_fee, total_amount: d.data.total_amount, method,
+        lines: lines.map(l => ({ item_id: l.item.id, name: l.item.name, spec: l.item.spec, image_url: l.item.image_url, price: l.item.price, quantity: l.quantity })),
+        customer: { name: name.trim(), phone: input.phone, store: isStorePickup(method) ? store : null, address: address.trim(), deliveryTime, note: note.trim() },
+      })
     } catch {
       setError('網路不穩，請再按一次')
     } finally {
@@ -371,15 +382,12 @@ function CheckoutSheet({ campaign, lines, subtotal, methods, onClose, onPlaced }
         </button>
         <p className="mt-2 text-center text-[13px] text-gray-500">截單後統一出貨；截單前如需取消請傳 LINE</p>
       </div>
-      {picking && <StorePickerModal title="選擇 7-11 取貨門市（冷凍）" onSelect={s => { setStore(s); setPicking(false) }} onClose={() => setPicking(false)} />}
+      {picking && <StorePickerModal title={`選擇 7-11 取貨門市（${method === '711_normal' ? '常溫' : '冷凍'}）`} onSelect={s => { setStore(s); setPicking(false) }} onClose={() => setPicking(false)} />}
     </div>
   )
 }
 
-function OrderPlaced({ placed, campaign }: {
-  placed: { order_no: string; total_amount: number; shipping_fee: number; method: ShippingMethod }
-  campaign: PublicCampaign['campaign']
-}) {
+function OrderPlaced({ placed, campaign }: { placed: Placed; campaign: PublicCampaign['campaign'] }) {
   // 成功頁比團購頁短很多：要等它畫出來後再「直接跳」到最上面。
   // 全站開了平滑捲動，若在換頁前慢慢捲，頁面一變短 iPhone 就會中斷捲動，
   // 客人停在頁尾，以為沒有下單成功。
@@ -390,23 +398,113 @@ function OrderPlaced({ placed, campaign }: {
     return () => cancelAnimationFrame(raf)
   }, [])
 
+  const pickup = isStorePickup(placed.method)
+  const payLabel = pickup ? '取貨時付款' : '送達時付款'
+  const count = placed.lines.reduce((n, l) => n + l.quantity, 0)
+  const c = placed.customer
+  const copyNo = async () => {
+    try { await navigator.clipboard.writeText(placed.order_no); toast.success('已複製訂單編號') } catch { toast.error('複製失敗，請截圖保存') }
+  }
+  const steps = [
+    `${formatTwDateTime(campaign.ends_at)} 截單`,
+    '截單後統一出貨',
+    pickup ? '貨到門市時，7-11 會傳簡訊通知' : '黑貓配送到府',
+    `${pickup ? '到店取貨時' : '收貨時'}付款 ${money(placed.total_amount)}`,
+  ]
+  const card = 'mt-4 rounded-3xl bg-white p-5 text-left shadow-sm'
+  const h2 = 'flex items-center gap-2 text-lg font-bold text-gray-900'
+
   return (
-    <div className="mx-auto max-w-lg px-4 pb-16 pt-16 text-center">
-      <p className="text-6xl" aria-hidden>🎉</p>
-      <h1 className="mt-4 text-2xl font-bold text-gray-900">跟團成功！</h1>
-      <div className="mt-5 rounded-3xl bg-white p-5 text-left shadow-sm">
-        <p className="text-[15px] text-gray-600">訂單編號</p>
-        <p className="font-mono text-2xl font-bold tracking-wide text-gray-900">{placed.order_no}</p>
-        <p className="mt-3 text-[15px] text-gray-600">{isStorePickup(placed.method) ? '取貨時付款' : '送達時付款'}</p>
-        <p className="text-2xl font-bold text-red-600">{money(placed.total_amount)}</p>
-        <p className="mt-4 rounded-xl bg-canvas p-3 text-[15px] leading-relaxed text-gray-700">
-          {formatTwDateTime(campaign.ends_at)} 截單後統一出貨，{isStorePickup(placed.method) ? '到店時會收到 7-11 簡訊通知' : '黑貓會在出貨後配送'}。
-          請截圖保存這個畫面，有問題傳 LINE 給我們。
-        </p>
-      </div>
+    <div className="mx-auto max-w-lg px-4 pb-16 pt-16">
+      {/* ── 成功 + 訂單編號 + 應付金額：第一屏一定看得到 ── */}
+      <section className="rounded-3xl bg-gradient-to-br from-green-700 to-emerald-600 px-5 pb-5 pt-6 text-center text-white shadow-md">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow" aria-hidden>
+          <svg viewBox="0 0 24 24" className="h-9 w-9 text-green-700" fill="none" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        </span>
+        <h1 className="mt-3 text-[26px] font-extrabold">跟團成功！</h1>
+        <p className="mt-1 text-[15px] text-green-50">訂單已成立，現在不用付款</p>
+        <div className="mt-4 rounded-2xl bg-white px-4 py-3 text-left text-gray-900">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[13px] text-gray-500">訂單編號</p>
+              <p className="font-mono text-[22px] font-bold tracking-wide">{placed.order_no}</p>
+            </div>
+            <button onClick={copyNo} className="flex-shrink-0 rounded-full border border-green-600 px-3 py-1.5 text-sm font-bold text-green-700 active:bg-green-50">複製</button>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between border-t border-dashed border-gray-200 pt-2">
+            <span className="text-[15px] font-bold text-gray-700">{payLabel}</span>
+            <span className="text-[26px] font-extrabold text-red-600 tabular-nums">{money(placed.total_amount)}</span>
+          </div>
+        </div>
+        <p className="mt-3 text-[13px] text-green-50">📸 請截圖保存這個畫面</p>
+      </section>
+
+      {/* ── 跟團商品 ── */}
+      <section className={card} aria-label="跟團商品">
+        <h2 className={h2}>🛍️ 跟團商品 <span className="text-sm font-normal text-gray-500">共 {count} 件</span></h2>
+        <ul className="mt-3 divide-y divide-gray-100">
+          {placed.lines.map(l => (
+            <li key={l.item_id} className="flex gap-3 py-3 first:pt-0">
+              <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white">
+                {l.image_url
+                  ? <Image src={l.image_url} alt="" fill className="object-contain" sizes="64px" />
+                  : <span className="flex h-full items-center justify-center text-2xl" aria-hidden>📦</span>}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold leading-snug text-gray-900">{l.name}</p>
+                {l.spec && <p className="text-[14px] text-gray-600">{l.spec}</p>}
+                <div className="mt-1 flex items-baseline justify-between gap-2">
+                  <span className="text-[14px] text-gray-600 tabular-nums">{money(l.price)} × <b className="text-base text-gray-900">{l.quantity}</b></span>
+                  <span className="font-bold text-gray-900 tabular-nums">{money(l.price * l.quantity)}</span>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <dl className="mt-1 space-y-1 rounded-2xl bg-canvas p-3 text-[15px]">
+          <div className="flex justify-between text-gray-600"><dt>商品小計</dt><dd className="tabular-nums">{money(placed.subtotal)}</dd></div>
+          <div className="flex justify-between text-gray-600"><dt>運費（{SHIPPING_SHORT[placed.method]}）</dt><dd className="tabular-nums">{placed.shipping_fee ? money(placed.shipping_fee) : '免運'}</dd></div>
+          <div className="flex justify-between border-t border-line pt-1.5 text-lg font-bold"><dt>{payLabel}</dt><dd className="text-red-600 tabular-nums">{money(placed.total_amount)}</dd></div>
+        </dl>
+      </section>
+
+      {/* ── 收件資訊 ── */}
+      <section className={card} aria-label="收件資訊">
+        <h2 className={h2}>{pickup ? '🏪' : '🚚'} 收件資訊</h2>
+        <dl className="mt-3 grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-2 text-[15px]">
+          <dt className="text-gray-500">收件人</dt><dd className="font-bold text-gray-900">{c.name}</dd>
+          <dt className="text-gray-500">手機</dt><dd className="font-mono text-gray-900">{c.phone}</dd>
+          <dt className="text-gray-500">取貨方式</dt><dd className="text-gray-900">{SHIPPING_LABEL[placed.method]}</dd>
+          {pickup && c.store ? <>
+            <dt className="text-gray-500">取貨門市</dt>
+            <dd><b className="text-gray-900">{c.store.store_name}門市</b><span className="block text-[14px] text-gray-600">{c.store.address}</span></dd>
+          </> : <>
+            <dt className="text-gray-500">地址</dt><dd className="text-gray-900">{c.address}</dd>
+            <dt className="text-gray-500">送達時段</dt><dd className="text-gray-900">{c.deliveryTime}</dd>
+          </>}
+          {c.note && <><dt className="text-gray-500">備註</dt><dd className="text-gray-900">{c.note}</dd></>}
+        </dl>
+      </section>
+
+      {/* ── 接下來 ── */}
+      <section className={card} aria-label="接下來">
+        <h2 className={h2}>📅 接下來</h2>
+        <ol className="mt-3 space-y-3">
+          {steps.map((t, i) => (
+            <li key={i} className="flex items-start gap-3 text-[15px] text-gray-800">
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-sm font-bold text-green-800">{i + 1}</span>
+              <span className="pt-0.5">{t}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-3 text-[13px] text-gray-500">截單前如需修改或取消，請傳 LINE 並告訴我們訂單編號。</p>
+      </section>
+
       <a href={LINE_URL} target="_blank" rel="noopener noreferrer"
-        className="mt-5 flex min-h-[48px] items-center justify-center rounded-2xl bg-[#06C755] font-bold text-white">加 LINE 收出貨通知</a>
-      <Link href="/" className="mt-4 inline-block font-bold text-green-700">← 回首頁逛逛</Link>
+        className="mt-5 flex min-h-[52px] items-center justify-center rounded-2xl bg-[#06C755] text-lg font-bold text-white">加 LINE 收出貨通知</a>
+      <div className="mt-4 text-center">
+        <Link href="/" className="inline-block font-bold text-green-700">← 回首頁逛逛</Link>
+      </div>
     </div>
   )
 }
