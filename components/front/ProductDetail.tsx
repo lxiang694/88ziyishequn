@@ -7,6 +7,7 @@ import { useCart } from './CartContext'
 import { formatPrice } from '@/lib/utils'
 import { timingLabels } from '@/lib/productMeta'
 import { renderProductText } from '@/lib/productBlocks'
+import ProductGallery from './ProductGallery'
 import toast from 'react-hot-toast'
 import SocialShareButtons from './SocialShareButtons'
 import { PRESALE } from '@/lib/presale/camelliaOil'
@@ -64,7 +65,6 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
     firstAvailable || product.product_variants?.[0] || null
   )
   const [qty, setQty] = useState(1)
-  const [activeImage, setActiveImage] = useState<string | null>(product.cover_image_url)
 
   const allImages = [
     ...(product.cover_image_url ? [product.cover_image_url] : []),
@@ -110,27 +110,7 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
         {/* Images —— 正方形。商品圖幾乎都是正方形的宣傳圖，容器改成 4:3 時左右會多出
             兩條白邊，看起來很空。購買按鈕已經固定在畫面底部，不必再壓縮圖片高度。
             object-contain：少數非正方形的圖完整顯示，不裁掉圖上的文字。 */}
-        <div>
-          <div className="aspect-square bg-white rounded-2xl overflow-hidden relative mb-3 shadow-sm">
-            {activeImage ? (
-              <Image src={activeImage} alt={product.product_name} fill className="object-contain"
-                sizes="(max-width: 768px) 100vw, 50vw" priority />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-7xl text-gray-200">💊</div>
-            )}
-          </div>
-          {allImages.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {allImages.map((img, i) => (
-                <button key={i} onClick={() => setActiveImage(img)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-colors
-                    ${activeImage === img ? 'border-green-600' : 'border-gray-200 hover:border-green-300'}`}>
-                  <Image src={img} alt="" width={64} height={64} className="object-cover w-full h-full" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <ProductGallery images={allImages} alt={product.product_name} />
 
         {/* Product info —— 先給買東西需要的：名稱、價格、規格、數量、按鈕；
             介紹與分類標籤放在按鈕後面 */}
@@ -228,7 +208,7 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
           </div>
 
           {product.short_intro && (
-            <p className="text-gray-600 text-base leading-relaxed mt-1 md:mt-5 bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <p className="mt-1 rounded-r-2xl border-l-4 border-green-600 bg-green-50/60 px-4 py-3 text-[16px] leading-[1.85] text-gray-800 md:mt-5">
               {product.short_intro}
             </p>
           )}
@@ -244,84 +224,39 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
         </div>
       </div>
 
-      {/* Detail sections */}
+      {/* Detail sections —— 內文 16px、行距加寬；小節標題獨立一行，內容用滿整個寬度 */}
       <div className="space-y-4">
         {(product.suitable_people || timingLabels(product.intake_timing).length > 0 || product.pairing_tips || product.source_notes) && (
-          <div className="bg-white rounded-2xl border-2 border-green-100 p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-lg">🎯</span>
-              情境化保健資訊
-            </h3>
-            <div className="space-y-3.5">
+          <DetailCard icon="🎯" iconBg="bg-green-50" title="情境化保健資訊" highlight>
+            <div className="divide-y divide-gray-100">
               {product.suitable_people && (
-                <div className="flex gap-3">
-                  <span className="text-xl flex-shrink-0">👥</span>
-                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">適合誰</p><div className="text-gray-600 text-sm leading-relaxed">{renderProductText(product.suitable_people)}</div></div>
-                </div>
+                <SubBlock icon="👥" title="適合誰">{renderProductText(product.suitable_people)}</SubBlock>
               )}
               {timingLabels(product.intake_timing).length > 0 && (
-                <div className="flex gap-3">
-                  <span className="text-xl flex-shrink-0">⏰</span>
-                  <div>
-                    <p className="font-bold text-gray-700 text-sm mb-1">建議服用時間</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {timingLabels(product.intake_timing).map((l, i) => (
-                        <span key={i} className="text-[13px] font-bold bg-green-50 text-green-800 px-3 py-1.5 rounded-full">{l}</span>
-                      ))}
-                    </div>
+                <SubBlock icon="⏰" title="建議服用時間">
+                  <div className="flex flex-wrap gap-2">
+                    {timingLabels(product.intake_timing).map((l, i) => (
+                      <span key={i} className="rounded-full bg-green-50 px-3 py-1.5 text-[14px] font-bold text-green-800">{l}</span>
+                    ))}
                   </div>
-                </div>
+                </SubBlock>
               )}
-              {product.pairing_tips && (
-                <div className="flex gap-3">
-                  <span className="text-xl flex-shrink-0">🔗</span>
-                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">怎麼搭</p><div className="text-gray-600 text-sm leading-relaxed">{renderProductText(product.pairing_tips)}</div></div>
-                </div>
-              )}
-              {product.source_notes && (
-                <div className="flex gap-3">
-                  <span className="text-xl flex-shrink-0">🌿</span>
-                  <div><p className="font-bold text-gray-700 text-sm mb-0.5">來源 / 挑選</p><div className="text-gray-600 text-sm leading-relaxed">{renderProductText(product.source_notes)}</div></div>
-                </div>
-              )}
+              {product.pairing_tips && <SubBlock icon="🔗" title="怎麼搭">{renderProductText(product.pairing_tips)}</SubBlock>}
+              {product.source_notes && <SubBlock icon="🌿" title="來源 / 挑選">{renderProductText(product.source_notes)}</SubBlock>}
             </div>
-          </div>
+          </DetailCard>
         )}
-        {product.usage_method && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <span className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-lg">📋</span>
-              使用方法
-            </h3>
-            <div className="text-gray-600 leading-relaxed">{renderProductText(product.usage_method)}</div>
-          </div>
-        )}
-        {product.ingredients && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <span className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-lg">🧪</span>
-              成分說明
-            </h3>
-            <div className="text-gray-600 leading-relaxed">{renderProductText(product.ingredients)}</div>
-          </div>
-        )}
+        {product.usage_method && <DetailCard icon="📋" iconBg="bg-green-50" title="使用方法">{renderProductText(product.usage_method)}</DetailCard>}
+        {product.ingredients && <DetailCard icon="🧪" iconBg="bg-purple-50" title="成分說明">{renderProductText(product.ingredients)}</DetailCard>}
         {product.precautions && (
-          <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5">
-            <h3 className="text-lg font-bold text-amber-800 mb-3 flex items-center gap-2">
-              <span className="text-xl">⚠️</span> 注意事項
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <h3 className="mb-3 flex items-center gap-2 text-[19px] font-bold text-amber-900">
+              <span className="text-xl" aria-hidden>⚠️</span> 注意事項
             </h3>
-            <div className="text-amber-700 leading-relaxed">{renderProductText(product.precautions)}</div>
+            <div className="text-[16px] leading-[1.85] text-amber-900">{renderProductText(product.precautions)}</div>
           </div>
         )}
-        {product.storage_method && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <span className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-lg">📦</span>
-              保存方式
-            </h3>
-            <div className="text-gray-600 leading-relaxed">{renderProductText(product.storage_method)}</div>
-          </div>
-        )}
+        {product.storage_method && <DetailCard icon="📦" iconBg="bg-gray-50" title="保存方式">{renderProductText(product.storage_method)}</DetailCard>}
       </div>
 
       {/*
@@ -420,6 +355,33 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/** 商品詳情的一張卡片：標題列＋內文（16px、行距 1.85） */
+function DetailCard({ icon, iconBg, title, highlight, children }: {
+  icon: string; iconBg: string; title: string; highlight?: boolean; children: React.ReactNode
+}) {
+  return (
+    <section className={`rounded-2xl bg-white p-5 shadow-sm ${highlight ? 'border-2 border-green-100' : 'border border-gray-100'}`}>
+      <h3 className="mb-4 flex items-center gap-2.5 text-[19px] font-bold text-gray-900">
+        <span className={`flex h-9 w-9 items-center justify-center rounded-xl text-lg ${iconBg}`} aria-hidden>{icon}</span>
+        {title}
+      </h3>
+      <div className="text-[16px] leading-[1.85] text-gray-700">{children}</div>
+    </section>
+  )
+}
+
+/** 情境化保健資訊裡的一小節：小標獨立一行，內容不再擠在 emoji 旁邊的窄欄 */
+function SubBlock({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
+  return (
+    <div className="py-4 first:pt-0 last:pb-0">
+      <h4 className="mb-2 flex items-center gap-2 text-[16px] font-bold text-green-800">
+        <span aria-hidden>{icon}</span>{title}
+      </h4>
+      {children}
     </div>
   )
 }

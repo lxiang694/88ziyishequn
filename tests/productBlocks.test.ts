@@ -82,3 +82,15 @@ describe('商品描述欄位的排版', () => {
     assert.equal((blocks[0] as any).items.length, 2)
   })
 })
+
+test('「・」後面沒空格也是條列（九檔控溫艾絨披肩的適合誰）', () => {
+  const blocks = parseArticle('・長時間使用電腦、手機的上班族\n・經常低頭、久坐，肩頸容易緊繃的人\n・冷氣房待得久，肩背容易覺得涼的人\n\n它比較適合當作「日常溫熱放鬆用品」，而不是等到非常不舒服才使用。')
+  assert.deepEqual(blocks.map(b => b.type), ['ul', 'p'])
+  assert.deepEqual((blocks[0] as any).items, ['長時間使用電腦、手機的上班族', '經常低頭、久坐，肩頸容易緊繃的人', '冷氣房待得久，肩背容易覺得涼的人'])
+})
+
+test('英文符號仍要空格：-5°C、**粗體** 不是條列', () => {
+  assert.deepEqual(parseArticle('-5°C 以下保存').map(b => b.type), ['p'])
+  assert.deepEqual(parseArticle('**重點**在這裡，請注意。').map(b => b.type), ['p'])
+})
+
