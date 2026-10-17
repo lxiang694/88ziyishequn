@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { supabaseAdmin } from '@/lib/supabase'
 import { signToken } from '@/lib/auth'
+import { writeAuditLog } from '@/lib/audit'
+import { isLocked, lockedMessage, LOCK_MINUTES, MAX_FAILED_LOGINS, WRONG_PASSWORD_MESSAGE } from '@/lib/adminLoginLock'
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,12 +20,34 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error || !user) {
-      return NextResponse.json({ success: false, error: '帳號或密碼錯誤' }, { status: 401 })
+      return NextResponse.json({ success: false, error: WRONG_PASSWORD_MESSAGE }, { status: 401 })
+    }
+
+    // 鎖定中：連密碼都不比對，猜對了也進不來
+    if (isLocked(user.locked_until)) {
+      return NextResponse.json({ success: false, error: lockedMessage(user.locked_until) }, { status: 423 })
     }
 
     const valid = await bcrypt.compare(password, user.password_hash)
     if (!valid) {
-      return NextResponse.json({ success: false, error: '帳號或密碼錯誤' }, { status: 401 })
+      // 記一次錯誤；到第 3 次資料庫會設定鎖定時間。
+      // 遷移還沒執行（沒有這個函式）時忽略，照常回「帳號或密碼錯誤」。
+      const { data: fail, error: failErr } = await supabaseAdmin.rpc('admin_login_failed', {
+        p_account: user.account, p_max: MAX_FAILED_LOGINS, p_minutes: LOCK_MINUTES,
+      })
+      if (failErr) console.error('[admin login] 無法記錄登入失敗（若尚未執行 admin_login_lockout.sql 屬預期）', failErr.code)
+      const lockedUntil = Array.isArray(fail) ? fail[0]?.locked_until : null
+      if (isLocked(lockedUntil)) {
+        await writeAuditLog(req, { id: user.id, name: user.name, account: user.account, role_key: '', permissions: [] },
+          'admin.login_locked', `連續輸錯 ${MAX_FAILED_LOGINS} 次，鎖定 ${LOCK_MINUTES} 分鐘`)
+        return NextResponse.json({ success: false, error: lockedMessage(lockedUntil) }, { status: 423 })
+      }
+      return NextResponse.json({ success: false, error: WRONG_PASSWORD_MESSAGE }, { status: 401 })
+    }
+
+    // 登入成功：錯誤次數歸零
+    if (user.failed_login_count || user.locked_until) {
+      await supabaseAdmin.from('admin_users').update({ failed_login_count: 0, locked_until: null }).eq('id', user.id)
     }
 
     // 帳號自訂權限優先；未設定則沿用角色預設權限

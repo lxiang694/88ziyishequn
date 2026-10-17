@@ -32,6 +32,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'group_buy.copy': '團購：複製上一檔',
   'group_buy.update': '團購：儲存檔期與商品',
   'group_buy.delete': '團購：刪除檔期',
+  'admin.login_locked': '後台登入：密碼連續錯誤，帳號鎖定',
   'group_buy.order_update': '團購：更新訂單',
   'site_popup.create': '彈窗：新增',
   'site_popup.update': '彈窗：修改',
