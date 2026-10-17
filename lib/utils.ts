@@ -14,15 +14,15 @@ export function formatPrice(price: number): string {
   return `NT$${Number(price).toLocaleString('zh-TW')}`
 }
 
+/**
+ * 訂單時間：台灣時間、24 小時制，例如 2026/10/16 17:47、2026/10/17 01:05。
+ * 不用 toLocaleString —— 那會出現「下午05:47」，而且不同瀏覽器格式不一樣。
+ */
 export function formatDateTime(dateStr: string): string {
-  try {
-    const date = new Date(dateStr)
-    return date.toLocaleString('zh-TW', {
-      timeZone: 'Asia/Taipei',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit',
-    })
-  } catch { return dateStr }
+  const t = new Date(dateStr).getTime()
+  if (Number.isNaN(t)) return dateStr
+  const tw = new Date(t + 8 * 3600_000).toISOString()   // 台灣沒有夏令時間，固定 +8
+  return `${tw.slice(0, 10).replace(/-/g, '/')} ${tw.slice(11, 16)}`
 }
 
 export function formatDate(dateStr: string): string {

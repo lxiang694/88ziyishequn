@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { formatDateTime } from '@/lib/utils'
 
 export type HistoryTransfer = {
   id: string; batch_id: string; status: string; external_order_no: string | null
@@ -66,7 +67,7 @@ export default function BatchHistory({ transfers, busy, onDownload, onReadResult
             </svg>
             <span className="min-w-0">
               <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="whitespace-nowrap font-bold text-slate-900 tabular-nums">{new Date(rows[0].created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</span>
+                <span className="whitespace-nowrap font-bold text-slate-900 tabular-nums">{formatDateTime(rows[0].created_at)}</span>
                 <span className="text-sm font-semibold text-slate-700">{rows.length} 筆</span>
                 {counts.map(({ s, n }) => <span key={s} className={`rounded-full px-2 py-0.5 text-xs font-bold ${STATUS[s].pill}`}>{STATUS[s].label} {n}</span>)}
               </span>

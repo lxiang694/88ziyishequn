@@ -119,16 +119,32 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   return NextResponse.json({ success: true })
 }
 
-/** 刪除檔期：只有還沒有任何訂單的才能刪 */
+/**
+ * 刪除檔期：只有「已關閉」的才能刪（開啟中的前台還有人在看、在下單）。
+ * 有訂單時要帶 ?with_orders=1 才會連同訂單一起刪 —— 前台先回 409 告訴後台
+ * 有幾筆，讓管理者輸入「刪除」確認後再送一次。商品隨檔期一起刪（ON DELETE CASCADE），
+ * 訂單明細隨訂單一起刪。
+ */
 export async function DELETE(req: NextRequest, { params }: Ctx) {
   const auth = authorizeGroupBuy(req)
   if (auth instanceof NextResponse) return auth
   const id = Number(params.id)
-  const { count } = await supabaseAdmin.from('group_buy_orders').select('id', { count: 'exact', head: true }).eq('campaign_id', id)
-  if (count) return NextResponse.json({ success: false, error: '這一檔已經有訂單，不能刪除；可以按「關閉」讓前台看不到' }, { status: 400 })
-  const { data: c } = await supabaseAdmin.from('group_buy_campaigns').delete().eq('id', id).select('slug').maybeSingle()
+  const { data: c } = await supabaseAdmin.from('group_buy_campaigns').select('slug, title, is_published').eq('id', id).maybeSingle()
   if (!c) return NextResponse.json({ success: false, error: '找不到檔期' }, { status: 404 })
-  await writeAuditLog(req, auth.admin, 'group_buy.delete', c.slug)
+  if (c.is_published) return NextResponse.json({ success: false, error: '開啟中的團購不能刪除，請先關閉' }, { status: 400 })
+
+  const { count } = await supabaseAdmin.from('group_buy_orders').select('id', { count: 'exact', head: true }).eq('campaign_id', id)
+  const orderCount = count || 0
+  if (orderCount > 0) {
+    if (req.nextUrl.searchParams.get('with_orders') !== '1') {
+      return NextResponse.json({ success: false, needsConfirm: true, orderCount, error: `這一檔有 ${orderCount} 筆訂單` }, { status: 409 })
+    }
+    const { error } = await supabaseAdmin.from('group_buy_orders').delete().eq('campaign_id', id)
+    if (error) return NextResponse.json({ success: false, error: '刪除訂單失敗，檔期沒有刪除' }, { status: 500 })
+  }
+  const { error } = await supabaseAdmin.from('group_buy_campaigns').delete().eq('id', id)
+  if (error) return NextResponse.json({ success: false, error: '刪除失敗' }, { status: 500 })
+  await writeAuditLog(req, auth.admin, 'group_buy.delete', `${c.slug}「${c.title}」${orderCount ? `（含 ${orderCount} 筆訂單）` : ''}`)
   refreshPages([c.slug])
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, deletedOrders: orderCount })
 }

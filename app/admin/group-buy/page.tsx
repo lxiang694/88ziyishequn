@@ -50,6 +50,26 @@ export default function GroupBuyAdminPage() {
     setRows(rs => rs.map(x => x.id === row.id ? { ...x, is_published: open } : x))
   }
 
+  const remove = async (row: Row) => {
+    if (!confirm(`刪除「${row.title}」？\n\n檔期和商品會一起刪除，無法復原。`)) return
+    setBusy(true)
+    try {
+      const url = `/api/admin/group-buy/${row.id}`
+      let d = await (await fetch(url, { method: 'DELETE' })).json()
+      if (!d.success && d.needsConfirm) {
+        // 有訂單：多一道確認，避免誤刪客人的訂單紀錄
+        const typed = prompt(`⚠️ 這一檔有 ${d.orderCount} 筆訂單（含已取消）。\n刪除後訂單資料也會一起刪掉，無法復原。\n建議先到「訂單與叫貨」匯出 CSV 備份。\n\n確定要刪除，請輸入「刪除」兩個字：`)
+        if (typed?.trim() !== '刪除') { if (typed !== null) toast.error('沒有輸入「刪除」，已取消'); return }
+        d = await (await fetch(`${url}?with_orders=1`, { method: 'DELETE' })).json()
+      }
+      if (!d.success) return toast.error(d.error || '刪除失敗')
+      toast.success(d.deletedOrders ? `已刪除檔期與 ${d.deletedOrders} 筆訂單` : '已刪除')
+      setRows(rs => rs.filter(x => x.id !== row.id))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const now = new Date()
   return (
     <div className="max-w-5xl">
@@ -96,6 +116,11 @@ export default function GroupBuyAdminPage() {
                     <Link href={`/admin/group-buy/${r.id}`} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold">編輯檔期與商品</Link>
                     <button disabled={busy} onClick={() => copy(r)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold disabled:opacity-40">複製成下個月</button>
                     {r.is_published && <a href={`/group-buy/${r.slug}`} target="_blank" rel="noopener" className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold">看前台 ↗</a>}
+                    {/* 只有關閉的團能刪；開啟中的先關掉才看得到這顆按鈕 */}
+                    {!r.is_published && (
+                      <button disabled={busy} onClick={() => remove(r)}
+                        className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40">🗑 刪除</button>
+                    )}
                   </div>
                 </div>
               </div>
