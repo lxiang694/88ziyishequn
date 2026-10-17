@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { formatPrice, formatDateTime } from '@/lib/utils'
+import GroupBuyDashboard from '@/components/admin/GroupBuyDashboard'
 
 export default function DashboardPage() {
   const [todayStats, setTodayStats] = useState<any>(null)
@@ -75,6 +76,9 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* 團購：待出貨提醒、檔期、最新團購訂單（沒有團購權限時不顯示） */}
+      <GroupBuyDashboard />
+
       {/* Member & traffic overview (super_admin only) */}
       {(memberSummary || trafficSummary) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -132,6 +136,7 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {[
               { href: '/admin/orders', icon: '📦', label: '查看所有訂單', desc: '搜尋、篩選、更新狀態' },
+              { href: '/admin/group-buy', icon: '🧊', label: '團購管理', desc: '檔期、團購訂單與叫貨' },
               { href: '/admin/products/new', icon: '➕', label: '新增商品', desc: '新增保健品到商店' },
               { href: '/admin/products', icon: '🛍️', label: '商品庫存管理', desc: '查看庫存、編輯規格' },
               { href: '/admin/reports', icon: '📈', label: '查看銷售報表', desc: '訂單統計與分析' },

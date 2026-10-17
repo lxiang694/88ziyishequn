@@ -153,6 +153,14 @@ export default function GroupBuyOrdersPage({ params }: { params: { id: string } 
   const [selected, setSelected] = useState<number[]>([])
   const [busy, setBusy] = useState(false)
 
+  // 從儀表板點進來時帶 ?q=訂單編號 或 ?status=待出貨，直接篩好
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    const q0 = sp.get('q'), st = sp.get('status')
+    if (q0) setQ(q0)
+    if (st && (ORDER_STATUSES as readonly string[]).includes(st)) setStatus(st)
+  }, [])
+
   const load = useCallback(async () => {
     setLoading(true)
     const d = await (await fetch(`/api/admin/group-buy/${params.id}/orders`, { cache: 'no-store' })).json()
