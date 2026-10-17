@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateOrderNo, validateTWPhone } from '@/lib/utils'
 import { getUserFromRequest } from '@/lib/userAuth'
+import { priceOrderItems, PUBLIC_ORDER_COLUMNS } from '@/lib/orderSecurity'
 
 // POST /api/orders - place order atomically
 export async function POST(req: NextRequest) {
@@ -18,11 +19,18 @@ export async function POST(req: NextRequest) {
     if (!store_id || !store_name) return NextResponse.json({ success: false, error: '請選擇 7-11 門市' }, { status: 400 })
     if (!items || items.length === 0) return NextResponse.json({ success: false, error: '購物車是空的' }, { status: 400 })
 
-    // Validate items have required fields
-    for (const item of items) {
-      if (!item.variant_id || !item.product_id || !item.quantity || item.quantity < 1) {
-        return NextResponse.json({ success: false, error: '訂單資料格式錯誤' }, { status: 400 })
-      }
+    // 名稱、圖片、規格、單價一律從資料庫重新讀取，不用瀏覽器送來的值 ——
+    // 否則改一下送出的資料就能用任意價格下單。瀏覽器只決定「哪個規格、買幾件」。
+    const variantIds = Array.isArray(items) ? items.map((i: any) => Number(i?.variant_id)).filter(Number.isSafeInteger) : []
+    const { data: variantRows, error: variantErr } = await supabaseAdmin
+      .from('product_variants')
+      .select('id, product_id, variant_name, sale_price, sku_code, is_active, products(product_name, cover_image_url, is_published)')
+      .in('id', variantIds.slice(0, 50))
+    if (variantErr) return NextResponse.json({ success: false, error: '系統錯誤，請稍後再試' }, { status: 500 })
+    const { value: pricedItems, error: itemError } = priceOrderItems(items, (variantRows || []) as any)
+    if (!pricedItems) return NextResponse.json({ success: false, error: itemError }, { status: 400 })
+    if (String(customer_name).trim().length > 40 || String(note || '').length > 500 || String(line_id || '').length > 60) {
+      return NextResponse.json({ success: false, error: '資料太長，請檢查後再試' }, { status: 400 })
     }
 
     const order_no = generateOrderNo()
@@ -39,16 +47,7 @@ export async function POST(req: NextRequest) {
       p_county: county || '',
       p_district: district || '',
       p_note: note?.trim() || null,
-      p_items: items.map((i: any) => ({
-        product_id: i.product_id,
-        product_name: i.product_name,
-        cover_image_url: i.cover_image_url || null,
-        variant_id: i.variant_id,
-        variant_name: i.variant_name,
-        sku_code: i.sku_code || null,
-        unit_price: i.unit_price,
-        quantity: i.quantity,
-      })),
+      p_items: pricedItems,
     })
 
     if (error) {
@@ -160,11 +159,13 @@ export async function GET(req: NextRequest) {
   if (!phone || !validateTWPhone(phone)) {
     return NextResponse.json({ success: false, error: '請輸入正確的手機號碼' }, { status: 400 })
   }
+  // 只回訂單查詢頁需要的欄位，不含姓名、手機、LINE、備註與後台欄位
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select('*, order_items(*)')
+    .select(PUBLIC_ORDER_COLUMNS)
     .eq('phone', phone.trim())
     .order('created_at', { ascending: false })
-  if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    .limit(50)
+  if (error) return NextResponse.json({ success: false, error: '查詢失敗，請稍後再試' }, { status: 500 })
   return NextResponse.json({ success: true, data: data || [] })
 }

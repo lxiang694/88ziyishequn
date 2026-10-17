@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { PUBLIC_ORDER_COLUMNS } from '@/lib/orderSecurity'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,19 +14,14 @@ export async function GET(
   { params }: { params: { orderNo: string } }
 ) {
   const orderNo = params.orderNo?.trim()
-  if (!orderNo) {
+  if (!orderNo || !/^TW\d{14}$/.test(orderNo)) {
     return NextResponse.json({ success: false, error: '訂單編號錯誤' }, { status: 400 })
   }
 
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select(`
-      order_no, order_status, customer_name, phone, line_id,
-      total_amount, items_count, store_name, store_address,
-      county, district, note, created_at,
-      order_items(id, product_name_snapshot, product_image_snapshot,
-                  variant_name_snapshot, unit_price, quantity, subtotal)
-    `)
+    // 只回下單成功頁需要的欄位：不含姓名、手機、LINE、備註（訂單編號可以被猜）
+    .select(PUBLIC_ORDER_COLUMNS)
     .eq('order_no', orderNo)
     .maybeSingle()
 

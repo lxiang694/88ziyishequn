@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/userAuth'
+import { isSafePhone } from '@/lib/orderSecurity'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,19 +24,21 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  if (profile?.phone) {
+  // 只有格式正確的手機才放進查詢條件。舊資料裡可能存著任意字串（以前沒驗證），
+  // 直接拼進 .or(...) 會被當成查詢語法，撈出別人的訂單。
+  if (isSafePhone(profile?.phone)) {
     // user_id 是唯一可靠的歸屬依據（收件人可以是別人）。
     // 手機比對只用來撈「入會前下的訪客單」，因此加上 user_id is null：
     // 否則只要有人把貨寄到這支手機，這個帳號就看得到那筆別人的訂單。
     query = query.or(
-      `user_id.eq.${user.id},and(user_id.is.null,phone.eq.${profile.phone})`)
+      `user_id.eq.${user.id},and(user_id.is.null,phone.eq.${profile!.phone})`)
   } else {
     query = query.eq('user_id', user.id)
   }
 
   const { data, error } = await query
 
-  if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ success: false, error: '讀取訂單失敗' }, { status: 500 })
 
   return NextResponse.json(
     { success: true, data: data || [] },

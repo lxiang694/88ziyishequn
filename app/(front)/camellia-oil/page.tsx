@@ -7,6 +7,7 @@ import { PRESALE } from '@/lib/presale/camelliaOil'
 import PresaleBuyBox from '@/components/front/PresaleBuyBox'
 import SocialShareButtons from '@/components/front/SocialShareButtons'
 import { SITE_URL } from '@/lib/siteUrl'
+import { jsonLdHtml } from '@/lib/jsonLd'
 
 // 前台頁面每 60 秒重新產生一次，期間的訪客直接拿快取（從離客人最近的
 // 節點送出），不再每次打開都查資料庫。後台改商品時會呼叫
@@ -82,7 +83,7 @@ export default async function CamelliaOilPresalePage() {
     <div className="bg-white pb-24 lg:pb-0">
       {jsonLd && (
         <script type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+          dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }} />
       )}
 
       {/* ── Hero ───────────────────────────────────────── */}

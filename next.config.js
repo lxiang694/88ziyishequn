@@ -31,6 +31,22 @@ const nextConfig = {
   // bcryptjs needs to be excluded from client bundle
   serverExternalPackages: ['bcryptjs'],
 
+  // 基本安全標頭：
+  //   X-Frame-Options：不讓別的網站用 iframe 嵌入（防止騙點擊，特別是後台）
+  //   nosniff：瀏覽器不猜檔案類型，上傳的圖片不會被當成網頁執行
+  //   Referrer-Policy：連到外站時只帶網域，不帶完整網址（訂單頁網址含訂單編號）
+  async headers() {
+    return [{
+      source: '/:path*',
+      headers: [
+        { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+      ],
+    }]
+  },
+
   // 陪診業務已移除。舊網址（搜尋引擎、分享出去的連結）導回首頁，不留 404。
   // 用暫時轉址（307）：之後若重新開辦，瀏覽器不會記住這個轉址。
   // 目的地是站內固定路徑，不吃來源 query，不可能被導向外部網址。

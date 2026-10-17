@@ -4,6 +4,7 @@ import ProductDetailClient from '@/components/front/ProductDetailClient'
 import { fetchPublishedProduct, fetchRelatedArticles } from '@/lib/productQuery'
 import { lowestActivePrice, isInStock } from '@/lib/productPricing'
 import { SITE_URL } from '@/lib/siteUrl'
+import { jsonLdHtml } from '@/lib/jsonLd'
 
 
 // ⚠️ 不可拿掉 revalidate。
@@ -139,7 +140,7 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
     <>
       {jsonLd && (
         <script type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+          dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }} />
       )}
       <ProductDetailClient slug={slug} initialProduct={product} relatedArticles={relatedArticles} />
     </>

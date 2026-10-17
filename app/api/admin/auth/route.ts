@@ -56,6 +56,11 @@ export async function POST(req: NextRequest) {
 
     return res
   } catch (err) {
+    console.error('[admin login]', err instanceof Error ? err.message : err)
+    // 金鑰沒設定時直接講清楚該怎麼修（說出「沒設定」不會讓人能偽造登入：沒有金鑰就不發憑證）
+    if (err instanceof Error && err.message.startsWith('JWT_SECRET')) {
+      return NextResponse.json({ success: false, error: '網站尚未設定 JWT_SECRET：請到 Vercel → Settings → Environment Variables 新增（至少 16 個字元的隨機字串）後重新部署' }, { status: 500 })
+    }
     return NextResponse.json({ success: false, error: '登入失敗，請稍後再試' }, { status: 500 })
   }
 }

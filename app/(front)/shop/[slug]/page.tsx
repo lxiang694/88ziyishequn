@@ -4,6 +4,7 @@ import ShopBrowser from '@/components/front/ShopBrowser'
 import { fetchShopCategories, fetchShopProducts } from '@/lib/shopQuery'
 import { SITE_URL } from '@/lib/siteUrl'
 import { SHOP_CATEGORIES } from '@/lib/shopCategories'
+import { jsonLdHtml } from '@/lib/jsonLd'
 
 // 前台頁面每 60 秒重新產生一次，期間的訪客直接拿快取（從離客人最近的
 // 節點送出），不再每次打開都查資料庫。後台改商品時會呼叫
@@ -65,7 +66,7 @@ export default async function ShopCategoryPage({ params }: { params: { slug: str
   return (
     <>
       <script type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }} />
       <ShopBrowser
         categories={categories}
         activeSlug={slug}

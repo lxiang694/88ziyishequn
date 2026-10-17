@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: '檔案大小不可超過 5MB' }, { status: 400 })
     }
 
-    const ext = file.name.split('.').pop() || 'jpg'
+    // 副檔名依實際的圖片格式決定，不用上傳者的檔名（避免 .html、.svg 之類混進來）
+    const ext = ({ 'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' } as Record<string, string>)[file.type]
+    // 資料夾只允許英數字與 - _，不能用 ../ 跳到別的位置
+    if (!/^[a-z0-9_-]{1,40}$/i.test(bucket)) return NextResponse.json({ success: false, error: '資料夾名稱不正確' }, { status: 400 })
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
     const path = `${bucket}/${fileName}`
 

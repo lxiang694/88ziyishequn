@@ -13,6 +13,7 @@ import SocialShareButtons from '@/components/front/SocialShareButtons'
 import LoginPrompt from '@/components/front/LoginPrompt'
 import ArticleAudioPlayer from '@/components/front/ArticleAudioPlayer'
 import { SITE_URL } from '@/lib/siteUrl'
+import { jsonLdHtml } from '@/lib/jsonLd'
 
 export const dynamic = 'force-dynamic'
 
@@ -122,7 +123,7 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
     <div className="bg-white">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }}
       />
 
       <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">

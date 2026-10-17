@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireUser } from '@/lib/userAuth'
+import { sanitizeProfilePatch } from '@/lib/orderSecurity'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,22 +44,16 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const updateData: any = {}
-    const allowed = [
-      'name', 'phone', 'line_id',
-      'default_store_id', 'default_store_name', 'default_store_address',
-      'default_store_county', 'default_store_district',
-    ]
-    for (const k of allowed) {
-      if (body[k] !== undefined) updateData[k] = body[k] || null
-    }
+    // 手機一定要是 09 開頭 10 碼：這個值之後會被拿去比對訂單，不能放任意字串
+    const { value: updateData, error: invalid } = sanitizeProfilePatch(body)
+    if (!updateData) return NextResponse.json({ success: false, error: invalid }, { status: 400 })
 
     const { error } = await supabaseAdmin
       .from('user_profiles')
       .update(updateData)
       .eq('id', user.id)
 
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    if (error) return NextResponse.json({ success: false, error: '更新失敗' }, { status: 500 })
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ success: false, error: '更新失敗' }, { status: 500 })
