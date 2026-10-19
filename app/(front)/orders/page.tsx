@@ -1,14 +1,16 @@
 'use client'
-import { useState, Suspense } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { formatPrice, formatDateTime, getStatusColor } from '@/lib/utils'
 import { validateTWPhone } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { formatPhoneDisplay, normalizePhoneInput, phoneHint } from '@/lib/phoneInput'
 
 interface OrderItem { id: number; product_name_snapshot: string; product_image_snapshot: string | null; variant_name_snapshot: string; unit_price: number; quantity: number; subtotal: number }
 interface Order { id: number; order_no: string; created_at: string; order_status: string; store_name: string; store_address: string; county: string; district: string; total_amount: number; items_count: number; order_items: OrderItem[] }
 
+const LAST_PHONE_KEY = 'order-lookup-phone'
 const XIAOJUANG_LINE_URL = 'https://line.me/ti/p/yw13134'
 const XIAOJUANG_LINE_ID = 'yw13134'
 
@@ -124,14 +126,29 @@ function OrderQueryContent() {
   const [searched, setSearched] = useState(false)
   const [loading, setLoading] = useState(false)
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set())
+  const [touched, setTouched] = useState(false)
+  const [lastPhone, setLastPhone] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleSearch = async () => {
-    if (!phone || !validateTWPhone(phone)) { toast.error('請輸入正確的手機號碼（09xxxxxxxx）'); return }
+  // 上次查過的號碼：這支手機（瀏覽器）記住，下次點一下就能查
+  useEffect(() => {
+    try { setLastPhone(normalizePhoneInput(localStorage.getItem(LAST_PHONE_KEY) || '')) } catch {}
+  }, [])
+
+  const hint = phoneHint(phone)
+  const showError = hint.tone === 'error' || (touched && hint.tone === 'typing')
+
+  const handleSearch = async (value = phone) => {
+    setTouched(true)
+    if (!validateTWPhone(value)) { inputRef.current?.focus(); return }
     setLoading(true)
     try {
-      const res = await fetch(`/api/orders?phone=${encodeURIComponent(phone)}`)
+      const res = await fetch(`/api/orders?phone=${encodeURIComponent(value)}`)
       const data = await res.json()
-      if (data.success) { setOrders(data.data); setSearched(true) }
+      if (data.success) {
+        setOrders(data.data); setSearched(true)
+        try { localStorage.setItem(LAST_PHONE_KEY, value); setLastPhone(value) } catch {}
+      }
       else toast.error(data.error || '查詢失敗')
     } catch { toast.error('網路錯誤，請稍後再試') }
     finally { setLoading(false) }
@@ -142,31 +159,65 @@ function OrderQueryContent() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-4 pb-8 pt-16 md:pt-8">
       <h1 className="text-2xl font-bold text-gray-800 mb-1">訂單查詢</h1>
       <p className="text-gray-500 mb-6">
         不用註冊會員，輸入下單時填寫的手機號碼，就可以查到您所有的訂單
       </p>
 
-      {/* Search box */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
-        <label className="form-label">下單時填的手機號碼</label>
-        <div className="flex flex-col sm:flex-row gap-3">
+      {/* Search box —— 大字、自動分組 0912 345 678、即時提示還差幾碼 */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 mb-4">
+        <label htmlFor="order-phone" className="block text-[17px] font-bold text-gray-800 mb-2">下單時填的手機號碼</label>
+        <div className={`flex items-center gap-2 rounded-2xl border-2 bg-white px-4 transition-colors focus-within:ring-4
+          ${showError ? 'border-red-400 focus-within:ring-red-100' : hint.tone === 'ok' ? 'border-green-600 focus-within:ring-green-100' : 'border-gray-300 focus-within:border-green-600 focus-within:ring-green-100'}`}>
+          <svg className="h-6 w-6 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+            <rect x="6" y="2.5" width="12" height="19" rx="2.5" /><path strokeLinecap="round" d="M10.5 18.5h3" />
+          </svg>
           <input
-            className="form-input flex-1"
-            type="tel" inputMode="numeric"
-            placeholder="09xxxxxxxx"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
+            ref={inputRef}
+            id="order-phone"
+            className="min-w-0 flex-1 bg-transparent py-3.5 text-[24px] font-bold tracking-[0.08em] text-gray-900 tabular-nums outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-300"
+            type="tel" inputMode="numeric" autoComplete="tel-national" enterKeyHint="search"
+            placeholder="0912 345 678"
+            aria-invalid={showError}
+            aria-describedby="order-phone-hint"
+            value={formatPhoneDisplay(phone)}
+            onChange={e => setPhone(normalizePhoneInput(e.target.value))}
+            onBlur={() => phone && setTouched(true)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
           />
-          <button onClick={handleSearch} disabled={loading}
-            className="btn-primary px-6 py-3 text-base whitespace-nowrap flex-shrink-0">
-            {loading ? '查詢中...' : '🔍 查詢訂單'}
-          </button>
+          {phone && (
+            <button type="button" aria-label="清除號碼" onClick={() => { setPhone(''); setTouched(false); inputRef.current?.focus() }}
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-500 active:bg-gray-200">✕</button>
+          )}
         </div>
-        <p className="text-[13px] text-gray-600 mt-2 leading-relaxed">
-          💡 系統會找出所有以這個手機號碼下單的訂單記錄
+
+        {/* 即時提示 */}
+        <p id="order-phone-hint" aria-live="polite"
+          className={`mt-2 flex items-center gap-1.5 text-[14px] font-semibold ${showError ? 'text-red-600' : hint.tone === 'ok' ? 'text-green-700' : 'text-gray-500'}`}>
+          <span aria-hidden>{showError ? '⚠️' : hint.tone === 'ok' ? '✓' : '📱'}</span>
+          {showError && hint.tone === 'typing' ? `號碼不完整，${hint.text}` : hint.text}
+          {phone.length > 0 && hint.tone !== 'ok' && !showError && <span className="ml-auto tabular-nums text-gray-400">{phone.length} / 10</span>}
+        </p>
+
+        {/* 上次查過的號碼：點一下直接查 */}
+        {lastPhone && lastPhone !== phone && !searched && (
+          <button type="button" onClick={() => { setPhone(lastPhone); handleSearch(lastPhone) }}
+            className="mt-3 inline-flex min-h-[40px] items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3.5 text-[15px] font-semibold text-green-800 active:bg-green-100">
+            <span aria-hidden>🕘</span>查上次的號碼 <span className="tabular-nums">{formatPhoneDisplay(lastPhone)}</span>
+          </button>
+        )}
+
+        <button onClick={() => handleSearch()} disabled={loading}
+          className="mt-4 flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-green-700 text-[18px] font-bold text-white shadow-sm transition-colors active:bg-green-800 disabled:opacity-60">
+          {loading ? (
+            <><span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden />查詢中…</>
+          ) : (
+            <><svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden><circle cx="11" cy="11" r="7" /><path strokeLinecap="round" d="m20 20-3.5-3.5" /></svg>查詢訂單</>
+          )}
+        </button>
+        <p className="text-[13px] text-gray-500 mt-3 text-center leading-relaxed">
+          會列出這個手機號碼下過的所有訂單與出貨進度
         </p>
       </div>
 
