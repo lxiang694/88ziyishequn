@@ -10,12 +10,12 @@ const cleanHeader = (s: string) => s.replace(/\s/g, '')
 // 原單標記。拆單的訂單會多一個（1/2）序號 —— 見 domain.ts 的 orderMarker()。
 // 序號必須也收進來：同一張訂單的兩半在不同賣場的不同批次裡，同一批次內
 // 仍然只會出現一次，所以「每批次標記唯一」的檢查照樣成立。
-const ORDER_MARKER = /^健康優選訂單：(TW[0-9]+)(?:（([1-9])\/([1-9])）)?$/
-const MARKER_PREFIX = '健康優選訂單：'
-/** 給人看的標籤：TW2026…（1/2）。錯誤訊息要指出是哪一半，不然拆單時會找錯張 */
-const labelOf = (marker: string) => marker.slice(MARKER_PREFIX.length)
+// 團購訂單的標記是「健康優選團購：GB…」（不拆單，沒有序號）——見 groupBuy.ts
+const ORDER_MARKER = /^(?:健康優選訂單：(TW[0-9]+)(?:（([1-9])\/([1-9])）)?|健康優選團購：(GB[0-9]{14}))$/
+/** 給人看的標籤：TW2026…（1/2）、GB2026…。錯誤訊息要指出是哪一筆，不然拆單時會找錯張 */
+const labelOf = (marker: string) => marker.replace(/^健康優選(?:訂單|團購)：/, '')
 export type ResultRow = { row: ImportRow; external_order_no: string; sheet_row: number }
-export type ResultTransfer = { id: string; order_id: number | null; import_row: string[]; status: string; external_order_no: string | null }
+export type ResultTransfer = { id: string; order_id: number | null; group_buy_order_id?: number | null; import_row: string[]; status: string; external_order_no: string | null }
 
 /** Only read bounded OOXML values. Never evaluate formulas, VBA, links or workbook instructions. */
 export function parseResultWorkbook(bytes: Uint8Array): ResultRow[] {
@@ -97,7 +97,7 @@ export function matchResultRows(rows: ResultRow[], transfers: ResultTransfer[]) 
     if (!match || !transfer || seen.has(marker)) throw new Error('結果包含其他批次、重複或缺少原單號的訂單，尚未回寫')
     seen.add(marker)
     const label = labelOf(marker)
-    if (!transfer.order_id || transfer.status === 'released') throw new Error(`${label}：原訂單不存在或已解除保留，尚未回寫`)
+    if (!(transfer.order_id || transfer.group_buy_order_id) || transfer.status === 'released') throw new Error(`${label}：原訂單不存在或已解除保留，尚未回寫`)
     if (validateRow(result.row).length || result.row.some((v, i) => field(v, i) !== field(transfer.import_row[i], i))) throw new Error(`${label}：收件資料、商品或金額與原批次不符，尚未回寫`)
     const external = result.external_order_no
     if (!/^CM\d{13}$/.test(external)) {
@@ -107,7 +107,7 @@ export function matchResultRows(rows: ResultRow[], transfers: ResultTransfer[]) 
     if (numbers.has(external)) throw new Error('結果出現重複的賣貨便編號，尚未回寫')
     numbers.add(external)
     if (transfer.status === 'confirmed' && transfer.external_order_no !== external) throw new Error(`${label}：已有不同的賣貨便編號，尚未回寫`)
-    confirmed.push({ transfer_id: transfer.id, order_no: match[1], external_order_no: external })
+    confirmed.push({ transfer_id: transfer.id, order_no: match[1] || match[4], external_order_no: external })
   }
   for (const t of transfers) if (t.status === 'exported' && !seen.has(t.import_row[9])) unresolved.push({ order_no: labelOf(t.import_row[9]), reason: '本次結果沒有這筆訂單，保留待核對' })
   return { confirmed, unresolved }

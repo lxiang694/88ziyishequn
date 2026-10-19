@@ -5,7 +5,7 @@ import { formatDateTime } from '@/lib/utils'
 
 export type HistoryTransfer = {
   id: string; batch_id: string; status: string; external_order_no: string | null
-  created_at: string; import_row: string[]
+  created_at: string; import_row: string[]; source?: string
 }
 
 const money = (n: number) => `NT$${n.toLocaleString('zh-TW')}`
@@ -17,6 +17,12 @@ const STATUS = {
   released: { label: '已解除', pill: 'bg-slate-200 text-slate-600', stripe: 'border-l-slate-300' },
 } as const
 const statusOf = (s: string) => STATUS[s as keyof typeof STATUS] || STATUS.released
+/** 團購訂單的原單標記是「健康優選團購：GB…」—— 用標記判斷，資料庫還沒加 source 欄位時也分得出來 */
+const isGroupBuy = (t: HistoryTransfer) => t.source === 'group_buy' || t.import_row[9]?.startsWith('健康優選團購：')
+const orderLabel = (marker: string) => marker.replace(/^健康優選(?:訂單|團購)：/, '')
+const KindBadge = ({ groupBuy }: { groupBuy: boolean }) => groupBuy
+  ? <span className="rounded-full bg-sky-600 px-2 py-0.5 text-xs font-bold text-white">🧊 團購</span>
+  : <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-bold text-slate-700">📦 一般</span>
 
 /**
  * 賣貨便批次紀錄。
@@ -67,6 +73,7 @@ export default function BatchHistory({ transfers, busy, onDownload, onReadResult
             </svg>
             <span className="min-w-0">
               <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <KindBadge groupBuy={rows.every(isGroupBuy)} />
                 <span className="whitespace-nowrap font-bold text-slate-900 tabular-nums">{formatDateTime(rows[0].created_at)}</span>
                 <span className="text-sm font-semibold text-slate-700">{rows.length} 筆</span>
                 {counts.map(({ s, n }) => <span key={s} className={`rounded-full px-2 py-0.5 text-xs font-bold ${STATUS[s].pill}`}>{STATUS[s].label} {n}</span>)}
@@ -88,7 +95,7 @@ export default function BatchHistory({ transfers, busy, onDownload, onReadResult
             const st = statusOf(t.status)
             return <div key={t.id} className={`flex flex-wrap items-center justify-between gap-3 border-l-4 border-t border-t-slate-100 px-4 py-3.5 first:border-t-0 ${st.stripe}`}>
               <div className="min-w-0">
-                <p className="font-semibold text-slate-900">{t.import_row[9]}</p>
+                <p className="flex flex-wrap items-center gap-2 font-semibold text-slate-900"><KindBadge groupBuy={isGroupBuy(t)} /><span className="font-mono">{orderLabel(t.import_row[9])}</span></p>
                 <p className="mt-1 text-sm text-slate-700">{t.import_row[0]} · 店號 {t.import_row[2]} · <span className="font-semibold tabular-nums">{money(Number(t.import_row[5]) + Number(t.import_row[6]))}</span></p>
                 <p className="mt-1 max-w-2xl text-sm text-slate-500">{t.import_row[4]}</p>
               </div>

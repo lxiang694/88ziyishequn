@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     } finally { reader.releaseLock() }
     const file = Buffer.concat(chunks)
     const rows = parseResultWorkbook(file)
-    const { data: transfers, error } = await supabaseAdmin.from('myship_transfers').select('id,order_id,import_row,status,external_order_no').eq('batch_id', batch)
+    const { data: transfers, error } = await supabaseAdmin.from('myship_transfers').select('*').eq('batch_id', batch)
     if (error) return failure('讀取原批次失敗', 500)
     if (!transfers?.length) return failure('找不到原批次', 404)
     const matched = matchResultRows(rows, transfers)

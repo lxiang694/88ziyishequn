@@ -17,11 +17,24 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (!data?.length) return failure('找不到批次', 404)
     // 部分已確認的批次不再提供整批重下載，以免再次匯入已成立的訂單。
     if (data.some(t => t.status !== 'exported')) return failure('此批次已有成功或解除保留的訂單，不可重新下載整批', 409)
-    const { data: orders, error: orderError } = await supabaseAdmin.from('orders').select('*, order_items(*)').in('id', data.map(t => t.order_id))
-    if (orderError) return failure('無法核對原訂單', 500)
-    for (const t of data) {
-      const order = orders?.find(o => o.id === t.order_id)
-      if (!order || !isDeepStrictEqual(snapshot(order as TransferOrder), t.snapshot)) return failure('原訂單已變更，請人工核對此批次', 409)
+    // 團購訂單：用資料庫算的快照比對（與保留時存下的同一個函式）
+    const gbRows = data.filter(t => t.source === 'group_buy')
+    if (gbRows.length) {
+      const { data: snaps, error: snapError } = await supabaseAdmin.rpc('myship_group_buy_snapshots', { p_ids: gbRows.map(t => t.group_buy_order_id) })
+      if (snapError) return failure('無法核對原團購訂單', 500)
+      for (const t of gbRows) {
+        const current = (snaps as { id: number; snapshot: unknown }[] | null)?.find(x => x.id === t.group_buy_order_id)
+        if (!current || !isDeepStrictEqual(current.snapshot, t.snapshot)) return failure('原團購訂單已變更，請人工核對此批次', 409)
+      }
+    }
+    const shopRows = data.filter(t => t.source !== 'group_buy')
+    if (shopRows.length) {
+      const { data: orders, error: orderError } = await supabaseAdmin.from('orders').select('*, order_items(*)').in('id', shopRows.map(t => t.order_id))
+      if (orderError) return failure('無法核對原訂單', 500)
+      for (const t of shopRows) {
+        const order = orders?.find(o => o.id === t.order_id)
+        if (!order || !isDeepStrictEqual(snapshot(order as TransferOrder), t.snapshot)) return failure('原訂單已變更，請人工核對此批次', 409)
+      }
     }
     const file = await buildWorkbook(data.map(t => t.import_row as ImportRow))
     return new NextResponse(Buffer.from(file), { headers: {

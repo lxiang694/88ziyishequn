@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { authorize, failure, json, loadContext, readBody } from '@/lib/myship/server'
+import { authorize, failure, json, loadContext, loadGroupBuyContext, groupBuyTransfersReady, readBody } from '@/lib/myship/server'
+import { prepareGroupBuyRow } from '@/lib/myship/groupBuy'
 import { parseIds, prepareOrderParts, snapshot, isMarketplaceId, type ImportRow } from '@/lib/myship/domain'
 import { buildWorkbook } from '@/lib/myship/workbook'
 import { writeAuditLog } from '@/lib/audit'
@@ -12,6 +13,7 @@ export async function POST(req: NextRequest) {
   if (auth instanceof NextResponse) return auth
   try {
     const body = await readBody(req)
+    if (body.source === 'group_buy') return await createGroupBuyBatch(req, body, auth.admin)
     const ids = parseIds(body.order_ids)
     if (typeof body.batch_id !== 'string' || !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(body.batch_id)) return failure('批次編號格式錯誤')
     const { data: existing, error: readError } = await supabaseAdmin.from('myship_transfers').select('order_id').eq('batch_id', body.batch_id)
@@ -65,3 +67,44 @@ export async function POST(req: NextRequest) {
     return json({ batch_id: body.batch_id })
   } catch (e) { return failure(e instanceof Error ? e.message : '建立批次失敗') }
 }
+
+/**
+ * 團購訂單的批次：整張依溫層對應賣場（7-11 冷凍 → 冷凍賣場、常溫 → 常溫賣場），
+ * 代收應收總額（含團購運費）、不拆單。資料庫會逐欄再比對一次（myship_group_buy.sql）。
+ * 一批只放團購訂單，不和一般訂單混在一起 —— 批次紀錄、結果檔核對都比較單純。
+ */
+async function createGroupBuyBatch(req: NextRequest, body: any, admin: { id: number; name: string; account: string; role_key: string; permissions: string[] }) {
+  if (!(await groupBuyTransfersReady())) return failure('團購轉單尚未啟用：請先在 Supabase 執行 migrations/myship_group_buy.sql')
+  const ids = parseIds(body.group_buy_order_ids)
+  if (typeof body.batch_id !== 'string' || !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(body.batch_id)) return failure('批次編號格式錯誤')
+  if (!isMarketplaceId(body.marketplace_id)) return failure('請選擇賣場')
+
+  // 同一個批次編號重送（網路重試）：訂單相同就直接回傳原批次
+  const { data: existing, error: readError } = await supabaseAdmin.from('myship_transfers').select('group_buy_order_id').eq('batch_id', body.batch_id)
+  if (readError) return failure('讀取批次失敗', 500)
+  if (existing?.length) {
+    if (existing.map(t => t.group_buy_order_id).sort((a, b) => a - b).join(',') !== ids.join(',')) return failure('此批次已用於其他訂單', 409)
+    return json({ batch_id: body.batch_id })
+  }
+
+  const context = await loadContext()
+  const market = context.markets.find(m => m.id === body.marketplace_id)
+  const gb = await loadGroupBuyContext(ids)
+  const entries = ids.map(id => {
+    const order = gb.orders.find(o => o.id === id)
+    if (!order) throw new Error('有團購訂單已不是待出貨的 7-11 取貨訂單，請重新整理')
+    const { row, errors } = prepareGroupBuyRow(order, market, gb.stores.find(s => s.id === order.store_id))
+    if (!row) throw new Error(`${order.order_no}：${errors.join('；')}`)
+    return { group_buy_order_id: id, marketplace_id: body.marketplace_id, row }
+  })
+  await buildWorkbook(entries.map(e => e.row))
+  const { error } = await supabaseAdmin.rpc('myship_reserve_group_buy_batch', { p_batch_id: body.batch_id, p_entries: entries, p_admin_id: admin.id })
+  if (error) {
+    // 資料庫的錯誤訊息都是我們自己寫的中文（哪一筆、什麼原因），直接顯示
+    const msg = /[\u4e00-\u9fff]/.test(error.message || '') ? error.message : '部分訂單已匯出或資料已變更，請重新整理並查看批次紀錄'
+    return failure(msg, 409)
+  }
+  await writeAuditLog(req, admin, 'myship.export', `group_buy;batch=${body.batch_id};count=${entries.length}`)
+  return json({ batch_id: body.batch_id })
+}
+

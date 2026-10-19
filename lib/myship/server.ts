@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission } from '@/lib/adminMiddleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import type { TransferOrder, Marketplace, Mapping, PickupStore } from './domain'
+import type { GroupBuyTransferOrder } from './groupBuy'
 
 export function authorize(req: NextRequest) {
   const auth = requirePermission(req, 'orders.transfer')
@@ -47,4 +48,42 @@ export async function loadContext() {
     stores.push(...(data || []))
   }
   return { orders: orders as TransferOrder[], markets: markets as Marketplace[], mappings: mappings as Mapping[], stores }
+}
+
+// ── 團購訂單 ─────────────────────────────────────────────
+
+/** myship_group_buy.sql 執行過了沒（看轉單表有沒有 group_buy_order_id 欄位） */
+export async function groupBuyTransfersReady(): Promise<boolean> {
+  const { error } = await supabaseAdmin.from('myship_transfers').select('group_buy_order_id').limit(0)
+  return !error
+}
+
+const GROUP_BUY_ORDER_COLUMNS = 'id, order_no, campaign_id, customer_name, phone, shipping_method, store_id, store_name, store_address, note, subtotal, shipping_fee, total_amount, status, created_at, group_buy_order_items(id, name_snapshot, spec_snapshot, unit_price, quantity, subtotal)'
+
+/** 待出貨、7-11 取貨的團購訂單，附檔期名稱與門市。團購資料表不存在時回傳空的 */
+export async function loadGroupBuyContext(ids?: number[]) {
+  const orders: GroupBuyTransferOrder[] = []
+  for (let offset = 0; ; offset += 500) {
+    let query = supabaseAdmin.from('group_buy_orders').select(GROUP_BUY_ORDER_COLUMNS)
+      .eq('status', '待出貨').in('shipping_method', ['711', '711_normal']).order('id').range(offset, offset + 499)
+    if (ids) query = query.in('id', ids)
+    const { data, error } = await query
+    if (error) return { orders: [], campaigns: new Map<number, string>(), stores: [] as PickupStore[] }
+    orders.push(...((data || []) as unknown as GroupBuyTransferOrder[]))
+    if (!data || data.length < 500) break
+  }
+  const campaignIds = [...new Set(orders.map(o => o.campaign_id))]
+  const campaigns = new Map<number, string>()
+  if (campaignIds.length) {
+    const { data } = await supabaseAdmin.from('group_buy_campaigns').select('id, title').in('id', campaignIds)
+    for (const c of data || []) campaigns.set(c.id, c.title)
+  }
+  const storeIds = [...new Set(orders.map(o => o.store_id).filter((v): v is number => !!v))]
+  const stores: PickupStore[] = []
+  for (let i = 0; i < storeIds.length; i += 200) {
+    const { data, error } = await supabaseAdmin.from('stores_711').select('id, store_code, store_name, address, is_active').in('id', storeIds.slice(i, i + 200))
+    if (error) throw new Error('無法讀取門市資料')
+    stores.push(...(data || []))
+  }
+  return { orders, campaigns, stores }
 }
