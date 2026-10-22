@@ -141,11 +141,62 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
+/** products_archive.sql 執行過了沒（products 有沒有 archived_at 欄位） */
+async function archiveReady() {
+  const { error } = await supabaseAdmin.from('products').select('archived_at').limit(0)
+  return !error
+}
+
+/**
+ * 刪除商品。
+ *
+ * 已經有人訂過的商品不能真的刪：訂單明細連著它（order_items_product_id_fkey），
+ * 刪掉的話舊訂單、報表都會失去對應，資料庫也會拒絕。這種商品改成「封存」：
+ * 下架、從後台商品列表與前台移除，資料留著，之後可以在「已封存」裡還原。
+ * 沒有任何訂單的商品才真的刪除。
+ */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = requireProductPerm(req)
   if (auth instanceof NextResponse) return auth
-  const { error } = await supabaseAdmin.from('products').delete().eq('id', params.id)
-  if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  const id = Number(params.id)
+  if (!Number.isSafeInteger(id) || id <= 0) return NextResponse.json({ success: false, error: '商品編號錯誤' }, { status: 400 })
+
+  const { count, error: countErr } = await supabaseAdmin.from('order_items').select('id', { count: 'exact', head: true }).eq('product_id', id)
+  if (countErr) return NextResponse.json({ success: false, error: '無法確認商品的訂單紀錄，請稍後再試' }, { status: 500 })
+
+  if (!count) {
+    const { error } = await supabaseAdmin.from('products').delete().eq('id', id)
+    if (!error) {
+      refreshStorefront()
+      return NextResponse.json({ success: true, archived: false, message: '商品已刪除' })
+    }
+    // 其他資料（例如賣貨便轉單）還連著它：一樣改成封存，不要把英文錯誤丟給使用者
+    if (error.code !== '23503') return NextResponse.json({ success: false, error: '刪除失敗，請稍後再試' }, { status: 500 })
+  }
+
+  const ready = await archiveReady()
+  const patch: Record<string, unknown> = { is_published: false }
+  if (ready) patch.archived_at = new Date().toISOString()
+  const { error } = await supabaseAdmin.from('products').update(patch).eq('id', id)
+  if (error) return NextResponse.json({ success: false, error: '封存失敗，請稍後再試' }, { status: 500 })
   refreshStorefront()
-  return NextResponse.json({ success: true, message: '商品已刪除' })
+  const why = count ? `這個商品有 ${count} 筆訂單紀錄` : '這個商品還有其他資料連著'
+  return NextResponse.json({
+    success: true, archived: ready, orderCount: count || 0,
+    message: ready
+      ? `${why}，不能刪除，已改為封存（前台與商品列表不再顯示，訂單資料保留，可在「已封存」還原）`
+      : `${why}，不能刪除，已改為下架。執行 migrations/products_archive.sql 後，就能封存並從列表隱藏`,
+  })
+}
+
+/** 還原封存的商品：回到商品列表，維持下架，確認後再自行上架 */
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = requireProductPerm(req)
+  if (auth instanceof NextResponse) return auth
+  let body: any
+  try { body = await req.json() } catch { return NextResponse.json({ success: false, error: '格式錯誤' }, { status: 400 }) }
+  if (body?.action !== 'restore') return NextResponse.json({ success: false, error: '不支援的操作' }, { status: 400 })
+  const { error } = await supabaseAdmin.from('products').update({ archived_at: null }).eq('id', params.id)
+  if (error) return NextResponse.json({ success: false, error: '還原失敗' }, { status: 500 })
+  return NextResponse.json({ success: true, message: '已還原到商品列表（目前是下架狀態）' })
 }

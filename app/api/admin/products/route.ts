@@ -43,6 +43,10 @@ export async function GET(req: NextRequest) {
     .range(offset, offset + limit - 1)
 
   if (search) query = query.ilike('product_name', `%${search}%`)
+  // 封存的商品（已有訂單、按過刪除）平常不顯示，選「已封存」才看得到。
+  // products_archive.sql 還沒執行時沒有 archived_at 欄位，不加這個條件。
+  const { error: archiveProbe } = await supabaseAdmin.from('products').select('archived_at').limit(0)
+  if (!archiveProbe) query = published === 'archived' ? query.not('archived_at', 'is', null) : query.is('archived_at', null)
   if (published === 'true') query = query.eq('is_published', true)
   if (published === 'false') query = query.eq('is_published', false)
   if (productIdFilter !== null) query = query.in('id', productIdFilter)

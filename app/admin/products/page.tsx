@@ -44,10 +44,19 @@ export default function AdminProductsPage() {
   }
 
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`確定刪除商品「${name}」？此操作無法還原。`)) return
+    if (!confirm(`刪除商品「${name}」？\n\n・沒有訂單的商品：直接刪除，無法還原\n・已經有人訂過的商品：改為「封存」，從前台與商品列表移除，但保留訂單紀錄，之後可以還原`)) return
     const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' })
     const d = await res.json()
-    if (d.success) { toast.success('商品已刪除'); fetchProducts() } else toast.error(d.error)
+    if (d.success) { (d.archived || d.orderCount ? toast : toast.success)(d.message || '商品已刪除', { duration: 6000 }); fetchProducts() }
+    else toast.error(d.error || '刪除失敗')
+  }
+
+  const handleRestore = async (id: number, name: string) => {
+    const res = await fetch(`/api/admin/products/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'restore' }),
+    })
+    const d = await res.json()
+    if (d.success) { toast.success(`「${name}」${d.message}`); fetchProducts() } else toast.error(d.error || '還原失敗')
   }
 
   const resetFilters = () => { setSearch(''); setCatFilter(''); setPubFilter(''); setPage(1) }
@@ -80,6 +89,7 @@ export default function AdminProductsPage() {
             <option value="">全部狀態</option>
             <option value="true">已上架</option>
             <option value="false">已下架</option>
+            <option value="archived">已封存</option>
           </select>
           {(search || catFilter || pubFilter) && (
             <button onClick={resetFilters} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
@@ -129,7 +139,7 @@ export default function AdminProductsPage() {
                       <p className="font-bold text-gray-800 text-base">{p.product_name}</p>
                       <span className={`text-[13px] font-bold px-2 py-0.5 rounded-full flex-shrink-0
                         ${p.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {p.is_published ? '已上架' : '未上架'}
+                        {p.archived_at ? '已封存' : p.is_published ? '已上架' : '未上架'}
                       </span>
                     </div>
                     {cats.length > 0 && (
@@ -156,15 +166,23 @@ export default function AdminProductsPage() {
                       className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors text-center">
                       編輯
                     </Link>
-                    <button onClick={() => togglePublish(p.id, p.is_published)}
-                      className={`text-sm px-3 py-2 rounded-lg font-semibold transition-colors
-                        ${p.is_published ? 'bg-orange-50 hover:bg-orange-100 text-orange-700' : 'bg-green-50 hover:bg-green-100 text-green-700'}`}>
-                      {p.is_published ? '下架' : '上架'}
-                    </button>
-                    <button onClick={() => handleDelete(p.id, p.product_name)}
-                      className="text-sm bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg font-semibold transition-colors">
-                      刪除
-                    </button>
+                    {p.archived_at ? (
+                      // 封存的商品：只能還原（回到列表、維持下架）
+                      <button onClick={() => handleRestore(p.id, p.product_name)}
+                        className="text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg font-semibold transition-colors">
+                        還原
+                      </button>
+                    ) : <>
+                      <button onClick={() => togglePublish(p.id, p.is_published)}
+                        className={`text-sm px-3 py-2 rounded-lg font-semibold transition-colors
+                          ${p.is_published ? 'bg-orange-50 hover:bg-orange-100 text-orange-700' : 'bg-green-50 hover:bg-green-100 text-green-700'}`}>
+                        {p.is_published ? '下架' : '上架'}
+                      </button>
+                      <button onClick={() => handleDelete(p.id, p.product_name)}
+                        className="text-sm bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg font-semibold transition-colors">
+                        刪除
+                      </button>
+                    </>}
                   </div>
                 </div>
               )
