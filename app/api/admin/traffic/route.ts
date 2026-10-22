@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireSuperAdmin } from '@/lib/adminMiddleware'
 import { getTWDateRange, toTWDate, listTWDays } from '@/lib/adminDateRange'
+import { summarizeSources, type ViewRow } from '@/lib/trafficSource'
+import { SITE_URL } from '@/lib/siteUrl'
 
 export const runtime = 'nodejs'
 
@@ -20,15 +22,21 @@ export async function GET(req: NextRequest) {
 
   const { start, end } = getTWDateRange(dateRange, startDate, endDate)
 
+  // traffic_sources.sql 執行過才有 utm 欄位；沒有就只用來源網址與瀏覽器判斷
+  const { error: utmProbe } = await supabaseAdmin.from('page_views').select('utm_source').limit(0)
+  const utmReady = !utmProbe
+  const columns = 'visitor_id, path, created_at, user_id, referrer, user_agent' + (utmReady ? ', utm_source, utm_medium, utm_campaign' : '')
+
   // 分批抓取範圍內所有瀏覽紀錄（只取統計需要的欄位）
-  const rows: { visitor_id: string | null; path: string; created_at: string; user_id: string | null }[] = []
+  const rows: (ViewRow & { user_id: string | null })[] = []
   for (let from = 0; from < MAX_ROWS; from += BATCH) {
     const { data, error } = await supabaseAdmin
       .from('page_views')
-      .select('visitor_id, path, created_at, user_id')
+      .select(columns)
       .gte('created_at', start)
       .lte('created_at', end)
       .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
       .range(from, from + BATCH - 1)
 
     if (error) {
@@ -92,6 +100,7 @@ export async function GET(req: NextRequest) {
       summary: { pv, uv, member_views: memberViews },
       trend,
       top_paths,
+      traffic_sources: { ...summarizeSources(rows, new URL(SITE_URL).host), utm_ready: utmReady },
     },
   })
 }
@@ -102,5 +111,6 @@ function emptyData(start: string, end: string) {
     summary: { pv: 0, uv: 0, member_views: 0 },
     trend: days.map(date => ({ date, pv: 0, uv: 0 })),
     top_paths: [],
+    traffic_sources: { total_visits: 0, sources: [], other_sites: [], campaigns: [], utm_ready: false },
   }
 }

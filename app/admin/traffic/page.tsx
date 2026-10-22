@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import TrafficSources from '@/components/admin/TrafficSources'
 
 const DATE_RANGES = [
   { value: 'today', label: '今日' },
@@ -97,6 +98,8 @@ export default function TrafficPage() {
               </div>
             ))}
           </div>
+
+          <TrafficSources data={data?.traffic_sources} />
 
           {/* Trend chart */}
           <div className="card p-5">
