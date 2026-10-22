@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import FrontShell from '@/components/front/FrontShell'
 import TrafficTracker from '@/components/front/TrafficTracker'
 import SitePopup from '@/components/front/SitePopup'
+import VercelAnalytics from '@/components/front/VercelAnalytics'
 
 /**
  * ⚠️ 這個 layout 刻意不做任何資料查詢。
@@ -19,6 +20,7 @@ export default function FrontLayout({ children }: { children: ReactNode }) {
       <TrafficTracker />
       <FrontShell>{children}</FrontShell>
       <SitePopup />
+      <VercelAnalytics />
     </>
   )
 }
