@@ -8,6 +8,7 @@ import {
   QUICK_ORDER_PERMISSION, DEFAULT_QUICK_ORDER_SOURCE,
 } from '@/lib/quickOrder/domain'
 import { refreshStorefront } from '@/lib/storefrontCache'
+import { SITE_URL } from '@/lib/siteUrl'
 
 /**
  * POST /api/admin/quick-order —— 後台代客下單。
@@ -185,9 +186,14 @@ export async function POST(req: NextRequest) {
     '',
     `金額：NT$${total.toLocaleString('en-US')}（貨到付款）`,
     `取貨門市：7-11 ${store.store_name}（${store.county}${store.district}）`,
-    `訂單編號：${order_no}`,
     '',
-    '出貨後會再通知您一次，感謝訂購 🙏',
+    // 代客下單不用給訂單編號（客人用不到）；出貨不另外通知，貨到門市 7-11 會發簡訊
+    '商品到店後，7-11 會傳簡訊通知您取貨 📩',
+    '取貨時再付款即可，謝謝您的訂購 🙏',
+    '',
+    '🌿 健康優選線上商城',
+    '還有更多保健食品、養生好物，歡迎有空逛逛～',
+    `👉 ${SITE_URL}`,
   ].join('\n')
 
   refreshStorefront()
