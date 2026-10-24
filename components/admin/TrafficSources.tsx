@@ -4,7 +4,7 @@ import type { SourceKey, SourceStat } from '@/lib/trafficSource'
 
 export type TrafficSourcesData = {
   total_visits: number
-  sources: SourceStat[]
+  sources: (Omit<SourceStat, 'landings'> & { landings: { path: string; label?: string; visits: number }[] })[]
   other_sites: { name: string; visits: number }[]
   campaigns: { source: string; medium: string; campaign: string; visits: number }[]
   utm_ready: boolean
@@ -67,7 +67,10 @@ export default function TrafficSources({ data }: { data?: TrafficSourcesData }) 
                     <ul className="space-y-1">
                       {s.landings.map(l => (
                         <li key={l.path} className="flex items-center gap-3">
-                          <span className="min-w-0 flex-1 break-all font-mono text-[13px] text-gray-700">{l.path}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-semibold leading-snug text-gray-800">{l.label || l.path}</span>
+                            <span className="block truncate font-mono text-[12px] text-gray-400">{l.path}</span>
+                          </span>
                           <span className="flex-shrink-0 font-semibold text-gray-600 tabular-nums">{l.visits}</span>
                         </li>
                       ))}

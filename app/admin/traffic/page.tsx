@@ -131,23 +131,28 @@ export default function TrafficPage() {
             {(!data?.top_paths || data.top_paths.length === 0) ? (
               <p className="text-gray-600 text-center py-8">暫無資料</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>{['#', '頁面路徑', '瀏覽量 PV', '訪客數 UV'].map(h => <th key={h} className="text-left px-4 py-3 font-bold text-gray-600">{h}</th>)}</tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {data.top_paths.map((p: any, i: number) => (
-                      <tr key={p.path} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-bold text-gray-600">#{i + 1}</td>
-                        <td className="px-4 py-3 font-mono text-gray-700 break-all">{p.path}</td>
-                        <td className="px-4 py-3"><span className="bg-blue-50 text-blue-700 font-bold px-2 py-1 rounded-lg">{p.pv}</span></td>
-                        <td className="px-4 py-3 font-semibold text-gray-600">{p.uv}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="flex items-center gap-3 border-b border-gray-100 pb-2 text-[12px] font-bold text-gray-500">
+                  <span className="w-7 flex-shrink-0">#</span>
+                  <span className="min-w-0 flex-1">頁面</span>
+                  <span className="w-14 flex-shrink-0 text-right">瀏覽</span>
+                  <span className="w-12 flex-shrink-0 text-right">訪客</span>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {data.top_paths.map((p: any, i: number) => (
+                    <li key={p.path} className="flex items-center gap-3 py-2.5">
+                      <span className="w-7 flex-shrink-0 font-bold text-gray-500 tabular-nums">{i + 1}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold leading-snug text-gray-900">{p.label || p.path}</span>
+                        <span className="block truncate font-mono text-[12px] text-gray-400">{p.path}</span>
+                      </span>
+                      <span className="w-14 flex-shrink-0 text-right"><span className="rounded-lg bg-blue-50 px-2 py-1 font-bold text-blue-700 tabular-nums">{p.pv}</span></span>
+                      <span className="w-12 flex-shrink-0 text-right font-semibold text-gray-600 tabular-nums">{p.uv}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-[12px] text-gray-500">瀏覽＝頁面被看的次數，訪客＝不重複的人數</p>
+              </>
             )}
           </div>
         </div>

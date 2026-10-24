@@ -4,6 +4,7 @@ import { requireSuperAdmin } from '@/lib/adminMiddleware'
 import { getTWDateRange, toTWDate, listTWDays } from '@/lib/adminDateRange'
 import { summarizeSources, type ViewRow } from '@/lib/trafficSource'
 import { SITE_URL } from '@/lib/siteUrl'
+import { pageLabel, slugsToLookup, type PageNames } from '@/lib/pageLabels'
 
 export const runtime = 'nodejs'
 
@@ -94,15 +95,45 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b.pv - a.pv)
     .slice(0, 20)
 
+  // 路徑翻成中文頁名（商品名、文章標題…），後台看得懂
+  const sources = summarizeSources(rows, new URL(SITE_URL).host)
+  const names = await lookupPageNames([...top_paths.map(p => p.path), ...sources.sources.flatMap(s => s.landings.map(l => l.path))])
+  const withLabel = <T extends { path: string }>(x: T) => ({ ...x, label: pageLabel(x.path, names) })
+
   return NextResponse.json({
     success: true,
     data: {
       summary: { pv, uv, member_views: memberViews },
       trend,
-      top_paths,
-      traffic_sources: { ...summarizeSources(rows, new URL(SITE_URL).host), utm_ready: utmReady },
+      top_paths: top_paths.map(withLabel),
+      traffic_sources: {
+        ...sources,
+        sources: sources.sources.map(s => ({ ...s, landings: s.landings.map(withLabel) })),
+        utm_ready: utmReady,
+      },
     },
   })
+}
+
+const NAME_SOURCES = {
+  products: { table: 'products', column: 'product_name' },
+  'health-articles': { table: 'health_articles', column: 'title' },
+  'group-buy': { table: 'group_buy_campaigns', column: 'title' },
+  events: { table: 'community_events', column: 'title' },
+} as const
+
+/** 查出路徑裡商品、文章、團購、活動的名稱（含已下架的，查不到就略過） */
+async function lookupPageNames(paths: string[]): Promise<PageNames> {
+  const wanted = slugsToLookup(paths)
+  const names: PageNames = {}
+  await Promise.all((Object.keys(NAME_SOURCES) as (keyof typeof NAME_SOURCES)[]).map(async kind => {
+    const slugs = wanted[kind]
+    if (!slugs.length) return
+    const { table, column } = NAME_SOURCES[kind]
+    const { data } = await supabaseAdmin.from(table).select(`slug, ${column}`).in('slug', slugs)
+    names[kind] = new Map(((data || []) as any[]).map(r => [r.slug, r[column]]))
+  }))
+  return names
 }
 
 function emptyData(start: string, end: string) {
