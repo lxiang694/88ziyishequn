@@ -1,4 +1,4 @@
-import { validateRow, type ImportRow, type Marketplace, type PickupStore } from './domain'
+import { storeProblem, validateRow, type ImportRow, type Marketplace, type PickupStore } from './domain'
 
 /**
  * 團購訂單轉賣貨便（純函式，可測試）。
@@ -36,8 +36,9 @@ export function groupBuyOrderErrors(order: GroupBuyTransferOrder, store?: Pickup
   if (!temperatureOf(order.shipping_method)) errors.push('黑貓宅配不走賣貨便')
   const items = order.group_buy_order_items || []
   if (!items.length) errors.push('訂單沒有商品明細')
-  if (!store || store.id !== order.store_id || !store.is_active) errors.push('門市不存在或已停用')
-  else if (normalized(store.store_name) !== normalized(order.store_name || '') || normalized(store.address) !== normalized(order.store_address || '')) {
+  const storeIssue = storeProblem(order.store_id, store)
+  if (storeIssue) errors.push(storeIssue)
+  else if (store && (normalized(store.store_name) !== normalized(order.store_name || '') || normalized(store.address) !== normalized(order.store_address || ''))) {
     errors.push('門市目前名稱或地址與訂單不一致，請核對')
   }
   if (items.reduce((n, i) => n + i.subtotal, 0) !== order.subtotal || order.subtotal + order.shipping_fee !== order.total_amount) {

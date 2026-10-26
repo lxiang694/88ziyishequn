@@ -6,13 +6,14 @@ import AssistantPanel from './AssistantPanel'
 import BatchHistory from './BatchHistory'
 
 type Item = { variant_id: number | null; name: string; variant: string; sku: string | null }
-type Row = PreparedOrder & { customer_name: string; total_amount: number; order_total: number; store_name: string; reserved: boolean; items: Item[] }
+type StoreFix = { id: number; store_name: string; address: string } | null
+type Row = PreparedOrder & { store_fix?: StoreFix; customer_name: string; total_amount: number; order_total: number; store_name: string; reserved: boolean; items: Item[] }
 type Transfer = { id: string; order_id: number | null; group_buy_order_id?: number | null; source?: string; marketplace_id: string; batch_id: string; status: string; external_order_no: string | null; created_at: string; import_row: string[] }
 type GbRow = {
   id: number; order_no: string; campaign_id: number; campaign_title: string; customer_name: string
   shipping_method: string; temperature: '冷凍' | '常溫' | null; store_name: string | null
   total_amount: number; shipping_fee: number; created_at: string
-  items: { name: string; spec: string; quantity: number }[]; errors: string[]; reserved: boolean
+  items: { name: string; spec: string; quantity: number }[]; errors: string[]; reserved: boolean; store_fix?: StoreFix
 }
 type Data = { orders: Row[]; groupBuyOrders?: GbRow[]; groupBuyReady?: boolean; markets: Marketplace[]; mappings: Mapping[]; transfers: Transfer[] }
 const money = (n: number) => `NT$${n.toLocaleString('zh-TW')}`
@@ -64,6 +65,15 @@ export default function MyshipPage() {
     setBusy(true); setError(''); setMessage('')
     try { await action() } catch (e) { setError(e instanceof Error ? e.message : '操作失敗') } finally { setBusy(false) }
   }
+  // 門市被標成停用、但其實還在營業：確認後一鍵重新啟用
+  const activateStore = (fix: NonNullable<StoreFix>) => {
+    if (!confirm(`重新啟用門市「${fix.store_name}」？\n${fix.address}\n\n請先確認這間 7-11 仍正常營業。啟用後，所有用這間門市的訂單都能轉單。`)) return
+    run(async () => { await post('stores', { action: 'activate', store_id: fix.id }); await load(); setMessage(`已重新啟用門市「${fix.store_name}」`) })
+  }
+  const errorList = (errors: string[], fix?: StoreFix) => <>
+    {errors.map(e => <p className="text-amber-800" key={e}>{e}</p>)}
+    {fix && <button type="button" className="mt-2 rounded-lg border border-green-600 bg-white px-3 py-1.5 text-xs font-bold text-green-700 hover:bg-green-50 disabled:opacity-40" disabled={busy} onClick={() => activateStore(fix)}>門市正常營業，重新啟用</button>}
+  </>
   const available = (data?.orders || []).filter(o => !o.reserved && !o.errors.length && o.marketplace_id === market)
   const unreserved = (data?.orders || []).filter(o => !o.reserved)
   const variants = Array.from(new Map(unreserved.flatMap(o => o.items).filter(i => i.variant_id !== null).map(i => [i.variant_id!, i])).entries())
@@ -195,7 +205,7 @@ export default function MyshipPage() {
                   <p className="mt-1 text-slate-600">{o.store_name}門市</p>
                 </td>
                 <td className="p-3 whitespace-nowrap tabular-nums"><p className="font-semibold">{money(o.total_amount)}</p>{o.shipping_fee > 0 && <p className="text-xs text-slate-500">含運費 {money(o.shipping_fee)}</p>}</td>
-                <td className="p-3 min-w-44">{o.errors.length ? o.errors.map(e => <p className="text-amber-800" key={e}>{e}</p>)
+                <td className="p-3 min-w-44">{o.errors.length ? errorList(o.errors, o.store_fix)
                   : tempMismatch ? <span className="text-slate-500">屬於{o.temperature}賣場</span>
                   : !currentMarket?.enabled ? <span className="text-slate-500">賣場未啟用</span>
                   : <span className="font-semibold text-green-800">可匯出</span>}</td>
@@ -215,7 +225,7 @@ export default function MyshipPage() {
             勾選本身只存 order_id 沒問題：可勾的永遠只有目前賣場那一列。 */}
         {unreserved.map(o => {
           const selectable = o.marketplace_id === market && available.some(a => a.order_id === o.order_id && a.marketplace_id === o.marketplace_id)
-          return <tr key={`${o.order_id}:${o.marketplace_id}`} className="align-top"><td className="p-4"><input aria-label={`選取 ${o.order_no}`} type="checkbox" checked={selectable && selected.includes(o.order_id)} disabled={busy || !selectable} onChange={() => toggle(o.order_id)}/></td><td className="p-4 whitespace-nowrap"><p className="font-medium">{o.order_no}</p><p className="mt-1 text-slate-500">{o.customer_name}</p>{o.parts > 1 && <p className="mt-1.5 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">拆單 {o.part}/{o.parts}</p>}</td><td className="p-4">{o.items.map((i, n) => <p key={n}>{i.sku} {i.name} · {i.variant}</p>)}</td><td className="p-4 whitespace-nowrap">{o.store_name}</td><td className="p-4 whitespace-nowrap tabular-nums">{money(o.total_amount)}{o.parts > 1 && <p className="mt-1 text-xs text-slate-500">原訂單 {money(o.order_total)}</p>}</td><td className="p-4 min-w-48">{o.errors.length ? o.errors.map(e => <p className="text-amber-800" key={e}>{e}</p>) : o.marketplace_id === market ? <span className="text-green-800">可匯出</span> : o.parts > 1 ? `這一半屬於其他賣場（${(data?.markets || []).find(m => m.id === o.marketplace_id)?.name || o.marketplace_id}）` : '屬於其他賣場'}</td></tr>
+          return <tr key={`${o.order_id}:${o.marketplace_id}`} className="align-top"><td className="p-4"><input aria-label={`選取 ${o.order_no}`} type="checkbox" checked={selectable && selected.includes(o.order_id)} disabled={busy || !selectable} onChange={() => toggle(o.order_id)}/></td><td className="p-4 whitespace-nowrap"><p className="font-medium">{o.order_no}</p><p className="mt-1 text-slate-500">{o.customer_name}</p>{o.parts > 1 && <p className="mt-1.5 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">拆單 {o.part}/{o.parts}</p>}</td><td className="p-4">{o.items.map((i, n) => <p key={n}>{i.sku} {i.name} · {i.variant}</p>)}</td><td className="p-4 whitespace-nowrap">{o.store_name}</td><td className="p-4 whitespace-nowrap tabular-nums">{money(o.total_amount)}{o.parts > 1 && <p className="mt-1 text-xs text-slate-500">原訂單 {money(o.order_total)}</p>}</td><td className="p-4 min-w-48">{o.errors.length ? errorList(o.errors, o.store_fix) : o.marketplace_id === market ? <span className="text-green-800">可匯出</span> : o.parts > 1 ? `這一半屬於其他賣場（${(data?.markets || []).find(m => m.id === o.marketplace_id)?.name || o.marketplace_id}）` : '屬於其他賣場'}</td></tr>
         })}
         {!unreserved.length && <tr><td colSpan={6} className="p-8 text-center text-slate-500">沒有尚未匯出的待確認訂單。已匯出的訂單請到批次紀錄核對。</td></tr>}
       </tbody></table></div>

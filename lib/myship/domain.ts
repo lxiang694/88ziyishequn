@@ -59,6 +59,17 @@ export function orderMarker(orderNo: string, part: number, parts: number): strin
 const textLength = (s: string) => Array.from(s).length
 const nameLength = (s: string) => Array.from(s).reduce((n, c) => n + (c.charCodeAt(0) > 127 ? 2 : 1), 0)
 const normalized = (s: string) => s.replace(/台/g, '臺').replace(/\s/g, '')
+
+/**
+ * 訂單的取貨門市有什麼問題；沒問題回 null。
+ * 分成三種講清楚，後台才知道要怎麼處理（以前一律寫「門市不存在或已停用」，看不出是哪一種）。
+ */
+export function storeProblem(storeId: number | null | undefined, store?: PickupStore): string | null {
+  if (!storeId) return '訂單沒有記錄取貨門市，請到訂單管理確認'
+  if (!store || store.id !== storeId) return `門市資料裡找不到這間門市（編號 ${storeId}）`
+  if (!store.is_active) return `門市「${store.store_name}」在門市資料中被標記為停用`
+  return null
+}
 const illegalXml = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/
 
 export function validateRow(row: readonly string[]): string[] {
@@ -103,7 +114,8 @@ export function prepareOrderParts(order: TransferOrder, mappings: Mapping[], mar
   if (order.order_status !== '待確認') common.push('訂單已不是待確認')
   const items = [...(order.order_items || [])].sort((a, b) => a.id - b.id)
   if (!items.length) common.push('訂單沒有商品明細')
-  if (!store || store.id !== order.store_id || !store.is_active) common.push('門市不存在或已停用')
+  const storeIssue = storeProblem(order.store_id, store)
+  if (storeIssue) common.push(storeIssue)
   if (store && (normalized(store.store_name) !== normalized(order.store_name) || normalized(store.address) !== normalized(order.store_address))) common.push('門市目前名稱或地址與訂單不一致，請核對')
   if (items.some(i => !Number.isSafeInteger(i.quantity) || i.quantity < 1 || !Number.isSafeInteger(i.unit_price) || i.unit_price < 0 || i.subtotal !== i.unit_price * i.quantity)) common.push('商品數量或明細金額不一致')
   if (!Number.isSafeInteger(order.total_amount) || items.reduce((sum, i) => sum + i.subtotal, 0) !== order.total_amount) common.push('訂單總額與商品小計不一致')

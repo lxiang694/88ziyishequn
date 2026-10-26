@@ -29,7 +29,7 @@ test('匯入列：代收應收總額（含運費）、運費欄 0、商品寫上
 test('擋下：選錯溫層的賣場、宅配、門市關閉或改名、金額對不上', () => {
   assert.match(prepareGroupBuyRow(order(), normalMarket, store).errors.join(), /冷凍訂單，請選冷凍賣場/)
   assert.match(groupBuyOrderErrors(order({ shipping_method: 'home' }), store).join(), /黑貓宅配/)
-  assert.match(groupBuyOrderErrors(order(), { ...store, is_active: false }).join(), /門市不存在或已停用/)
+  assert.match(groupBuyOrderErrors(order(), { ...store, is_active: false }).join(), /門市「.*」在門市資料中被標記為停用/)
   assert.match(groupBuyOrderErrors(order(), { ...store, store_name: '新湖慧' }).join(), /名稱或地址與訂單不一致/)
   assert.match(groupBuyOrderErrors(order({ total_amount: 2000 }), store).join(), /金額/)
   assert.equal(prepareGroupBuyRow(order(), normalMarket, store).row, null)
@@ -40,4 +40,14 @@ test('結果檔核對認得團購標記', () => {
   const transfers = [{ id: 't1', order_id: null, group_buy_order_id: 1, import_row: row!, status: 'exported', external_order_no: null }]
   const r = matchResultRows([{ row: row!, external_order_no: 'CM2610200000001', sheet_row: 2 }], transfers)
   assert.deepEqual(r.confirmed, [{ transfer_id: 't1', order_no: 'GB20261020000001', external_order_no: 'CM2610200000001' }])
+})
+
+test('門市問題分三種講清楚', async () => {
+  const { storeProblem } = await import('../lib/myship/domain.ts')
+  const s = { id: 7, store_code: '123456', store_name: '正隆', address: '新北市板橋區', is_active: true }
+  assert.equal(storeProblem(7, s), null)
+  assert.match(storeProblem(null, s)!, /沒有記錄取貨門市/)
+  assert.match(storeProblem(7, undefined)!, /找不到這間門市（編號 7）/)
+  assert.match(storeProblem(7, { ...s, id: 8 })!, /找不到這間門市/)
+  assert.match(storeProblem(7, { ...s, is_active: false })!, /門市「正隆」在門市資料中被標記為停用/)
 })

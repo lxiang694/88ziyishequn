@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authorize, failure, json, loadContext, loadGroupBuyContext, groupBuyTransfersReady } from '@/lib/myship/server'
-import { prepareOrderParts } from '@/lib/myship/domain'
+import { prepareOrderParts, type PickupStore } from '@/lib/myship/domain'
 import { groupBuyOrderErrors, temperatureOf } from '@/lib/myship/groupBuy'
 
 export const dynamic = 'force-dynamic'
+
+/** 門市被標成停用時，回傳給畫面「重新啟用」用的資料 */
+function inactiveStore(store?: PickupStore) {
+  return store && !store.is_active ? { id: store.id, store_name: store.store_name, address: store.address } : null
+}
 export async function GET(req: NextRequest) {
   const auth = authorize(req)
   if (auth instanceof NextResponse) return auth
@@ -48,13 +53,15 @@ export async function GET(req: NextRequest) {
     // 一張訂單拆成幾張，這裡就回傳幾列，每列屬於一個賣場。畫面依賣場篩選，
     // 所以每個賣場的清單裡只會看到屬於它的那一半。
     const orders = context.orders.flatMap(order => {
-      const parts = prepareOrderParts(order, context.mappings, context.markets, context.stores.find(s => s.id === order.store_id))
+      const store = context.stores.find(s => s.id === order.store_id)
+      const parts = prepareOrderParts(order, context.mappings, context.markets, store)
       return parts.map(p => ({
         ...p,
         ...(p.parts > 1 && !splitReady && !p.errors.length
           ? { errors: ['跨賣場拆單尚未啟用：請先在 Supabase 執行 migrations/myship_split_orders.sql'], row: null }
           : {}),
         customer_name: order.customer_name, store_name: order.store_name,
+        store_fix: inactiveStore(store),
         // 代收金額欄顯示的是「這一張」要收的錢；沒拆單時就等於訂單總額
         total_amount: p.amount,
         order_total: order.total_amount,
@@ -79,6 +86,7 @@ export async function GET(req: NextRequest) {
       customer_name: o.customer_name, shipping_method: o.shipping_method, temperature: temperatureOf(o.shipping_method),
       store_name: o.store_name, total_amount: o.total_amount, shipping_fee: o.shipping_fee, created_at: o.created_at,
       items: [...o.group_buy_order_items].sort((a, b) => a.id - b.id).map(i => ({ name: i.name_snapshot, spec: i.spec_snapshot, quantity: i.quantity })),
+      store_fix: inactiveStore(gb.stores.find(s => s.id === o.store_id)),
       errors: groupBuyReady ? groupBuyOrderErrors(o, gb.stores.find(s => s.id === o.store_id))
         : ['團購轉單尚未啟用：請先在 Supabase 執行 migrations/myship_group_buy.sql'],
       reserved: gbReserved.has(o.id),
