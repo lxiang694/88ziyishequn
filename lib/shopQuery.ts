@@ -47,10 +47,15 @@ export async function fetchShopCategories(): Promise<ShopCategoryView[]> {
  * slug 為空字串時回傳全部商品 —— 還沒指派分類的商品也在裡面，所以
  * 不會有商品因為忘了分類就從賣場消失。
  */
+/** 新品上市：最近上架的商品，最新的排最前面 */
+export const NEW_ARRIVALS_SLUG = 'new'
+export const NEW_ARRIVALS_LIMIT = 20
+
 export async function fetchShopProducts(slug: string, limit = 200) {
+  const newest = slug === NEW_ARRIVALS_SLUG
   let productIds: number[] | null = null
 
-  if (slug) {
+  if (slug && !newest) {
     const { data, error } = await supabaseAdmin
       .from('product_shop_category_relations')
       .select('product_id, shop_categories!inner(slug)')
@@ -64,10 +69,11 @@ export async function fetchShopProducts(slug: string, limit = 200) {
 
   let query = supabaseAdmin
     .from('products')
-    .select(`id, product_name, slug, short_intro, cover_image_url,
+    .select(`id, product_name, slug, short_intro, cover_image_url, created_at,
       product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, is_active)`)
     .eq('is_published', true)
-    .limit(limit)
+    .limit(newest ? NEW_ARRIVALS_LIMIT : limit)
+  if (newest) query = query.order('created_at', { ascending: false }).order('id', { ascending: false })
   if (productIds !== null) query = query.in('id', productIds)
 
   const [{ data, error }, salesMap] = await Promise.all([query, buildSalesMap(supabaseAdmin)])
@@ -81,5 +87,6 @@ export async function fetchShopProducts(slug: string, limit = 200) {
       sales_count: salesMap[p.id] || 0,
       shop_categories: (shopByProduct.get(p.id) || []) as ShopCategoryRow[],
     }))
-    .sort((a, b) => b.sales_count - a.sales_count)
+    // 新品上市照上架時間排（查詢已排好）；其他照銷量
+    .sort((a, b) => newest ? 0 : b.sales_count - a.sales_count)
 }

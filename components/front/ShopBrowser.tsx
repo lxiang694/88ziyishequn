@@ -175,6 +175,10 @@ export default function ShopBrowser({
           <Link href="/shop" data-active={activeSlug === ''} className={railItem(activeSlug === '')}>
             全部商品
           </Link>
+          <Link href="/shop/new" data-active={activeSlug === 'new'} className={railItem(activeSlug === 'new')}>
+            新品上市
+            <span className="mt-1 block text-[11px] font-bold leading-none text-red-600">NEW</span>
+          </Link>
           {categories.map(cat => (
             <Link key={cat.slug} href={`/shop/${cat.slug}`} data-active={activeSlug === cat.slug}
               className={railItem(activeSlug === cat.slug)}>
@@ -205,7 +209,7 @@ export default function ShopBrowser({
           {products.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
               <p className="text-gray-600">
-                {searching ? `找不到「${search.trim()}」相關的商品` : '這個分類還沒有上架商品'}
+                {searching ? `找不到「${search.trim()}」相關的商品` : activeSlug === 'new' ? '最近還沒有新上架的商品' : '這個分類還沒有上架商品'}
               </p>
               {searching ? (
                 <button onClick={clearSearch} className="mt-3 font-semibold text-green-700 underline">
@@ -221,7 +225,7 @@ export default function ShopBrowser({
             <>
               <div className="space-y-3">
                 {visible.map(p => (
-                  <ProductRow key={p.id} product={p} onAddToCart={handleAddToCart} />
+                  <ProductRow key={p.id} product={p} onAddToCart={handleAddToCart} showListedDate={activeSlug === 'new' && !searching} />
                 ))}
               </div>
               <div ref={sentinelRef} aria-hidden className="h-px" />

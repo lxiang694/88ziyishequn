@@ -21,9 +21,18 @@ import type { CardProduct } from './ProductCard'
 interface Props {
   product: CardProduct
   onAddToCart: (product: CardProduct) => void
+  /** 新品上市頁：標出上架日期 */
+  showListedDate?: boolean
 }
 
-export default function ProductRow({ product, onAddToCart }: Props) {
+/** 台灣日期 M/D */
+function listedDate(iso?: string): string {
+  if (!iso) return ''
+  const d = new Date(new Date(iso).getTime() + 8 * 3600_000)
+  return Number.isFinite(d.getTime()) ? `${d.getUTCMonth() + 1}/${d.getUTCDate()}` : ''
+}
+
+export default function ProductRow({ product, onAddToCart, showListedDate }: Props) {
   const minPrice = lowestActivePrice(product)
   const inStock = isInStock(product)
   const isMulti = buyableVariants(product).length > 1
@@ -46,6 +55,12 @@ export default function ProductRow({ product, onAddToCart }: Props) {
       </Link>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {showListedDate && listedDate(product.created_at) && (
+          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+            <span className="rounded bg-red-600 px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">NEW</span>
+            {listedDate(product.created_at)} 上架
+          </p>
+        )}
         <Link href={`/products/${product.slug}`} className="min-w-0">
           <h3 className="text-[17px] font-bold leading-snug text-gray-800 line-clamp-2 hover:text-green-700">
             {product.product_name}

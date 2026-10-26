@@ -34,6 +34,7 @@ export interface CardProduct {
   cover_image_url: string | null
   product_variants: any[]
   sales_count?: number
+  created_at?: string
   shop_categories?: { id: number; name: string; slug: string; emoji: string }[]
   product_category_relations?: { health_categories: any }[]
 }

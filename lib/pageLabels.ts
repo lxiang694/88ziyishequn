@@ -22,6 +22,7 @@ export interface PageNames {
 const STATIC: Record<string, string> = {
   '/': '首頁',
   '/shop': '全部商品',
+  '/shop/new': '新品上市',
   '/cart': '購物車',
   '/checkout': '結帳',
   '/order-success': '下單成功',

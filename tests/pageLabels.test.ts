@@ -39,3 +39,4 @@ test('整理要查名稱的代稱', () => {
   assert.deepEqual(s['health-articles'], ['a'])
   assert.deepEqual(s['group-buy'], [])
 })
+test('新品上市', () => { assert.equal(pageLabel('/shop/new'), '新品上市') })
