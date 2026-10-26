@@ -283,7 +283,7 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
 
       {/* ── 底部固定列 ───────────────────────────────── */}
       {isOpen && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white px-4 pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
+        <div className="fixed inset-x-0 bottom-0 z-40 bottom-skirt border-t border-gray-200 bg-white px-4 pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
           <div className="mx-auto flex max-w-3xl items-center gap-3">
             <div className="min-w-0 flex-1">

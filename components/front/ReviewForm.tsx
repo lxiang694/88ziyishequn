@@ -87,7 +87,7 @@ export default function ReviewForm({ productId, productSlug, productName, onClos
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-labelledby="review-form-title" onClick={e => e.stopPropagation()}
-        className="flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-white shadow-xl sm:max-w-lg sm:rounded-3xl">
+        className="bottom-skirt relative flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-white shadow-xl sm:after:hidden sm:max-w-lg sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <div className="min-w-0">
             <h2 id="review-form-title" className="text-lg font-bold text-gray-900">{existing ? '修改我的評價' : '撰寫評價'}</h2>

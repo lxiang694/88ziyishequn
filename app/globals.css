@@ -222,3 +222,20 @@
 /* 隱藏水平捲軸（熱門標籤 / 熱銷橫向列） */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/*
+  底部固定列下方的「裙邊」。
+  iPhone Safari 網址列收起來時，畫面最底下會多出一段（原本工具列的位置），
+  固定在 bottom-0 的購買列、選單列沒有延伸過去，網頁內容就從那條縫露出來。
+  在列的正下方接一塊同色的延伸，不管 Safari 怎麼伸縮都蓋得住。
+*/
+.bottom-skirt::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 160px;
+  background: #fff;
+  pointer-events: none;
+}

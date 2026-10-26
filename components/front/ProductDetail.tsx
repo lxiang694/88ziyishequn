@@ -379,7 +379,7 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
         這一頁的底部導覽列（MobileBottomNav）會讓位給它。
         上面一行寫出目前選的規格與價格，避免客人沒注意就買到預設規格。
       */}
-      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white px-3 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 bottom-skirt border-t border-gray-200 bg-white px-3 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
         style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
         {selectedVariant && (
           <div className="mb-1.5 flex items-center justify-between gap-2 text-[13px]">

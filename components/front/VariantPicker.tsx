@@ -71,7 +71,7 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
       />
 
       {/* Drawer - slides up from bottom on mobile, centered modal on desktop */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl
+      <div className="fixed bottom-0 left-0 right-0 z-50 bottom-skirt bg-white rounded-t-2xl shadow-2xl
                       md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
                       md:max-w-lg md:w-full md:rounded-2xl animate-slide-up">
 

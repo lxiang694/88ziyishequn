@@ -53,7 +53,7 @@ export default function MobileBottomNav() {
       （購物車、結帳頁的底部列、LINE 按鈕都是用 60px + 安全區定位，剛好對齊）
     */
     <nav aria-label="主要選單"
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-gray-200/80 bg-white/95 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur md:hidden ${inputFocused ? 'hidden' : ''}`}
+      className={`fixed inset-x-0 bottom-0 z-40 bottom-skirt border-t border-gray-200/80 bg-white/95 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur md:hidden ${inputFocused ? 'hidden' : ''}`}
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <ul className="mx-auto flex h-[60px] max-w-5xl items-stretch">
         {items.map(it => (

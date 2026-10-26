@@ -65,7 +65,7 @@ export default function PresaleBuyBox({ product, shipMonth, sticky = false }: Pr
 
   if (sticky) {
     return (
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bottom-skirt bg-white border-t border-gray-200 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <div className="min-w-0">
             <p className="text-[12px] text-gray-500 leading-tight">預計 {shipMonth} 出貨</p>
