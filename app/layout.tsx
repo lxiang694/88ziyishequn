@@ -7,6 +7,9 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  // 讓網頁鋪滿到 iPhone 螢幕最底（Safari 收起工具列後的那一段也算進來），
+  // 底部固定列才貼得到最底；各列已用 env(safe-area-inset-bottom) 讓開 home 橫條
+  viewportFit: 'cover',
   themeColor: '#15803d',
 }
 
