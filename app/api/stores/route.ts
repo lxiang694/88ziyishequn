@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { safeSearchTerm } from '@/lib/stores'
 
 // GET /api/stores?county=台北市&district=大安區&search=關鍵字&limit=50
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const county = searchParams.get('county') || ''
   const district = searchParams.get('district') || ''
-  const search = searchParams.get('search') || ''
-  const limit = parseInt(searchParams.get('limit') || '50')
+  // 逗號、括號會被當成查詢語法，先清掉
+  const search = safeSearchTerm(searchParams.get('search'))
+  const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') || '50') || 50))
   let query = supabaseAdmin
     .from('stores_711')
     .select('id, store_code, store_name, county, district, address')
