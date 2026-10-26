@@ -42,6 +42,57 @@ const DATE_RANGES = [
   { value: 'custom', label: '自訂' },
 ]
 
+/** 訂單展開後的商品明細：先列 3 項，其餘按「展開」看全部（不再塞在小框框裡捲動） */
+const ITEMS_PREVIEW = 3
+function OrderItemsCard({ detail }: { detail: any }) {
+  const [showAll, setShowAll] = useState(false)
+  const items: any[] = detail.order_items || []
+  const hidden = items.length - ITEMS_PREVIEW
+  const visible = showAll || hidden <= 0 ? items : items.slice(0, ITEMS_PREVIEW)
+  const quantity = items.reduce((n, i) => n + (i.quantity || 0), 0)
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+      <h4 className="font-bold text-gray-600 mb-3 text-[13px] uppercase tracking-wider flex items-center gap-2">
+        <span className="w-5 h-5 bg-purple-50 rounded flex items-center justify-center">📦</span>
+        商品明細
+        <span className="font-semibold normal-case tracking-normal text-gray-500">共 {items.length} 項・{quantity || detail.items_count} 件</span>
+      </h4>
+      <ul className="divide-y divide-gray-100">
+        {visible.map((item: any) => (
+          <li key={item.id} className="flex gap-3 items-start py-2.5 first:pt-0">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 overflow-hidden relative flex-shrink-0">
+              {item.product_image_snapshot
+                ? <Image src={item.product_image_snapshot} alt={item.product_name_snapshot} fill className="object-cover" sizes="40px" />
+                : <div className="w-full h-full flex items-center justify-center text-sm">💊</div>}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-bold text-gray-800 line-clamp-2">{item.product_name_snapshot}</p>
+              <p className="text-[13px] text-gray-500 mt-0.5">{item.variant_name_snapshot}</p>
+              {item.sku_snapshot && <p className="text-[13px] text-gray-600 font-mono">SKU: {item.sku_snapshot}</p>}
+            </div>
+            <div className="text-right flex-shrink-0 ml-2">
+              <p className="text-[13px] text-gray-600">{formatPrice(item.unit_price)} × {item.quantity}</p>
+              <p className="text-sm font-bold text-gray-800">{formatPrice(item.subtotal)}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {hidden > 0 && (
+        <button type="button" onClick={() => setShowAll(v => !v)} aria-expanded={showAll}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-gray-50 py-2.5 text-sm font-bold text-green-700 transition-colors hover:bg-green-50">
+          {showAll ? '收起' : `展開其餘 ${hidden} 項商品`}
+          <span className={`transition-transform ${showAll ? 'rotate-180' : ''}`} aria-hidden>▾</span>
+        </button>
+      )}
+      <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+        <span className="text-sm text-gray-500">訂單總額</span>
+        <span className="text-lg font-bold text-green-700">{formatPrice(detail.total_amount)}</span>
+      </div>
+    </div>
+  )
+}
+
 function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }: { order: any; onStatusChange: (id:number, s:string) => void; onDelete: (id: number) => void; selected: boolean; onToggleSelect: (id: number) => void }) {
   const [expanded, setExpanded] = useState(false)
   const [detail, setDetail] = useState<any>(null)
@@ -306,37 +357,7 @@ function OrderRow({ order, onStatusChange, onDelete, selected, onToggleSelect }:
                     <p className="text-red-500 text-[13px] mt-1.5 text-center">⚠️ 將同步刪除商品明細，無法還原</p>
                   </div>
                 </div>
-                {/* Items */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-                  <h4 className="font-bold text-gray-600 mb-3 text-[13px] uppercase tracking-wider flex items-center gap-2">
-                    <span className="w-5 h-5 bg-purple-50 rounded flex items-center justify-center">📦</span>
-                    商品明細（{detail.items_count} 件）
-                  </h4>
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
-                    {detail.order_items?.map((item: any) => (
-                      <div key={item.id} className="flex gap-3 items-start">
-                        <div className="w-10 h-10 rounded-xl bg-gray-100 overflow-hidden relative flex-shrink-0">
-                          {item.product_image_snapshot
-                            ? <Image src={item.product_image_snapshot} alt={item.product_name_snapshot} fill className="object-cover" sizes="40px" />
-                            : <div className="w-full h-full flex items-center justify-center text-sm">💊</div>}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-bold text-gray-800 line-clamp-1">{item.product_name_snapshot}</p>
-                          <p className="text-[13px] text-gray-500 mt-0.5">{item.variant_name_snapshot}</p>
-                          {item.sku_snapshot && <p className="text-[13px] text-gray-600 font-mono">SKU: {item.sku_snapshot}</p>}
-                        </div>
-                        <div className="text-right flex-shrink-0 ml-2">
-                          <p className="text-[13px] text-gray-600">{formatPrice(item.unit_price)} × {item.quantity}</p>
-                          <p className="text-sm font-bold text-gray-800">{formatPrice(item.subtotal)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
-                    <span className="text-sm text-gray-500">訂單總額</span>
-                    <span className="text-lg font-bold text-green-700">{formatPrice(detail.total_amount)}</span>
-                  </div>
-                </div>
+                <OrderItemsCard detail={detail} />
               </div>
             ) : <div className="py-4 text-center text-gray-600">無法載入詳情</div>}
           </td>
