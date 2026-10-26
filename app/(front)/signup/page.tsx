@@ -7,6 +7,13 @@ import { useUserAuth } from '@/components/front/UserAuthContext'
 import { validateTWPhone } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
+/** 註冊完回到原本的頁面（例如商品頁寫評價）；只接受站內路徑 */
+function nextPath(): string {
+  if (typeof window === 'undefined') return '/account'
+  const next = new URLSearchParams(window.location.search).get('next') || ''
+  return next.startsWith('/') && !next.startsWith('//') ? next : '/account'
+}
+
 export default function SignupPage() {
   const router = useRouter()
   const { user, loading: authLoading, refresh } = useUserAuth()
@@ -20,7 +27,7 @@ export default function SignupPage() {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    if (!authLoading && user) router.replace('/account')
+    if (!authLoading && user) router.replace(nextPath())
   }, [user, authLoading, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,7 +62,7 @@ export default function SignupPage() {
       // Auto-signed in (email confirmation off)
       await refresh()
       toast.success('註冊成功，歡迎加入！')
-      router.replace('/account')
+      router.replace(nextPath())
     } else {
       // Email confirmation required
       setDone(true)

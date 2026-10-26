@@ -3,17 +3,20 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import ProductDetail from './ProductDetail'
 import type { ScoredArticle } from '@/lib/productArticleMatcher'
+import type { InitialReviews } from './ProductReviews'
 
 /**
  * initialProduct 由伺服器先查好傳進來，商品內容才會出現在第一份 HTML
  * 裡（搜尋引擎、LINE/FB 預覽、關閉 JS 的情況都讀得到）。
  * 沒有傳時退回原本的前端抓取，不影響其他呼叫端。
  */
-export default function ProductDetailClient({ slug, initialProduct = null, relatedArticles = [] }: {
+export default function ProductDetailClient({ slug, initialProduct = null, relatedArticles = [], initialReviews }: {
   slug: string
   initialProduct?: any | null
   /** 伺服器算好的相關文章；只有伺服器渲染時會有 */
   relatedArticles?: ScoredArticle[]
+  /** 伺服器查好的評價摘要與第一頁 */
+  initialReviews?: InitialReviews
 }) {
   const [product, setProduct] = useState<any>(initialProduct)
   const [loading, setLoading] = useState(!initialProduct)
@@ -51,5 +54,5 @@ export default function ProductDetailClient({ slug, initialProduct = null, relat
     </div>
   )
 
-  return <ProductDetail product={product} relatedArticles={relatedArticles} />
+  return <ProductDetail product={product} relatedArticles={relatedArticles} initialReviews={initialReviews} />
 }

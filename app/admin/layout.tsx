@@ -19,6 +19,7 @@ const NAV = [
   { href: '/admin/products', label: '🛍️ 商品管理', perms: ['products.all','all'] },
   { href: '/admin/products/categories', label: '　└ 批次指派分類', perms: ['products.all','all'] },
   { href: '/admin/products/images', label: '　└ 圖片壓縮', perms: ['products.all','all'] },
+  { href: '/admin/reviews', label: '　└ 商品評價', perms: ['products.all','all'] },
   { href: '/admin/categories', label: '🏷️ 健康分類', perms: ['products.all','categories.all','all'] },
   { href: '/admin/articles', label: '📚 健康知識', perms: ['products.all','all'] },
   // reports: super_admin + customer_service

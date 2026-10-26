@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -13,6 +13,13 @@ import SocialShareButtons from './SocialShareButtons'
 import { PRESALE } from '@/lib/presale/camelliaOil'
 import { SITE_URL } from '@/lib/siteUrl'
 import type { ScoredArticle } from '@/lib/productArticleMatcher'
+import { EMPTY_SUMMARY } from '@/lib/reviews'
+import ProductReviews, { type InitialReviews } from './ProductReviews'
+import SectionTabs, { type TabItem } from './SectionTabs'
+import Collapsible from './Collapsible'
+import { Stars } from './StarRating'
+
+const NO_REVIEWS: InitialReviews = { ready: false, summary: EMPTY_SUMMARY, reviews: [], hasMore: false }
 
 
 interface Variant {
@@ -52,13 +59,36 @@ interface Product {
   sales_count?: number
 }
 
-export default function ProductDetail({ product, relatedArticles = [] }: {
+export default function ProductDetail({ product, relatedArticles = [], initialReviews = NO_REVIEWS }: {
   product: Product
   /** 由伺服器算好傳進來；沒有夠相關的文章時為空陣列 */
   relatedArticles?: ScoredArticle[]
+  /** 評價摘要與第一頁，由伺服器查好；沒有時當成還沒有評價 */
+  initialReviews?: InitialReviews
 }) {
   const router = useRouter()
   const { addItem, totalItems } = useCart()
+  const [reviewFormOpen, setReviewFormOpen] = useState(false)
+  const reviewCount = initialReviews.summary.count
+
+  const hasIntro = !!(product.suitable_people || timingLabels(product.intake_timing).length > 0 || product.usage_method || product.pairing_tips || product.source_notes)
+  const hasSpec = !!(product.ingredients || product.precautions || product.storage_method)
+  const tabs: TabItem[] = [
+    ...(hasIntro ? [{ id: 'intro', label: '商品介紹' }] : []),
+    ...(hasSpec ? [{ id: 'spec', label: '成分規格' }] : []),
+    { id: 'reviews', label: '評價', badge: reviewCount ? `(${reviewCount})` : undefined },
+  ]
+  const goReviews = () => {
+    const node = document.getElementById('reviews')
+    if (node) window.scrollTo({ top: node.getBoundingClientRect().top + window.scrollY - 124, behavior: 'smooth' })
+  }
+
+  // 從登入頁回來（網址帶 #write-review）：直接捲到評價區並打開寫評價
+  useEffect(() => {
+    if (window.location.hash !== '#write-review') return
+    history.replaceState(null, '', window.location.pathname)
+    setTimeout(() => { goReviews(); setReviewFormOpen(true) }, 300)
+  }, [])
 
   const firstAvailable = product.product_variants?.find(v => v.is_active && v.stock_qty > 0)
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
@@ -116,6 +146,23 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
             介紹與分類標籤放在按鈕後面 */}
         <div className="flex flex-col">
           <h1 className="text-[22px] sm:text-3xl font-bold text-gray-900 mb-2 leading-snug">{product.product_name}</h1>
+
+          {/* 評分一行（台灣購物網站的習慣：名稱下方就看得到幾顆星、幾則評價），點了跳到評價區 */}
+          <button type="button" onClick={goReviews}
+            className="mb-3 flex w-fit items-center gap-2 text-[14px] text-gray-600 hover:text-green-700">
+            {reviewCount > 0 ? (
+              <>
+                <span className="font-bold text-amber-600 tabular-nums">{initialReviews.summary.average.toFixed(1)}</span>
+                <Stars value={initialReviews.summary.average} size={15} />
+                <span className="underline underline-offset-2">{reviewCount} 則評價</span>
+              </>
+            ) : (
+              <>
+                <Stars value={0} size={15} />
+                <span className="underline underline-offset-2">尚無評價，寫第一則</span>
+              </>
+            )}
+          </button>
 
           {/*
             預售商品的出貨時間跟一般商品不同。從首頁或搜尋進到這一頁的人
@@ -224,39 +271,52 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
         </div>
       </div>
 
-      {/* Detail sections —— 內文 16px、行距加寬；小節標題獨立一行，內容用滿整個寬度 */}
-      <div className="space-y-4">
-        {(product.suitable_people || timingLabels(product.intake_timing).length > 0 || product.pairing_tips || product.source_notes) && (
-          <DetailCard icon="🎯" iconBg="bg-green-50" title="情境化保健資訊" highlight>
-            <div className="divide-y divide-gray-100">
-              {product.suitable_people && (
-                <SubBlock icon="👥" title="適合誰">{renderProductText(product.suitable_people)}</SubBlock>
-              )}
-              {timingLabels(product.intake_timing).length > 0 && (
-                <SubBlock icon="⏰" title="建議服用時間">
-                  <div className="flex flex-wrap gap-2">
-                    {timingLabels(product.intake_timing).map((l, i) => (
-                      <span key={i} className="rounded-full bg-green-50 px-3 py-1.5 text-[14px] font-bold text-green-800">{l}</span>
-                    ))}
-                  </div>
-                </SubBlock>
-              )}
-              {product.pairing_tips && <SubBlock icon="🔗" title="怎麼搭">{renderProductText(product.pairing_tips)}</SubBlock>}
-              {product.source_notes && <SubBlock icon="🌿" title="來源 / 挑選">{renderProductText(product.source_notes)}</SubBlock>}
-            </div>
-          </DetailCard>
-        )}
-        {product.usage_method && <DetailCard icon="📋" iconBg="bg-green-50" title="使用方法">{renderProductText(product.usage_method)}</DetailCard>}
-        {product.ingredients && <DetailCard icon="🧪" iconBg="bg-purple-50" title="成分說明">{renderProductText(product.ingredients)}</DetailCard>}
-        {product.precautions && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-            <h3 className="mb-3 flex items-center gap-2 text-[19px] font-bold text-amber-900">
-              <span className="text-xl" aria-hidden>⚠️</span> 注意事項
-            </h3>
-            <div className="text-[16px] leading-[1.85] text-amber-900">{renderProductText(product.precautions)}</div>
-          </div>
-        )}
-        {product.storage_method && <DetailCard icon="📦" iconBg="bg-gray-50" title="保存方式">{renderProductText(product.storage_method)}</DetailCard>}
+      {/*
+        ─── 商品資訊：分頁籤＋三段 ───
+        以前六張卡片一路往下排，手機上要滑很久、找不到想看的。改成跟台灣
+        購物網站一樣：上方一排「商品介紹／成分規格／評價」分頁籤黏在表頭下，
+        點了直接跳過去；長的介紹先收起來，成分與注意事項用摺疊列。
+      */}
+      <div className="mx-auto max-w-3xl">
+        <SectionTabs items={tabs} />
+        <div className="space-y-4">
+          {hasIntro && (
+            <section id="intro" className="scroll-mt-32 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm" aria-labelledby="intro-heading">
+              <h2 id="intro-heading" className="mb-4 text-[19px] font-bold text-gray-900">商品介紹</h2>
+              <Collapsible maxHeight={420} moreLabel="展開完整介紹">
+                <div className="divide-y divide-gray-100 text-[16px] leading-[1.85] text-gray-700">
+                  {product.suitable_people && <SubBlock icon="👥" title="適合誰">{renderProductText(product.suitable_people)}</SubBlock>}
+                  {timingLabels(product.intake_timing).length > 0 && (
+                    <SubBlock icon="⏰" title="建議服用時間">
+                      <div className="flex flex-wrap gap-2">
+                        {timingLabels(product.intake_timing).map((l, i) => (
+                          <span key={i} className="rounded-full bg-green-50 px-3 py-1.5 text-[14px] font-bold text-green-800">{l}</span>
+                        ))}
+                      </div>
+                    </SubBlock>
+                  )}
+                  {product.usage_method && <SubBlock icon="📋" title="使用方法">{renderProductText(product.usage_method)}</SubBlock>}
+                  {product.pairing_tips && <SubBlock icon="🔗" title="怎麼搭">{renderProductText(product.pairing_tips)}</SubBlock>}
+                  {product.source_notes && <SubBlock icon="🌿" title="來源 / 挑選">{renderProductText(product.source_notes)}</SubBlock>}
+                </div>
+              </Collapsible>
+            </section>
+          )}
+
+          {hasSpec && (
+            <section id="spec" className="scroll-mt-32 rounded-2xl border border-gray-100 bg-white px-5 pb-2 pt-5 shadow-sm" aria-labelledby="spec-heading">
+              <h2 id="spec-heading" className="mb-2 text-[19px] font-bold text-gray-900">成分與注意事項</h2>
+              <div className="divide-y divide-gray-100">
+                {product.ingredients && <Fold icon="🧪" title="成分說明" defaultOpen>{renderProductText(product.ingredients)}</Fold>}
+                {product.precautions && <Fold icon="⚠️" title="注意事項" tone="amber" defaultOpen={!product.ingredients}>{renderProductText(product.precautions)}</Fold>}
+                {product.storage_method && <Fold icon="📦" title="保存方式">{renderProductText(product.storage_method)}</Fold>}
+              </div>
+            </section>
+          )}
+
+          <ProductReviews productId={product.id} productSlug={product.slug} productName={product.product_name}
+            initial={initialReviews} formOpen={reviewFormOpen} setFormOpen={setReviewFormOpen} />
+        </div>
       </div>
 
       {/*
@@ -359,18 +419,21 @@ export default function ProductDetail({ product, relatedArticles = [] }: {
   )
 }
 
-/** 商品詳情的一張卡片：標題列＋內文（16px、行距 1.85） */
-function DetailCard({ icon, iconBg, title, highlight, children }: {
-  icon: string; iconBg: string; title: string; highlight?: boolean; children: React.ReactNode
+/** 成分／注意事項／保存方式的摺疊列：點標題展開或收起（內容一直在 HTML 裡） */
+function Fold({ icon, title, tone, defaultOpen, children }: {
+  icon: string; title: string; tone?: 'amber'; defaultOpen?: boolean; children: React.ReactNode
 }) {
   return (
-    <section className={`rounded-2xl bg-white p-5 shadow-sm ${highlight ? 'border-2 border-green-100' : 'border border-gray-100'}`}>
-      <h3 className="mb-4 flex items-center gap-2.5 text-[19px] font-bold text-gray-900">
-        <span className={`flex h-9 w-9 items-center justify-center rounded-xl text-lg ${iconBg}`} aria-hidden>{icon}</span>
-        {title}
-      </h3>
-      <div className="text-[16px] leading-[1.85] text-gray-700">{children}</div>
-    </section>
+    <details open={defaultOpen} className="group py-1">
+      <summary className="flex min-h-[52px] cursor-pointer list-none items-center gap-2.5 text-[17px] font-bold text-gray-900 [&::-webkit-details-marker]:hidden">
+        <span aria-hidden>{icon}</span>
+        <span className="flex-1">{title}</span>
+        <span className="text-sm text-gray-400 transition-transform group-open:rotate-180" aria-hidden>▼</span>
+      </summary>
+      <div className={`mb-3 text-[16px] leading-[1.85] ${tone === 'amber' ? 'rounded-xl bg-amber-50 p-4 text-amber-900' : 'text-gray-700'}`}>
+        {children}
+      </div>
+    </details>
   )
 }
 
