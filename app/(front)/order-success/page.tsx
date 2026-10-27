@@ -68,7 +68,7 @@ function OrderSuccessContent() {
             {order_no}
           </p>
           <p className="text-[13px] text-green-700 leading-relaxed">
-            💡 建議您<strong>截圖保存</strong>此編號，方便日後查詢訂單
+            💡 建議您<strong>截圖保存</strong>此編號，方便日後在網站查詢訂單或詢問客服
           </p>
         </div>
       )}
@@ -147,7 +147,7 @@ function OrderSuccessContent() {
             { t: '確認訂單', d: '我們會在 1 個工作日內確認訂單並安排出貨，不會另外傳訊息通知；想詢問進度可以直接 LINE 客服' },
             { t: '備貨與出貨', d: '現貨商品約 3 個工作日寄出，預購商品約 7 個工作日' },
             { t: '到店通知', d: '商品送達 7-11 門市後，7-11 會傳簡訊通知您取貨' },
-            { t: '7-11 取貨付款', d: '憑訂單編號或手機號碼至門市櫃台，現金或行動支付付款' },
+            { t: '7-11 取貨付款', d: '收到簡訊後到門市櫃台，告知取件人姓名或手機號碼即可取貨，現場以現金或行動支付付款（網站訂單編號無法在 7-11 查詢）' },
           ].map((s, i) => (
             <div key={i} className="flex items-start gap-3 text-sm text-blue-900">
               <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-[13px] font-bold mt-0.5">{i + 1}</span>
