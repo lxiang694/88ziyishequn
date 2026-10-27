@@ -449,7 +449,7 @@ export default function CheckoutPage() {
                   <ul className="text-sm text-amber-700 space-y-1 leading-relaxed">
                     <li>· <strong>現貨商品</strong>：下單後約 <strong>3 個工作日</strong>送達 7-11</li>
                     <li>· <strong>預購商品</strong>：下單後約 <strong>7 個工作日</strong>送達 7-11</li>
-                    <li>· 商品到店後，我們會透過 <strong>LINE / 簡訊通知您</strong></li>
+                    <li>· 商品到店後，<strong>7-11 會傳簡訊通知您</strong>取貨</li>
                   </ul>
                 </div>
               </div>

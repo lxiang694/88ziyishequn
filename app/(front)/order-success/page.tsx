@@ -144,9 +144,9 @@ function OrderSuccessContent() {
         <p className="font-bold text-blue-900 mb-3 text-base">📦 接下來的流程</p>
         <div className="space-y-2.5">
           {[
-            { t: '客服確認訂單', d: '我們會在 1 個工作日內透過 LINE / 簡訊通知您' },
+            { t: '確認訂單', d: '我們會在 1 個工作日內確認訂單並安排出貨，不會另外傳訊息通知；想詢問進度可以直接 LINE 客服' },
             { t: '備貨與出貨', d: '現貨商品約 3 個工作日寄出，預購商品約 7 個工作日' },
-            { t: '到店通知', d: '商品送達 7-11 後，我們會再次通知您前往取貨' },
+            { t: '到店通知', d: '商品送達 7-11 門市後，7-11 會傳簡訊通知您取貨' },
             { t: '7-11 取貨付款', d: '憑訂單編號或手機號碼至門市櫃台，現金或行動支付付款' },
           ].map((s, i) => (
             <div key={i} className="flex items-start gap-3 text-sm text-blue-900">
