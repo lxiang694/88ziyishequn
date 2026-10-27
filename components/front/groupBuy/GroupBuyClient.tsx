@@ -1,5 +1,6 @@
 'use client'
 
+import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
 import React, { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -330,6 +331,7 @@ function CheckoutSheet({ campaign, lines, subtotal, methods, onClose, onPlaced }
   onPlaced: (p: Placed) => void
 }) {
   const [name, setName] = useState('')
+  const [nameTouched, setNameTouched] = useState(false)
   const [phone, setPhone] = useState('')
   const [method, setMethod] = useState<ShippingMethod>(methods[0])
   const [store, setStore] = useState<Store | null>(null)
@@ -391,8 +393,20 @@ function CheckoutSheet({ campaign, lines, subtotal, methods, onClose, onPlaced }
         </div>
 
         <label className="mt-4 block font-bold text-gray-800">收件人姓名
-          <input className={field} value={name} onChange={e => setName(e.target.value)} autoComplete="name" maxLength={20} />
+          <input className={field} value={name} onChange={e => { setName(e.target.value); setNameTouched(false) }} onBlur={() => setNameTouched(true)} autoComplete="name" maxLength={20} />
         </label>
+        {/* 7-11 取貨：姓名要符合取件規則；離開欄位就提醒，並給一鍵修正 */}
+        {nameTouched && name.trim() && isStorePickup(method) && recipientNameError(name) && (
+          <div className="mt-1.5">
+            <p className="text-sm text-red-600">⚠️ {recipientNameError(name)}</p>
+            {suggestRecipientName(name) && (
+              <button type="button" onClick={() => setName(suggestRecipientName(name) || name)}
+                className="mt-1.5 rounded-lg border border-green-600 bg-green-50 px-3 py-1.5 text-sm font-bold text-green-800">
+                改成「{suggestRecipientName(name)}」
+              </button>
+            )}
+          </div>
+        )}
         <label className="mt-4 block font-bold text-gray-800">手機
           <input className={field} value={phone} onChange={e => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="09xxxxxxxx" />
         </label>

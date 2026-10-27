@@ -1,3 +1,5 @@
+import { recipientNameError } from '../recipientName'
+
 /**
  * 團購（每月一檔）：純函式，前台、後台、API 共用，可單元測試。
  *
@@ -161,6 +163,11 @@ export function checkoutProblem(input: Partial<CheckoutInput>, methods: Shipping
   if (!/^09\d{8}$/.test((input.phone || '').trim())) return '請填寫正確的手機號碼（09 開頭 10 碼）'
   if (!input.shipping_method || !methods.includes(input.shipping_method)) return '請選擇取貨方式'
   if (isStorePickup(input.shipping_method) && !(Number.isSafeInteger(input.store_id) && (input.store_id as number) > 0)) return '請選擇 7-11 取貨門市'
+  // 7-11 取貨：姓名要符合賣貨便規則（只能中英文、2～5 個中文字），不然轉單會被擋
+  if (isStorePickup(input.shipping_method)) {
+    const nameProblem = recipientNameError(name)
+    if (nameProblem) return nameProblem
+  }
   if (input.shipping_method === 'home') {
     const addr = (input.home_address || '').trim()
     if (Array.from(addr).length < 8) return '請填寫完整的收件地址（含縣市、區、路、門牌）'

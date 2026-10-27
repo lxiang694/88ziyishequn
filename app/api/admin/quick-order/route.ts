@@ -8,6 +8,7 @@ import {
   QUICK_ORDER_PERMISSION, DEFAULT_QUICK_ORDER_SOURCE,
 } from '@/lib/quickOrder/domain'
 import { refreshStorefront } from '@/lib/storefrontCache'
+import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
 import { SITE_URL } from '@/lib/siteUrl'
 
 /**
@@ -45,8 +46,11 @@ export async function POST(req: NextRequest) {
   if (!customer_name) {
     return NextResponse.json({ success: false, error: '請填寫收件人姓名' }, { status: 400 })
   }
-  if (customer_name.length > 40) {
-    return NextResponse.json({ success: false, error: '姓名過長' }, { status: 400 })
+  // 跟前台結帳同一套規則：不合賣貨便規則的姓名，轉單時會被擋
+  const nameProblem = recipientNameError(customer_name)
+  if (nameProblem) {
+    const fix = suggestRecipientName(customer_name)
+    return NextResponse.json({ success: false, error: fix ? `${nameProblem}（建議改成「${fix}」）` : nameProblem }, { status: 400 })
   }
   if (!validateTWPhone(phone)) {
     return NextResponse.json({ success: false, error: '手機號碼格式不正確（09 開頭 10 碼）' }, { status: 400 })

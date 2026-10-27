@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { recipientNameError } from '@/lib/recipientName'
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateOrderNo, validateTWPhone } from '@/lib/utils'
 import { getUserFromRequest } from '@/lib/userAuth'
@@ -15,6 +16,8 @@ export async function POST(req: NextRequest) {
     const authedUser = await getUserFromRequest(req)
 
     if (!customer_name?.trim()) return NextResponse.json({ success: false, error: '請填寫姓名' }, { status: 400 })
+    const nameProblem = recipientNameError(String(customer_name))
+    if (nameProblem) return NextResponse.json({ success: false, error: nameProblem, field: 'customer_name' }, { status: 400 })
     if (!phone || !validateTWPhone(phone)) return NextResponse.json({ success: false, error: '請填寫正確的手機號碼（09xxxxxxxx）' }, { status: 400 })
     if (!store_id || !store_name) return NextResponse.json({ success: false, error: '請選擇 7-11 門市' }, { status: 400 })
     if (!items || items.length === 0) return NextResponse.json({ success: false, error: '購物車是空的' }, { status: 400 })

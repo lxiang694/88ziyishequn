@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useCart } from '@/components/front/CartContext'
 import { useUserAuth } from '@/components/front/UserAuthContext'
 import { formatPrice, validateTWPhone } from '@/lib/utils'
+import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
 import StorePickerModal, { Store } from '@/components/front/StorePickerModal'
 import { trackFunnel } from '@/lib/funnel'
 import toast from 'react-hot-toast'
@@ -124,7 +125,8 @@ export default function CheckoutPage() {
 
   const validate = () => {
     const e: Record<string, string> = {}
-    if (!form.customer_name.trim()) e.customer_name = '請填寫姓名'
+    const nameProblem = recipientNameError(form.customer_name)
+    if (nameProblem) e.customer_name = nameProblem
     if (!form.phone || !validateTWPhone(form.phone)) e.phone = '請填寫正確手機號碼（09xxxxxxxx）'
     if (!selectedStore) e.store = '請選擇 7-11 取貨門市'
     setErrors(e)
@@ -343,9 +345,22 @@ export default function CheckoutPage() {
                   placeholder="請輸入您的姓名"
                   value={form.customer_name}
                   onChange={e => { setForm(f => ({ ...f, customer_name: e.target.value })); setErrors(er => ({ ...er, customer_name: '' })) }}
+                  // 離開欄位就先檢查：「鄭景耀,」這種多打一個符號的，當下就提醒
+                  onBlur={() => { if (form.customer_name.trim()) setErrors(er => ({ ...er, customer_name: recipientNameError(form.customer_name) || '' })) }}
                 />
-                {errors.customer_name && (
-                  <p className="text-red-500 text-sm mt-1.5">⚠️ {errors.customer_name}</p>
+                {errors.customer_name ? (
+                  <div className="mt-1.5">
+                    <p className="text-red-500 text-sm">⚠️ {errors.customer_name}</p>
+                    {suggestRecipientName(form.customer_name) && (
+                      <button type="button"
+                        onClick={() => { setForm(f => ({ ...f, customer_name: suggestRecipientName(f.customer_name) || f.customer_name })); setErrors(er => ({ ...er, customer_name: '' })) }}
+                        className="mt-1.5 rounded-lg border border-green-600 bg-green-50 px-3 py-1.5 text-sm font-bold text-green-800">
+                        改成「{suggestRecipientName(form.customer_name)}」
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-[13px] mt-1">請填 7-11 取貨時核對的真實姓名（2～5 個中文字，不含符號）</p>
                 )}
               </div>
               <div id="field-phone" className="scroll-mt-24">

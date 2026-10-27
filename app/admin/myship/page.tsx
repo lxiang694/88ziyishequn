@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Marketplace, Mapping, PreparedOrder } from '@/lib/myship/domain'
 import AssistantPanel from './AssistantPanel'
+import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
 import BatchHistory from './BatchHistory'
 
 type Item = { variant_id: number | null; name: string; variant: string; sku: string | null }
@@ -70,8 +71,17 @@ export default function MyshipPage() {
     if (!confirm(`重新啟用門市「${fix.store_name}」？\n${fix.address}\n\n請先確認這間 7-11 仍正常營業。啟用後，所有用這間門市的訂單都能轉單。`)) return
     run(async () => { await post('stores', { action: 'activate', store_id: fix.id }); await load(); setMessage(`已重新啟用門市「${fix.store_name}」`) })
   }
-  const errorList = (errors: string[], fix?: StoreFix, storeName?: string | null) => <>
+  // 取件人姓名不合規則（例如多打了逗號）：直接在這裡改
+  const fixName = (kind: 'shop' | 'group_buy', orderId: number, current: string) => {
+    const next = prompt(`修改取件人姓名（只能中英文、2～5 個中文字）\n\n目前：${current}`, suggestRecipientName(current) || current)
+    if (next === null || next.trim() === current) return
+    const problem = recipientNameError(next)
+    if (problem) { setError(problem); return }
+    run(async () => { await post('recipient', { kind, order_id: orderId, customer_name: next.trim() }); await load(); setMessage(`已把取件人姓名改成「${next.trim()}」`) })
+  }
+  const errorList = (errors: string[], fix?: StoreFix, storeName?: string | null, nameFix?: () => void) => <>
     {errors.map(e => <p className="text-amber-800" key={e}>{e}</p>)}
+    {nameFix && errors.some(e => e.includes('姓名')) && <button type="button" disabled={busy} onClick={nameFix} className="mt-2 mr-2 rounded-lg border border-green-600 bg-white px-3 py-1.5 text-xs font-bold text-green-700 hover:bg-green-50 disabled:opacity-40">修改姓名</button>}
     {errors.some(e => e.includes('門市')) && <a href={`/admin/stores?q=${encodeURIComponent(fix?.store_name || storeName || '')}`} className="mt-1 inline-block text-xs font-bold text-green-700 underline">到門市管理查看 →</a>}
     {fix && <button type="button" className="mt-2 rounded-lg border border-green-600 bg-white px-3 py-1.5 text-xs font-bold text-green-700 hover:bg-green-50 disabled:opacity-40" disabled={busy} onClick={() => activateStore(fix)}>門市正常營業，重新啟用</button>}
   </>
@@ -206,7 +216,7 @@ export default function MyshipPage() {
                   <p className="mt-1 text-slate-600">{o.store_name}門市</p>
                 </td>
                 <td className="p-3 whitespace-nowrap tabular-nums"><p className="font-semibold">{money(o.total_amount)}</p>{o.shipping_fee > 0 && <p className="text-xs text-slate-500">含運費 {money(o.shipping_fee)}</p>}</td>
-                <td className="p-3 min-w-44">{o.errors.length ? errorList(o.errors, o.store_fix, o.store_name)
+                <td className="p-3 min-w-44">{o.errors.length ? errorList(o.errors, o.store_fix, o.store_name, () => fixName('group_buy', o.id, o.customer_name))
                   : tempMismatch ? <span className="text-slate-500">屬於{o.temperature}賣場</span>
                   : !currentMarket?.enabled ? <span className="text-slate-500">賣場未啟用</span>
                   : <span className="font-semibold text-green-800">可匯出</span>}</td>
@@ -226,7 +236,7 @@ export default function MyshipPage() {
             勾選本身只存 order_id 沒問題：可勾的永遠只有目前賣場那一列。 */}
         {unreserved.map(o => {
           const selectable = o.marketplace_id === market && available.some(a => a.order_id === o.order_id && a.marketplace_id === o.marketplace_id)
-          return <tr key={`${o.order_id}:${o.marketplace_id}`} className="align-top"><td className="p-4"><input aria-label={`選取 ${o.order_no}`} type="checkbox" checked={selectable && selected.includes(o.order_id)} disabled={busy || !selectable} onChange={() => toggle(o.order_id)}/></td><td className="p-4 whitespace-nowrap"><p className="font-medium">{o.order_no}</p><p className="mt-1 text-slate-500">{o.customer_name}</p>{o.parts > 1 && <p className="mt-1.5 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">拆單 {o.part}/{o.parts}</p>}</td><td className="p-4">{o.items.map((i, n) => <p key={n}>{i.sku} {i.name} · {i.variant}</p>)}</td><td className="p-4 whitespace-nowrap">{o.store_name}</td><td className="p-4 whitespace-nowrap tabular-nums">{money(o.total_amount)}{o.parts > 1 && <p className="mt-1 text-xs text-slate-500">原訂單 {money(o.order_total)}</p>}</td><td className="p-4 min-w-48">{o.errors.length ? errorList(o.errors, o.store_fix, o.store_name) : o.marketplace_id === market ? <span className="text-green-800">可匯出</span> : o.parts > 1 ? `這一半屬於其他賣場（${(data?.markets || []).find(m => m.id === o.marketplace_id)?.name || o.marketplace_id}）` : '屬於其他賣場'}</td></tr>
+          return <tr key={`${o.order_id}:${o.marketplace_id}`} className="align-top"><td className="p-4"><input aria-label={`選取 ${o.order_no}`} type="checkbox" checked={selectable && selected.includes(o.order_id)} disabled={busy || !selectable} onChange={() => toggle(o.order_id)}/></td><td className="p-4 whitespace-nowrap"><p className="font-medium">{o.order_no}</p><p className="mt-1 text-slate-500">{o.customer_name}</p>{o.parts > 1 && <p className="mt-1.5 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">拆單 {o.part}/{o.parts}</p>}</td><td className="p-4">{o.items.map((i, n) => <p key={n}>{i.sku} {i.name} · {i.variant}</p>)}</td><td className="p-4 whitespace-nowrap">{o.store_name}</td><td className="p-4 whitespace-nowrap tabular-nums">{money(o.total_amount)}{o.parts > 1 && <p className="mt-1 text-xs text-slate-500">原訂單 {money(o.order_total)}</p>}</td><td className="p-4 min-w-48">{o.errors.length ? errorList(o.errors, o.store_fix, o.store_name, () => fixName('shop', o.order_id, o.customer_name)) : o.marketplace_id === market ? <span className="text-green-800">可匯出</span> : o.parts > 1 ? `這一半屬於其他賣場（${(data?.markets || []).find(m => m.id === o.marketplace_id)?.name || o.marketplace_id}）` : '屬於其他賣場'}</td></tr>
         })}
         {!unreserved.length && <tr><td colSpan={6} className="p-8 text-center text-slate-500">沒有尚未匯出的待確認訂單。已匯出的訂單請到批次紀錄核對。</td></tr>}
       </tbody></table></div>
