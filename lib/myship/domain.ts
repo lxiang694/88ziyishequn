@@ -76,8 +76,9 @@ export function validateRow(row: readonly string[]): string[] {
   if (row.length !== 10 || row.some(v => typeof v !== 'string')) return ['匯入欄位格式不符']
   const [name, phone, store, temperature, goods, amount, freight, date, memo, other] = row
   const errors: string[] = []
-  // 範本 A4：10個半形字元或5個中文字，不允許數字及特殊符號。
+  // 範本 A4（1.5 版）：最少 2 字、10個半形字元或5個中文字，不允許數字及特殊符號。
   if (!name || nameLength(name) > 10 || !/^[\p{L}\p{M} ]+$/u.test(name)) errors.push('姓名需為中文或英文字母，最多5個中文字或10個半形字元')
+  else if (Array.from(name.replace(/\s/g, '')).length < 2) errors.push('取件人姓名最少2個字')
   if (!/^09\d{8}$/.test(phone)) errors.push('手機需為09開頭的10碼數字')
   if (!/^\d{6}$/.test(store)) errors.push('缺少有效的6碼門市店號')
   if (!['常溫', '冷凍'].includes(temperature)) errors.push('溫層需為常溫或冷凍')

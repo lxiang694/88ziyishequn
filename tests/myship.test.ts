@@ -46,6 +46,9 @@ test('範本代收金額上下限、姓名與字數限制', () => {
   for (const amount of ['0','54','20001','NaN','1.5','1e3']) assert.ok(validateRow(row.map((v, i) => i === 5 ? amount : v)).length)
   for (const amount of ['55','20000']) assert.deepEqual(validateRow(row.map((v, i) => i === 5 ? amount : v)), [])
   for (const name of ['六個中文姓名','A1','A-B','王😀']) assert.ok(validateRow(row.map((v, i) => i === 0 ? name : v)).length)
+  // 1.5 版範本：姓名最少 2 字
+  assert.deepEqual(validateRow(row.map((v, i) => i === 0 ? '王' : v)), ['取件人姓名最少2個字'])
+  for (const name of ['王明', 'Al']) assert.deepEqual(validateRow(row.map((v, i) => i === 0 ? name : v)), [])
   assert.ok(validateRow(row.map((v, i) => i === 8 ? '字'.repeat(201) : v)).length)
 })
 test('備註不截斷、非法XML字元不可進入工作簿', () => {
@@ -63,7 +66,7 @@ test('快照商品排序穩定', () => {
   assert.equal(o.order_items[0].id, 2)
 })
 test('官方XLSM原始部件完整保留，資料全為文字且不產生公式', async () => {
-  const input = await readFile(new URL('../assets/myship/order-import-v1.4.xlsm', import.meta.url))
+  const input = await readFile(new URL('../assets/myship/order-import-v1.5.xlsm', import.meta.url))
   const row = prepare({ ...order, note: '=HYPERLINK("https://example.test","<test>&")' }).row!
   const output = fillOfficialTemplate(input, [row])
   const before = unzipSync(input); const after = unzipSync(output)
@@ -77,4 +80,11 @@ test('官方XLSM原始部件完整保留，資料全為文字且不產生公式'
   assert.throws(() => fillOfficialTemplate(input, Array(501).fill(row)))
   assert.throws(() => fillOfficialTemplate(new Uint8Array([0]), [row]))
   assert.match(strFromU8(unzipSync(fillOfficialTemplate(input, Array(500).fill(row)))['xl/worksheets/sheet1.xml']), /ref="A1:K506"/)
+  // 版本號 1.5（賣貨便看這一格判斷是不是最新範本），範本裡不能留任何客人資料
+  const sst = strFromU8(before['xl/sharedStrings.xml'])
+  assert.match(sst, /<t[^>]*>1\.5<\/t>/)
+  assert.equal(sst.includes('健康優選訂單：'), false)
+  // 只剩官方「填寫範例」的兩支示範手機（張大華、李大仁）
+  assert.deepEqual([...new Set(sst.match(/09\d{8}/g))].sort(), ['0901234567', '0901234589'])
+  assert.match(xml, /s="24" t="inlineStr"/)
 })

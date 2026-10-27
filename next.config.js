@@ -2,8 +2,8 @@
 const nextConfig = {
   experimental: {
     outputFileTracingIncludes: {
-      '/api/admin/myship/batches': ['./assets/myship/order-import-v1.4.xlsm'],
-      '/api/admin/myship/batches/*': ['./assets/myship/order-import-v1.4.xlsm'],
+      '/api/admin/myship/batches': ['./assets/myship/order-import-v1.5.xlsm'],
+      '/api/admin/myship/batches/*': ['./assets/myship/order-import-v1.5.xlsm'],
     },
   },
   typescript: { ignoreBuildErrors: true },
