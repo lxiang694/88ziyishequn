@@ -36,6 +36,8 @@ export interface MemberOrder {
 export interface Stage { steps: string[]; current: number; done: boolean; cancelled: boolean; hint: string }
 
 const SHOP_STEPS = ['已下單', '處理中', '已出貨', '已到店']
+/** 出貨後很久沒人改成「已到店」的訂單，最後一步顯示成「已完成」 */
+const SHOP_STEPS_DONE = ['已下單', '處理中', '已出貨', '已完成']
 const GROUP_STEPS = ['已跟團', '已出貨', '已完成']
 
 /** 訂單進度：第幾步、給客人看的一句話 */
@@ -45,15 +47,26 @@ const DAY_MS = 86_400_000
 function arrivedLongAgo(o: Pick<MemberOrder, 'created_at' | 'updated_at'>, now: number) {
   return now - new Date(o.updated_at || o.created_at).getTime() > PICKUP_DAYS * DAY_MS
 }
+/**
+ * 後台按「已出貨」後滿 10 天，會員看到的就是「已完成」：
+ * 7-11 約 3 天到店、保留 7 天，10 天後不是取了就是退回，不必再掛在「進行中」。
+ * 只影響會員中心的顯示，後台的訂單狀態不變。
+ */
+export const SHIPPED_DONE_DAYS = 10
+function shippedLongAgo(o: Pick<MemberOrder, 'status' | 'created_at' | 'updated_at'>, now: number) {
+  return o.status === '已出貨' && now - new Date(o.updated_at || o.created_at).getTime() >= SHIPPED_DONE_DAYS * DAY_MS
+}
 
 export function orderStage(o: Pick<MemberOrder, 'kind' | 'status' | 'store_name' | 'created_at' | 'updated_at'>, now = Date.now()): Stage {
   const store = o.store_name ? `7-11 ${o.store_name}門市` : '7-11 門市'
   if (o.status === '已取消') return { steps: o.kind === 'shop' ? SHOP_STEPS : GROUP_STEPS, current: -1, done: false, cancelled: true, hint: '這筆訂單已取消' }
   if (o.kind === 'group_buy') {
+    if (shippedLongAgo(o, now)) return { steps: GROUP_STEPS, current: 2, done: true, cancelled: false, hint: '已完成，謝謝您跟團' }
     const current = o.status === '已完成' ? 2 : o.status === '已出貨' ? 1 : 0
     const hint = current === 0 ? '截單後統一出貨，到店時 7-11 會傳簡訊通知' : current === 1 ? `已出貨，到 ${store} 時會收到 7-11 簡訊` : '已完成，謝謝您跟團'
     return { steps: GROUP_STEPS, current, done: current === 2, cancelled: false, hint }
   }
+  if (shippedLongAgo(o, now)) return { steps: SHOP_STEPS_DONE, current: 3, done: true, cancelled: false, hint: '已完成，謝謝您的訂購' }
   const map: Record<string, number> = { 待確認: 0, 已確認: 1, 備貨中: 1, 已出貨: 2, 已到店: 3 }
   const current = map[o.status] ?? 0
   const hint = [

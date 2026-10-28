@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     shopQuery,
     phone
       ? supabaseAdmin.from('group_buy_orders')
-        .select('id, order_no, phone, store_name, status, total_amount, created_at, campaign_id, group_buy_campaigns(title), group_buy_order_items(id, name_snapshot, spec_snapshot, quantity, subtotal)')
+        .select('id, order_no, phone, store_name, status, total_amount, created_at, updated_at, campaign_id, group_buy_campaigns(title), group_buy_order_items(id, name_snapshot, spec_snapshot, quantity, subtotal)')
         .eq('phone', phone).order('created_at', { ascending: false }).limit(30)
       : Promise.resolve({ data: [], error: null }),
     supabaseAdmin.from('product_reviews').select('product_id').eq('user_id', user.id),
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     })),
     // 團購表還沒建時 gb.error 有值，當成沒有團購訂單
     ...((gb.error ? [] : gb.data) || []).map((o: any) => ({
-      kind: 'group_buy' as const, id: o.id, order_no: o.order_no, status: o.status, created_at: o.created_at,
+      kind: 'group_buy' as const, id: o.id, order_no: o.order_no, status: o.status, created_at: o.created_at, updated_at: o.updated_at ?? null,
       total: o.total_amount, store_name: o.store_name, store_area: '', phone: o.phone,
       campaign_title: o.group_buy_campaigns?.title || '每月團購',
       items: (o.group_buy_order_items || []).sort((a: any, b: any) => a.id - b.id).map((i: any) => ({

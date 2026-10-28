@@ -53,3 +53,24 @@ test('到店超過 8 天不再提醒取貨', () => {
   assert.equal(isReadyForPickup(old, now), false)
   assert.match(orderStage(old, now).hint, /已送達門市/)
 })
+
+test('後台出貨滿 10 天，會員看到已完成', () => {
+  const now = new Date('2026-10-28T00:00:00Z').getTime()
+  const shipped = (updated_at: string, kind: 'shop' | 'group_buy' = 'shop') => o('已出貨', { kind, created_at: '2026-10-01T00:00:00Z', updated_at })
+  // 出貨 9 天：還在進行中
+  const nine = orderStage(shipped('2026-10-19T00:00:00Z'), now)
+  assert.equal(nine.current, 2)
+  assert.equal(nine.done, false)
+  // 出貨滿 10 天：已完成，最後一步寫「已完成」
+  const ten = orderStage(shipped('2026-10-18T00:00:00Z'), now)
+  assert.equal(ten.done, true)
+  assert.equal(ten.current, 3)
+  assert.equal(ten.steps[3], '已完成')
+  assert.match(ten.hint, /已完成/)
+  // 團購也一樣
+  const gb = orderStage(shipped('2026-10-01T00:00:00Z', 'group_buy'), now)
+  assert.equal(gb.done, true)
+  assert.equal(gb.current, 2)
+  // 其他狀態不受影響
+  assert.equal(orderStage(o('備貨中', { updated_at: '2026-09-01T00:00:00Z' }), now).done, false)
+})
