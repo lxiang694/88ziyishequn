@@ -27,6 +27,7 @@ const NAV = [
   { href: '/admin/reports', label: '📈 銷售報表', perms: ['all', 'orders.view'] },
   { href: '/admin/funnel', label: '🔻 下單漏斗', perms: ['all', 'orders.view'] },
   { href: '/admin/crm', label: '💚 客戶經營', perms: ['all', 'orders.view'] },
+  { href: '/admin/referrals', label: '　└ 好友推薦', perms: ['all', 'orders.view'] },
   { href: '/admin/customers', label: '🔁 復購分析', perms: ['all', 'orders.view'] },
   { href: '/admin/events', label: '📅 社群活動', perms: ['all', 'events.view'] },
   { href: '/admin/popups', label: '💬 前台彈窗', perms: ['all', 'site_popup.manage'] },

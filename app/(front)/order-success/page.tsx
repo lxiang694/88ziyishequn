@@ -1,4 +1,5 @@
 'use client'
+import ShareCard from '@/components/front/referral/ShareCard'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
@@ -159,6 +160,12 @@ function OrderSuccessContent() {
           ))}
         </div>
       </div>
+
+      {/* 好友推薦：剛下完單、心情最好的時候 */}
+      <ShareCard className="mb-5" icon="👨‍👩‍👧" title="家人朋友也需要嗎？"
+        subtitle="把這個網站傳給他們，7-11 取貨付款，不用先付錢。"
+        message="跟你分享我常買保健品的地方 😊 商品介紹寫得很清楚，7-11 取貨付款，不用先付錢，有需要可以看看👇"
+        medium="order_success" />
 
       {/* How to query order */}
       <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 mb-5">

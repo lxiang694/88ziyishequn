@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { withReferral } from '@/lib/referral'
+import { useMyReferral } from './referral/useMyReferral'
 
 interface Props {
   url: string
@@ -20,13 +22,16 @@ const THEME_CLASSES = {
 }
 
 export default function SocialShareButtons({
-  url,
+  url: pageUrl,
   title,
   heading = '把這個分享給家人朋友',
   subtext = '一起重視健康',
   theme = 'green',
 }: Props) {
   const [copied, setCopied] = useState(false)
+  // 會員分享時自動附上自己的推薦碼，朋友點進來下單就知道是誰介紹的
+  const { referral } = useMyReferral()
+  const url = withReferral(pageUrl, referral?.code)
 
   // LINE 用通用 URL Scheme（手機自動開啟 LINE App，桌機開啟 LINE 桌面版）
   // 標題和網址分行，LINE 會自動把網址轉成可點擊預覽卡片

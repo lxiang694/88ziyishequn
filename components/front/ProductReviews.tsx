@@ -2,6 +2,7 @@
 import { useCallback, useState } from 'react'
 import { Stars } from './StarRating'
 import ReviewForm from './ReviewForm'
+import ShareCard from './referral/ShareCard'
 import { reviewDate, type PublicReview, type ReviewSummary } from '@/lib/reviews'
 
 export interface InitialReviews { ready: boolean; summary: ReviewSummary; reviews: PublicReview[]; hasMore: boolean }
@@ -25,6 +26,8 @@ export default function ProductReviews({ productId, productSlug, productName, in
   const [hasMore, setHasMore] = useState(initial.hasMore)
   const [filter, setFilter] = useState<Filter>('all')
   const [loading, setLoading] = useState(false)
+  // 剛寫完評價：最願意分享的時刻，邀請傳給有需要的朋友
+  const [justReviewed, setJustReviewed] = useState(false)
 
   const load = useCallback(async (f: Filter, offset: number) => {
     setLoading(true)
@@ -64,6 +67,14 @@ export default function ProductReviews({ productId, productSlug, productName, in
           </button>
         )}
       </div>
+
+      {justReviewed && (
+        <ShareCard className="mb-4" icon="🙏" title="謝謝您的評價！"
+          subtitle="身邊有人也需要的話，把這個商品傳給他參考吧。"
+          path={`/products/${productSlug}`}
+          message={`我最近在用「${productName}」，分享給你參考 😊 上面有成分介紹和大家的評價👇`}
+          medium="review" />
+      )}
 
       {count === 0 ? (
         <div className="rounded-2xl bg-gray-50 px-4 py-8 text-center">
@@ -128,7 +139,7 @@ export default function ProductReviews({ productId, productSlug, productName, in
       {formOpen && (
         <ReviewForm productId={productId} productSlug={productSlug} productName={productName}
           onClose={() => setFormOpen(false)}
-          onSaved={() => { setFormOpen(false); setFilter('all'); load('all', 0) }} />
+          onSaved={() => { setFormOpen(false); setFilter('all'); load('all', 0); setJustReviewed(true) }} />
       )}
     </section>
   )

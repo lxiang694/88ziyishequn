@@ -7,6 +7,7 @@ import { useCart } from '@/components/front/CartContext'
 import { useUserAuth } from '@/components/front/UserAuthContext'
 import { formatPrice, validateTWPhone } from '@/lib/utils'
 import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
+import { getStoredRef } from '@/components/front/referral/referralClient'
 import StorePickerModal, { Store } from '@/components/front/StorePickerModal'
 import { trackFunnel } from '@/lib/funnel'
 import toast from 'react-hot-toast'
@@ -163,6 +164,8 @@ export default function CheckoutPage() {
           county: selectedStore!.county,
           district: selectedStore!.district,
           note: form.note.trim() || null,
+          // 朋友的推薦連結點進來的：記上推薦碼
+          ref: getStoredRef(),
           items: items.map(i => ({
             product_id: i.product_id, product_name: i.product_name,
             cover_image_url: i.cover_image_url, variant_id: i.variant_id,

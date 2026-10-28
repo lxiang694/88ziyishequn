@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { attachReferral } from '@/lib/referralRepo'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabase'
 import {
@@ -61,6 +62,8 @@ export async function POST(req: NextRequest) {
     }
     // 讓團購頁的已售數量與跟團人數盡快更新
     try { revalidatePath(`/group-buy/${slug}`) } catch {}
+    // 好友推薦（揪團）：記上推薦碼，失敗不影響訂單
+    if ((data as any)?.order_no) await attachReferral('group_buy_orders', (data as any).order_no, body.ref, { phone: input.phone })
     return NextResponse.json({ success: true, data })
   }
   return NextResponse.json({ success: false, error: '下單失敗，請稍後再試' }, { status: 500 })

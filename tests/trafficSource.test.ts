@@ -78,3 +78,8 @@ test('前台取 utm', () => {
   assert.deepEqual(utmFromSearch('?utm_source=line&utm_medium=group&q=魚油'), { utm_source: 'line', utm_medium: 'group' })
   assert.deepEqual(utmFromSearch(''), {})
 })
+
+test('親友推薦連結（?ref=）算成親友推薦', () => {
+  assert.deepEqual(utmFromSearch('?ref=k7m2qx'), { utm_source: 'referral', utm_medium: 'friend', utm_campaign: 'K7M2QX' })
+  assert.equal(classifySource({ visitor_id: 'v', path: '/', created_at: '', utm_source: 'referral' }, SITE).key, 'referral')
+})

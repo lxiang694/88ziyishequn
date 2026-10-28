@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useUserAuth } from '@/components/front/UserAuthContext'
 import { validateTWPhone } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { getStoredRef } from '@/components/front/referral/referralClient'
 
 /** 註冊完回到原本的頁面（例如商品頁寫評價）；只接受站內路徑 */
 function nextPath(): string {
@@ -25,6 +26,8 @@ export default function SignupPage() {
   const [agreed, setAgreed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [invited, setInvited] = useState(false)
+  useEffect(() => { setInvited(!!getStoredRef()) }, [])
 
   useEffect(() => {
     if (!authLoading && user) router.replace(nextPath())
@@ -98,6 +101,17 @@ export default function SignupPage() {
           <h1 className="text-2xl font-bold text-gray-900">註冊新會員</h1>
           <p className="text-gray-500 text-sm mt-1">3 分鐘完成註冊，享受快速結帳</p>
         </div>
+
+        {/* 親友推薦來的：先讓他知道是誰邀請的（推薦碼記在瀏覽器裡，註冊後自動記錄） */}
+        {invited && (
+          <p className="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-center text-[15px] font-semibold text-green-800">💚 您的親友邀請您加入健康優選</p>
+        )}
+        {/* 會員好處：說清楚為什麼要註冊 */}
+        <ul className="mb-4 grid grid-cols-2 gap-2 text-[14px] text-gray-700">
+          {['📦 訂單到哪了一眼看到', '🔁 常買的一鍵再買', '📍 收件門市免重填', '💌 專屬連結分享親友'].map(t => (
+            <li key={t} className="rounded-xl bg-white px-3 py-2.5 text-center shadow-sm">{t}</li>
+          ))}
+        </ul>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 space-y-4">
           <div>

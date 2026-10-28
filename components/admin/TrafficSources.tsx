@@ -19,6 +19,7 @@ const STYLE: Record<SourceKey, { icon: string; bar: string }> = {
   line: { icon: '💬', bar: 'bg-green-500' },
   threads: { icon: '🧵', bar: 'bg-gray-800' },
   youtube: { icon: '▶️', bar: 'bg-red-500' },
+  referral: { icon: '💌', bar: 'bg-rose-500' },
   other: { icon: '🌐', bar: 'bg-amber-500' },
   direct: { icon: '⌨️', bar: 'bg-gray-400' },
 }

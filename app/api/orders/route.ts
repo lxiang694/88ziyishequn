@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { recipientNameError } from '@/lib/recipientName'
+import { attachReferral } from '@/lib/referralRepo'
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateOrderNo, validateTWPhone } from '@/lib/utils'
 import { getUserFromRequest } from '@/lib/userAuth'
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { customer_name, phone, line_id, store_id, store_name, store_address,
-            county, district, note, items } = body
+            county, district, note, items, ref } = body
 
     // Optionally identify logged-in user (no fail if not authed — guest checkout still works)
     const authedUser = await getUserFromRequest(req)
@@ -139,6 +140,9 @@ export async function POST(req: NextRequest) {
           .eq('id', authedUser.id)
       }
     }
+
+    // 好友推薦：朋友的推薦連結帶來的訂單記上推薦碼（自己的、不存在的不記；失敗不影響訂單）
+    await attachReferral('orders', order_no, ref, { phone: phone.trim(), userId: authedUser?.id })
 
     return NextResponse.json({
       success: true,

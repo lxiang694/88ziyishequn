@@ -1,6 +1,8 @@
 'use client'
 
 import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
+import { getStoredRef } from '@/components/front/referral/referralClient'
+import ShareCard from '@/components/front/referral/ShareCard'
 import React, { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -258,6 +260,13 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
         </section>
       )}
 
+      {/* 揪團：台灣人最習慣的分享方式，一起湊免運 */}
+      <ShareCard className="mt-5" icon="🙌" title="揪親友一起跟團"
+        subtitle={`${campaign.title}，截單前大家一起跟，${campaign.free_shipping_threshold ? `滿 $${campaign.free_shipping_threshold.toLocaleString('zh-TW')} 免運` : '一起出貨更划算'}。`}
+        path={`/group-buy/${campaign.slug}`}
+        message={`這個月的團購是「${campaign.title}」，要不要一起跟？截單後統一出貨 😊`}
+        medium="group_buy" tone="sky" />
+
       <section className="mt-5 rounded-3xl bg-white p-5 shadow-sm">
         <h2 className="mb-1 text-center text-[20px] font-bold text-gray-900">常見問題</h2>
         <div className="divide-y divide-gray-100">
@@ -365,7 +374,8 @@ function CheckoutSheet({ campaign, lines, subtotal, methods, onClose, onPlaced }
     try {
       const res = await fetch('/api/group-buy/orders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: campaign.slug, ...input }),
+        // 朋友的推薦連結點進來的：記上推薦碼（揪團成效）
+        body: JSON.stringify({ slug: campaign.slug, ...input, ref: getStoredRef() }),
       })
       const d = await res.json()
       if (!d.success) { setError(d.error || '下單失敗'); return }
@@ -589,6 +599,12 @@ function OrderPlaced({ placed, campaign }: { placed: Placed; campaign: PublicCam
         </ol>
         <p className="mt-3 text-[13px] text-gray-500">截單前如需修改或取消，請傳 LINE 並告訴我們訂單編號。</p>
       </section>
+
+      <ShareCard className="mt-5" icon="🙌" title="揪親友一起跟團"
+        subtitle="家人朋友也有需要的話，傳給他們一起跟，截單前都能下單。"
+        path={`/group-buy/${campaign.slug}`}
+        message={`我剛跟了「${campaign.title}」的團購，要不要一起跟？截單後統一出貨 😊`}
+        medium="group_buy_success" tone="sky" />
 
       <a href={LINE_URL} target="_blank" rel="noopener noreferrer"
         className="mt-5 flex min-h-[52px] items-center justify-center rounded-2xl bg-[#06C755] text-lg font-bold text-white">加 LINE 收出貨通知</a>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useUserAuth, useRequireUser } from '@/components/front/UserAuthContext'
 import OrderProgress from '@/components/front/account/OrderProgress'
 import { useMemberOrders } from '@/components/front/account/useMemberOrders'
+import { useMyReferral } from '@/components/front/referral/useMyReferral'
 import { isActiveOrder, isReadyForPickup, orderStage, type MemberOrder } from '@/lib/memberOrders'
 import { formatPrice } from '@/lib/utils'
 
@@ -24,6 +25,7 @@ export default function AccountDashboard() {
   const { authedFetch, signOut } = useUserAuth()
   const { orders, rebuy, reviewable, loading: loadingOrders, reload, addToCart } = useMemberOrders(!!user)
   const [profile, setProfile] = useState<any>(null)
+  const { referral } = useMyReferral()
   const [linking, setLinking] = useState(false)
   const [linkMessage, setLinkMessage] = useState<string | null>(null)
 
@@ -133,6 +135,20 @@ export default function AccountDashboard() {
           </section>
         )}
 
+        {/* ── 邀請親友 ── */}
+        <Link href="/account/invite" className="flex items-center gap-4 rounded-3xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-5 shadow-sm">
+          <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow-sm" aria-hidden>💌</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-bold text-gray-900">邀請親友</span>
+            <span className="block text-[14px] leading-snug text-gray-600">
+              {referral?.stats && (referral.stats.visits || referral.stats.friends)
+                ? `已有 ${referral.stats.visits} 次點擊、${referral.stats.friends} 位親友下單`
+                : '用過覺得好，傳給有需要的家人朋友'}
+            </span>
+          </span>
+          <span className="flex-shrink-0 rounded-xl bg-green-700 px-3.5 py-2 text-sm font-bold text-white">去分享</span>
+        </Link>
+
         {/* ── 寫評價 ── */}
         {reviewable.length > 0 && (
           <section className="rounded-3xl bg-white p-5 shadow-sm">
@@ -158,6 +174,7 @@ export default function AccountDashboard() {
         <nav aria-label="會員服務" className="overflow-hidden rounded-3xl bg-white shadow-sm">
           {[
             { href: '/account/orders', icon: '📦', label: '我的訂單', hint: `共 ${orders.length} 筆，含團購` },
+            { href: '/account/invite', icon: '💌', label: '邀請親友', hint: '專屬連結，看有幾位親友因您而來' },
             { href: '/account/addresses', icon: '📍', label: '收件人與取貨門市', hint: '結帳時一鍵帶入' },
             { href: '/account/profile', icon: '👤', label: '個人資料', hint: '姓名、手機、LINE ID' },
           ].map(m => (

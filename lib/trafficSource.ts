@@ -13,12 +13,12 @@
  */
 export type SourceKey =
   | 'google' | 'yahoo' | 'search' | 'facebook' | 'instagram' | 'line' | 'threads' | 'youtube'
-  | 'other' | 'direct'
+  | 'referral' | 'other' | 'direct'
 
 export const SOURCE_LABEL: Record<SourceKey, string> = {
   google: 'Google 搜尋', yahoo: 'Yahoo 搜尋', search: '其他搜尋引擎',
   facebook: 'Facebook', instagram: 'Instagram', line: 'LINE', threads: 'Threads', youtube: 'YouTube',
-  other: '其他網站', direct: '直接造訪',
+  referral: '親友推薦', other: '其他網站', direct: '直接造訪',
 }
 
 export interface ViewRow {
@@ -46,6 +46,7 @@ export function isInternalHost(host: string, siteHost: string): boolean {
 
 function fromUtm(value: string): SourceKey | null {
   const v = value.toLowerCase()
+  if (v === 'referral') return 'referral'
   if (v.startsWith('line')) return 'line'
   if (v === 'fb' || v.startsWith('facebook')) return 'facebook'
   if (v === 'ig' || v.startsWith('instagram')) return 'instagram'
@@ -177,5 +178,8 @@ export function utmFromSearch(search: string): { utm_source?: string; utm_medium
     const v = (params.get(key) || '').trim().slice(0, 100)
     if (v) out[key] = v
   }
+  // 親友推薦連結只有 ?ref=推薦碼：沒有其他標記時記成「親友推薦」，活動欄放推薦碼
+  const ref = (params.get('ref') || '').trim().toUpperCase().slice(0, 10)
+  if (ref && !out.utm_source) { out.utm_source = 'referral'; out.utm_medium = 'friend'; out.utm_campaign = ref }
   return out
 }
