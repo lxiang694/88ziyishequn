@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -26,8 +26,11 @@ export default function CheckoutPage() {
   // 手機版訂單商品摘要：預設收起（縮圖＋件數＋金額一眼可見），點「明細」展開逐項，讓姓名／手機／門市不需下拉即可看到
   const [showItems, setShowItems] = useState(false)
 
-  // 常用收件資訊：超過 2 筆時預設只顯示 2 筆，其餘可展開／收起
-  const [showAllAddresses, setShowAllAddresses] = useState(false)
+  // 收件人已確認（會員資料帶入、或選了常用收件人）時收成一張小卡，按「修改」才展開表單；
+  // 訪客邊打字邊收起會嚇到人，所以只在這兩種情況才收
+  const [recipientLocked, setRecipientLocked] = useState(false)
+  const [showAddressList, setShowAddressList] = useState(false)
+  const [showNote, setShowNote] = useState(false)
 
   // 流程內的下單按鈕是否在畫面中 — 若看得到就不再顯示底部固定條，避免同時出現兩顆「確認下單」
   const inlineSubmitRef = useRef<HTMLDivElement>(null)
@@ -75,6 +78,7 @@ export default function CheckoutPage() {
           line_id: f.line_id || p.line_id || '',
           note: f.note,
         }))
+        if (!recipientNameError(p.name || '') && validateTWPhone(p.phone || '')) setRecipientLocked(true)
         if (p.default_store_id && !selectedStore) {
           setSelectedStore({
             id: p.default_store_id,
@@ -121,6 +125,9 @@ export default function CheckoutPage() {
   const applyAddress = (addr: any) => {
     setForm(f => ({ ...f, customer_name: addr.recipient_name, phone: addr.phone, line_id: addr.line_id || '' }))
     setSelectedStore({ id: addr.store_id, store_name: addr.store_name, address: addr.store_address, county: addr.store_county, district: addr.store_district })
+    setStoreFromLast(false)
+    setRecipientLocked(!recipientNameError(addr.recipient_name || '') && validateTWPhone(addr.phone || ''))
+    setShowAddressList(false)
     setErrors({})
   }
 
@@ -218,303 +225,228 @@ export default function CheckoutPage() {
   }
 
   const totalItems = items.reduce((s, i) => s + i.quantity, 0)
+  const recipientValid = !recipientNameError(form.customer_name) && validateTWPhone(form.phone)
+  const recipientCollapsed = recipientLocked && recipientValid
+  const visibleItems = showItems ? items : items.slice(0, 3)
 
   return (
     <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-8 md:pb-10">
-      {/* Back button */}
-      <div className="flex items-center gap-3 mb-4">
-        <Link href="/cart" className="text-gray-600 hover:text-gray-600 p-1 rounded-lg transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-800">確認訂單</h1>
-      </div>
+      <h1 className="text-2xl font-bold text-gray-900">確認訂單</h1>
+      <CheckoutSteps />
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* LEFT: Form */}
-        <div className="flex-1 space-y-4 order-2 md:order-1">
+        <div className="flex-1 min-w-0 space-y-4">
 
-          {/* Mobile order summary at top — 可展開精簡摘要 */}
-          <div className="md:hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <button type="button" onClick={() => setShowItems(s => !s)}
-              className="w-full flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                {/* 疊加縮圖 */}
-                <div className="flex -space-x-2 flex-shrink-0">
-                  {items.slice(0, 3).map(item => (
-                    <div key={item.variant_id} className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 relative ring-2 ring-white">
-                      {item.cover_image_url
-                        ? <Image src={item.cover_image_url} alt={item.product_name} fill className="object-cover" sizes="36px" />
-                        : <div className="w-full h-full flex items-center justify-center text-sm">💊</div>}
-                    </div>
-                  ))}
+          {/* ① 收件人 */}
+          <Section n={1} title="收件人" id="field-recipient">
+            {recipientCollapsed ? (
+              <>
+                <div className="flex items-start justify-between gap-3 rounded-xl border-2 border-green-200 bg-green-50/60 p-4">
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold text-gray-900">{form.customer_name}</p>
+                    <p className="mt-0.5 text-[15px] text-gray-700 tabular-nums">{prettyPhone(form.phone)}</p>
+                    {form.line_id && <p className="mt-0.5 text-[13px] text-gray-500">LINE ID：{form.line_id}</p>}
+                  </div>
+                  <button type="button" onClick={() => setRecipientLocked(false)}
+                    className="flex-shrink-0 rounded-lg border-2 border-green-300 bg-white px-3 py-1.5 text-sm font-bold text-green-700 hover:bg-green-100">
+                    修改
+                  </button>
                 </div>
-                <span className="font-bold text-gray-800 text-sm whitespace-nowrap">訂單商品 {totalItems} 件</span>
-                <span className="text-green-700 text-[13px] font-bold whitespace-nowrap">{showItems ? '收合' : '明細'}</span>
-                <svg className={`w-4 h-4 text-gray-600 flex-shrink-0 transition-transform ${showItems ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-              <span className="text-green-700 font-bold text-lg flex-shrink-0">{formatPrice(totalAmount)}</span>
-            </button>
-            {showItems && (
-              <div className="mt-3 overflow-hidden rounded-xl border-2 border-green-200">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-green-700 text-white">
-                      <th className="text-left font-bold px-3 py-2">商品</th>
-                      <th className="text-center font-bold px-2 py-2 whitespace-nowrap">數量</th>
-                      <th className="text-right font-bold px-3 py-2 whitespace-nowrap">小計</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item, idx) => (
-                      <tr key={item.variant_id} className={idx % 2 === 0 ? 'bg-white' : 'bg-green-50/70'}>
-                        <td className="px-3 py-2.5 border-t border-green-100 align-top">
-                          <div className="flex items-center gap-2">
-                            <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 relative flex-shrink-0">
-                              {item.cover_image_url
-                                ? <Image src={item.cover_image_url} alt={item.product_name} fill className="object-cover" sizes="36px" />
-                                : <div className="w-full h-full flex items-center justify-center text-sm">💊</div>}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-gray-800 leading-relaxed line-clamp-2">{item.product_name}</p>
-                              <p className="text-gray-500 text-[13px] mt-0.5">{item.variant_name}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-2 py-2.5 border-t border-green-100 text-center text-gray-600 whitespace-nowrap">×{item.quantity}</td>
-                        <td className="px-3 py-2.5 border-t border-green-100 text-right font-bold text-gray-800 whitespace-nowrap">{formatPrice(item.unit_price * item.quantity)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-amber-50">
-                      <td className="px-3 py-2.5 border-t-2 border-green-200 font-bold text-gray-700" colSpan={2}>合計（{totalItems} 件）</td>
-                      <td className="px-3 py-2.5 border-t-2 border-green-200 text-right text-green-700 font-bold text-base whitespace-nowrap">{formatPrice(totalAmount)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                <p className="mt-2 text-[13px] text-gray-500">7-11 取貨時，報這個姓名或手機號碼即可</p>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div id="field-customer_name" className="scroll-mt-24">
+                  <label className="form-label">取件人姓名 <span className="text-red-500">*</span></label>
+                  <input
+                    className={`form-input ${errors.customer_name ? 'border-red-400 bg-red-50' : ''}`}
+                    placeholder="例如：王小明" autoComplete="name"
+                    value={form.customer_name}
+                    onChange={e => { setForm(f => ({ ...f, customer_name: e.target.value })); setErrors(er => ({ ...er, customer_name: '' })) }}
+                    // 離開欄位就先檢查：「鄭景耀,」這種多打一個符號的，當下就提醒
+                    onBlur={() => { if (form.customer_name.trim()) setErrors(er => ({ ...er, customer_name: recipientNameError(form.customer_name) || '' })) }}
+                  />
+                  {errors.customer_name ? (
+                    <div className="mt-1.5">
+                      <p className="text-red-600 text-sm">⚠️ {errors.customer_name}</p>
+                      {suggestRecipientName(form.customer_name) && (
+                        <button type="button"
+                          onClick={() => { setForm(f => ({ ...f, customer_name: suggestRecipientName(f.customer_name) || f.customer_name })); setErrors(er => ({ ...er, customer_name: '' })) }}
+                          className="mt-1.5 rounded-lg border border-green-600 bg-green-50 px-3 py-1.5 text-sm font-bold text-green-800">
+                          改成「{suggestRecipientName(form.customer_name)}」
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-[13px] mt-1.5">請填真實姓名，7-11 取貨時會核對（不要加符號或稱謂）</p>
+                  )}
+                </div>
+                <div id="field-phone" className="scroll-mt-24">
+                  <label className="form-label">手機號碼 <span className="text-red-500">*</span></label>
+                  <input
+                    className={`form-input tabular-nums ${errors.phone ? 'border-red-400 bg-red-50' : ''}`}
+                    type="tel" inputMode="numeric" autoComplete="tel" placeholder="0912345678"
+                    value={form.phone}
+                    onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(er => ({ ...er, phone: '' })) }}
+                  />
+                  {errors.phone
+                    ? <p className="text-red-600 text-sm mt-1.5">⚠️ {errors.phone}</p>
+                    : <p className="text-gray-500 text-[13px] mt-1.5">之後用這支手機就能查訂單進度</p>
+                  }
+                </div>
+                <div>
+                  <label className="form-label">LINE ID <span className="text-gray-500 font-normal text-sm">（選填，方便客服聯絡您）</span></label>
+                  <input className="form-input" placeholder="選填"
+                    value={form.line_id} onChange={e => setForm(f => ({ ...f, line_id: e.target.value }))} />
+                </div>
+                {user && (
+                  <label className="flex items-center gap-2.5 rounded-xl bg-gray-50 px-3 py-2.5 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" className="w-5 h-5 rounded accent-green-700"
+                      checked={saveAsAddress} onChange={e => setSaveAsAddress(e.target.checked)} />
+                    存成常用收件人，下次結帳一鍵帶入
+                  </label>
+                )}
               </div>
             )}
-          </div>
 
-          {/* Saved addresses quick-pick (logged-in members) */}
-          {user && savedAddresses.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <h2 className="text-base font-bold text-gray-800 mb-2 flex items-center gap-2">
-                <span className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-base">⭐</span>
-                常用收件資訊
-              </h2>
-              <div className="space-y-2">
-                {(showAllAddresses ? savedAddresses : savedAddresses.slice(0, 2)).map(addr => (
-                  <button key={addr.id} onClick={() => applyAddress(addr)}
-                    className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-green-300 hover:bg-green-50 transition-colors flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm truncate">
-                        {addr.label ? `${addr.label}・` : ''}{addr.recipient_name} {addr.phone}
-                        {addr.is_default && <span className="ml-1.5 text-[13px] text-green-600 font-bold">預設</span>}
-                      </p>
-                      <p className="text-gray-500 text-[13px] mt-0.5 truncate">{addr.store_name}（{addr.store_county}{addr.store_district}）</p>
-                    </div>
-                    <span className="flex-shrink-0 text-green-700 text-sm font-bold">使用</span>
-                  </button>
-                ))}
-              </div>
-              {savedAddresses.length > 2 && (
-                <button type="button" onClick={() => setShowAllAddresses(s => !s)}
-                  className="w-full mt-2 flex items-center justify-center gap-1 text-green-700 text-sm font-bold py-2 hover:bg-green-50 rounded-lg transition-colors">
-                  {showAllAddresses ? '收起' : `展開全部 ${savedAddresses.length} 筆`}
-                  <svg className={`w-4 h-4 transition-transform ${showAllAddresses ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* 會員的常用收件人（含門市），點一下整組帶入 */}
+            {user && savedAddresses.length > 0 && (
+              <div className="mt-3">
+                <button type="button" onClick={() => setShowAddressList(s => !s)} aria-expanded={showAddressList}
+                  className="flex w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-3 text-[15px] font-bold text-gray-700 hover:border-green-300 hover:bg-green-50">
+                  <span>⭐ 從常用收件人選擇（{savedAddresses.length}）</span>
+                  <svg className={`w-4 h-4 text-gray-500 transition-transform ${showAddressList ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-              )}
-            </div>
-          )}
-
-          {/* Recipient form */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <span className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-base">✍️</span>
-              收件資料
-            </h2>
-            <div className="space-y-3">
-              <div id="field-customer_name" className="scroll-mt-24">
-                <label className="form-label">姓名 <span className="text-red-500">*</span></label>
-                <input
-                  className={`form-input ${errors.customer_name ? 'border-red-400 bg-red-50' : ''}`}
-                  placeholder="請輸入您的姓名"
-                  value={form.customer_name}
-                  onChange={e => { setForm(f => ({ ...f, customer_name: e.target.value })); setErrors(er => ({ ...er, customer_name: '' })) }}
-                  // 離開欄位就先檢查：「鄭景耀,」這種多打一個符號的，當下就提醒
-                  onBlur={() => { if (form.customer_name.trim()) setErrors(er => ({ ...er, customer_name: recipientNameError(form.customer_name) || '' })) }}
-                />
-                {errors.customer_name ? (
-                  <div className="mt-1.5">
-                    <p className="text-red-500 text-sm">⚠️ {errors.customer_name}</p>
-                    {suggestRecipientName(form.customer_name) && (
-                      <button type="button"
-                        onClick={() => { setForm(f => ({ ...f, customer_name: suggestRecipientName(f.customer_name) || f.customer_name })); setErrors(er => ({ ...er, customer_name: '' })) }}
-                        className="mt-1.5 rounded-lg border border-green-600 bg-green-50 px-3 py-1.5 text-sm font-bold text-green-800">
-                        改成「{suggestRecipientName(form.customer_name)}」
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-[13px] mt-1">請填 7-11 取貨時核對的真實姓名（2～5 個中文字，不含符號）</p>
+                {showAddressList && (
+                  <ul className="mt-2 space-y-2">
+                    {savedAddresses.map(addr => {
+                      const current = recipientCollapsed && addr.recipient_name === form.customer_name && addr.phone === form.phone && addr.store_id === selectedStore?.id
+                      return (
+                        <li key={addr.id}>
+                          <button type="button" onClick={() => applyAddress(addr)}
+                            className={`flex w-full items-center gap-3 rounded-xl border-2 p-3 text-left transition-colors ${current ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-green-300'}`}>
+                            <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${current ? 'border-green-600' : 'border-gray-300'}`} aria-hidden>
+                              {current && <span className="h-2.5 w-2.5 rounded-full bg-green-600" />}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-bold text-gray-900">
+                                {addr.label ? `${addr.label}・` : ''}{addr.recipient_name} <span className="font-normal tabular-nums text-gray-600">{prettyPhone(addr.phone)}</span>
+                                {addr.is_default && <span className="ml-1.5 rounded bg-green-100 px-1.5 py-0.5 text-[12px] font-bold text-green-800">預設</span>}
+                              </span>
+                              <span className="mt-0.5 block truncate text-[13px] text-gray-500">7-11 {storeLabel(addr.store_name)}（{addr.store_county}{addr.store_district}）</span>
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 )}
               </div>
-              <div id="field-phone" className="scroll-mt-24">
-                <label className="form-label">手機號碼 <span className="text-red-500">*</span></label>
-                <input
-                  className={`form-input ${errors.phone ? 'border-red-400 bg-red-50' : ''}`}
-                  type="tel" inputMode="numeric" placeholder="09xxxxxxxx"
-                  value={form.phone}
-                  onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(er => ({ ...er, phone: '' })) }}
-                />
-                {errors.phone
-                  ? <p className="text-red-500 text-sm mt-1.5">⚠️ {errors.phone}</p>
-                  : <p className="text-gray-600 text-[13px] mt-1">事後用此號碼查詢訂單狀態</p>
-                }
-              </div>
-              <div>
-                <label className="form-label">LINE ID <span className="text-gray-600 font-normal text-sm">（選填，方便客服聯繫）</span></label>
-                <input className="form-input" placeholder="your_line_id"
-                  value={form.line_id} onChange={e => setForm(f => ({ ...f, line_id: e.target.value }))} />
-              </div>
-              {user && (
-                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded accent-green-700"
-                    checked={saveAsAddress} onChange={e => setSaveAsAddress(e.target.checked)} />
-                  儲存這筆收件資訊，下次結帳快速選擇
-                </label>
-              )}
-            </div>
-          </div>
+            )}
+          </Section>
 
-          {/* Store picker */}
-          <div id="field-store" className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 scroll-mt-24">
-            <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <span className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-base">🏪</span>
-              選擇 7-11 取貨門市 <span className="text-red-500 text-base">*</span>
-            </h2>
-
+          {/* ② 取貨門市 */}
+          <Section n={2} title="7-11 取貨門市" id="field-store">
             {selectedStore ? (
-              <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+              <>
                 {storeFromLast && (
-                  <p className="text-amber-700 text-[13px] font-semibold mb-2">💡 已自動帶入您上次的取貨門市，如需更換請點右側「更換」</p>
+                  <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-[13px] font-semibold text-amber-800">💡 已帶入您上次取貨的門市，要換請按「更換」</p>
                 )}
-                <div className="flex justify-between items-start gap-3">
-                  <div>
-                    <p className="font-bold text-green-800 text-lg leading-relaxed">{selectedStore.store_name}</p>
-                    <p className="text-green-600 text-sm font-semibold mt-1">{selectedStore.county}{selectedStore.district}</p>
-                    <p className="text-gray-600 text-sm mt-1">{selectedStore.address}</p>
+                <div className="flex items-start gap-3 rounded-xl border-2 border-green-200 bg-green-50/60 p-4">
+                  <span className="mt-0.5 flex-shrink-0 rounded-md bg-orange-500 px-1.5 py-0.5 text-[12px] font-bold text-white">7-11</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-lg font-bold leading-snug text-gray-900">{storeLabel(selectedStore.store_name)}</p>
+                    <p className="mt-0.5 text-sm font-semibold text-green-700">{selectedStore.county}{selectedStore.district}</p>
+                    <p className="mt-0.5 text-sm leading-relaxed text-gray-600">{selectedStore.address}</p>
                   </div>
-                  <button onClick={() => setShowStorePicker(true)}
-                    className="flex-shrink-0 text-green-700 font-bold text-sm border-2 border-green-300 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors whitespace-nowrap">
+                  <button type="button" onClick={() => setShowStorePicker(true)}
+                    className="flex-shrink-0 rounded-lg border-2 border-green-300 bg-white px-3 py-1.5 text-sm font-bold text-green-700 hover:bg-green-100">
                     更換
                   </button>
                 </div>
-              </div>
+              </>
             ) : (
-              <button onClick={() => setShowStorePicker(true)}
-                className={`w-full py-5 px-4 rounded-xl border-2 border-dashed text-left transition-all hover:scale-[1.005]
-                  ${errors.store ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-green-400 bg-gray-50 hover:bg-green-50'}`}>
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">📍</span>
-                  <div>
-                    <p className={`font-bold text-base ${errors.store ? 'text-red-600' : 'text-gray-600'}`}>
-                      點此選擇 7-11 取貨門市
-                    </p>
-                    <p className="text-gray-600 text-sm mt-0.5">全台 7,000+ 家門市，輸入地址或區域即可搜尋</p>
-                  </div>
-                </div>
+              <button type="button" onClick={() => setShowStorePicker(true)}
+                className={`w-full rounded-xl border-2 border-dashed px-4 py-5 text-left transition-colors
+                  ${errors.store ? 'border-red-400 bg-red-50' : 'border-green-300 bg-green-50/40 hover:bg-green-50'}`}>
+                <span className="flex items-center gap-3">
+                  <span className="text-3xl" aria-hidden>📍</span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-base font-bold ${errors.store ? 'text-red-600' : 'text-green-800'}`}>點這裡選擇取貨門市</span>
+                    <span className="mt-0.5 block text-sm text-gray-600">輸入路名、地區或門市名稱就能找到</span>
+                  </span>
+                  <span className="text-xl text-green-700" aria-hidden>›</span>
+                </span>
               </button>
             )}
-            {errors.store && <p className="text-red-500 text-sm mt-2">⚠️ {errors.store}</p>}
-          </div>
+            {errors.store && <p className="text-red-600 text-sm mt-2">⚠️ {errors.store}</p>}
+          </Section>
 
-          {/* Payment & Delivery info */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-green-50 rounded-xl flex items-center justify-center text-base">💵</span>
-              付款方式與到貨時間
-            </h2>
-
-            {/* Payment method */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-xl p-4 mb-3">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl flex-shrink-0">🏪</span>
-                <div className="flex-1">
-                  <p className="font-bold text-green-800 text-base mb-1.5">7-11 取貨付款</p>
-                  <ul className="text-sm text-green-700 space-y-1 leading-relaxed">
-                    <li>✓ 商品到 7-11 門市時於櫃檯付款即可</li>
-                    <li>✓ 接受 現金、悠遊卡、icash、LINE Pay</li>
-                    <li>✓ 我們<strong>不會預先扣款</strong>，請您安心下單</li>
-                  </ul>
-                </div>
+          {/* ③ 付款方式 */}
+          <Section n={3} title="付款方式">
+            <div className="flex items-start gap-3 rounded-xl border-2 border-green-500 bg-green-50/60 p-4">
+              <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-green-600" aria-hidden>
+                <span className="h-2.5 w-2.5 rounded-full bg-green-600" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-x-2 text-base font-bold text-gray-900">
+                  7-11 取貨付款
+                  <span className="rounded bg-green-700 px-1.5 py-0.5 text-[12px] font-bold text-white">不用先付錢</span>
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-gray-600">到門市取貨時再付款，可用現金、悠遊卡、icash、LINE Pay</p>
               </div>
             </div>
+            <ul className="mt-3 space-y-2 text-[14px] leading-relaxed text-gray-700">
+              <li className="flex gap-2.5"><span aria-hidden>🚚</span><span><b>到貨時間</b>：現貨約 3 個工作日、預購約 7 個工作日送到門市</span></li>
+              <li className="flex gap-2.5"><span aria-hidden>📩</span><span><b>到店通知</b>：7-11 會傳簡訊給您，請在 7 天內取貨</span></li>
+            </ul>
+          </Section>
 
-            {/* Delivery time */}
-            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl flex-shrink-0">📦</span>
-                <div className="flex-1">
-                  <p className="font-bold text-amber-800 text-base mb-1.5">預計到貨時間</p>
-                  <ul className="text-sm text-amber-700 space-y-1 leading-relaxed">
-                    <li>· <strong>現貨商品</strong>：下單後約 <strong>3 個工作日</strong>送達 7-11</li>
-                    <li>· <strong>預購商品</strong>：下單後約 <strong>7 個工作日</strong>送達 7-11</li>
-                    <li>· 商品到店後，<strong>7-11 會傳簡訊通知您</strong>取貨</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[13px] text-gray-600 mt-3 leading-relaxed">
-              💡 7-11 商品保留期限為到店後 7 天，請您於期限內取貨
-            </p>
-          </div>
-
-          {/* Note */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <label className="form-label">備註 <span className="text-gray-600 font-normal text-sm">（選填）</span></label>
-            <textarea className="form-input" rows={3} placeholder="有任何特殊需求請填寫..."
-              value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
-          </div>
-
-          {/* Trust badges */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <p className="text-[13px] font-bold text-gray-500 mb-3 text-center tracking-wide">— 安心下單保障 —</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { icon: '🔒', title: 'SSL 加密', desc: '個資安全保護' },
-                { icon: '🏪', title: '全台 7-11', desc: '7,000+ 家門市' },
-                { icon: '💬', title: 'LINE 客服', desc: '即時專人回覆' },
-                { icon: '🔄', title: '7 天鑑賞期', desc: '未拆封可退換' },
-              ].map(badge => (
-                <div key={badge.title} className="text-center px-2">
-                  <div className="text-2xl mb-1">{badge.icon}</div>
-                  <p className="text-[13px] font-bold text-gray-700 leading-tight">{badge.title}</p>
-                  <p className="text-[13px] text-gray-600 mt-0.5 leading-tight">{badge.desc}</p>
-                </div>
+          {/* 訂單明細（手機；電腦版在右側） */}
+          <section className="md:hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+            <h2 className="mb-2 text-lg font-bold text-gray-900">訂單明細<span className="ml-1.5 text-base font-semibold text-gray-500">（{totalItems} 件）</span></h2>
+            <ul className="divide-y divide-gray-100">
+              {visibleItems.map(item => (
+                <li key={item.variant_id} className="flex items-center gap-3 py-2.5">
+                  <ItemThumb item={item} size={52} />
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-[15px] font-semibold leading-snug text-gray-800">{item.product_name}</p>
+                    <p className="mt-0.5 text-[13px] text-gray-500">{item.variant_name}・{formatPrice(item.unit_price)} × {item.quantity}</p>
+                  </div>
+                  <p className="flex-shrink-0 font-bold text-gray-900 tabular-nums">{formatPrice(item.unit_price * item.quantity)}</p>
+                </li>
               ))}
-            </div>
+            </ul>
+            {items.length > 3 && (
+              <button type="button" onClick={() => setShowItems(s => !s)}
+                className="mt-1 w-full rounded-lg py-2 text-sm font-bold text-green-700 hover:bg-green-50">
+                {showItems ? '收起' : `看全部 ${items.length} 樣商品`}
+              </button>
+            )}
+            <AmountBreakdown totalItems={totalItems} totalAmount={totalAmount} />
+          </section>
+
+          {/* 備註：多數人用不到，收起來 */}
+          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
+            {showNote || form.note ? (
+              <div className="p-4">
+                <label className="form-label">給我們的備註 <span className="text-gray-500 font-normal text-sm">（選填）</span></label>
+                <textarea className="form-input" rows={3} placeholder="例如：希望和上一筆訂單一起寄" autoFocus={showNote && !form.note}
+                  value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
+              </div>
+            ) : (
+              <button type="button" onClick={() => setShowNote(true)} className="flex w-full items-center gap-2 px-4 py-3.5 text-[15px] font-bold text-gray-600 hover:text-green-700">
+                <span className="text-lg leading-none text-green-700" aria-hidden>＋</span>給我們的備註（選填）
+              </button>
+            )}
           </div>
 
-          {/* Mobile inline submit — 隨內容捲動、不會被 LINE 內建瀏覽器底部工具列或底部固定條遮住的保底下單入口 */}
-          <div ref={inlineSubmitRef} className="md:hidden space-y-2">
-            <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-4">
-              {submitting ? '處理中，請稍候...' : `確認下單・${formatPrice(totalAmount)}`}
-            </button>
-            <p className="text-center text-[13px] text-gray-600">下單後如需修改，請透過 LINE 聯絡客服</p>
-          </div>
-
-          {/* Desktop submit */}
-          <div className="hidden md:block space-y-2">
-            <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-5">
+          {/* 下單按鈕（隨內容捲動；不會被 LINE 內建瀏覽器底部工具列遮住的保底入口） */}
+          <div ref={inlineSubmitRef} className="space-y-2.5 pt-1">
+            <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-4 md:py-5">
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -525,63 +457,62 @@ export default function CheckoutPage() {
                 </span>
               ) : `確認下單・${formatPrice(totalAmount)}`}
             </button>
-            <p className="text-center text-sm text-gray-600">下單後如需修改，請透過 LINE 聯絡客服</p>
+            <p className="text-center text-[13px] leading-relaxed text-gray-500">
+              現在不會扣款，到 7-11 取貨時才付款<br />下單後要修改，請 LINE 聯絡客服
+            </p>
           </div>
+
+          {/* 安心保障 */}
+          <ul className="grid grid-cols-3 gap-2 text-center">
+            {[
+              { icon: '🔒', title: '資料加密', desc: '個資安全保護' },
+              { icon: '🔄', title: '7 天鑑賞期', desc: '未拆封可退換' },
+              { icon: '💬', title: 'LINE 客服', desc: '專人回覆' },
+            ].map(b => (
+              <li key={b.title} className="rounded-xl bg-white/70 px-1 py-2.5">
+                <p className="text-xl" aria-hidden>{b.icon}</p>
+                <p className="mt-0.5 text-[13px] font-bold text-gray-700">{b.title}</p>
+                <p className="text-[12px] text-gray-500">{b.desc}</p>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* RIGHT: Sticky order summary (desktop) */}
-        <div className="hidden md:block w-80 flex-shrink-0 order-2">
+        <div className="hidden md:block w-80 flex-shrink-0">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sticky top-24">
-            <h2 className="font-bold text-gray-800 text-lg mb-4 pb-3 border-b border-gray-100">
+            <h2 className="font-bold text-gray-800 text-lg mb-3 pb-3 border-b border-gray-100">
               訂單明細（{totalItems} 件）
             </h2>
-            <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+            <div className="space-y-3 mb-2 max-h-72 overflow-y-auto">
               {items.map(item => (
                 <div key={item.variant_id} className="flex gap-3 items-start">
-                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 relative flex-shrink-0">
-                    {item.cover_image_url
-                      ? <Image src={item.cover_image_url} alt={item.product_name} fill className="object-cover" sizes="56px" />
-                      : <div className="w-full h-full flex items-center justify-center text-xl">💊</div>}
-                  </div>
+                  <ItemThumb item={item} size={56} />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 text-sm line-clamp-2 leading-relaxed">{item.product_name}</p>
                     <p className="text-gray-500 text-[13px] mt-0.5">{item.variant_name} × {item.quantity}</p>
-                    <p className="text-green-700 font-bold text-sm mt-1">{formatPrice(item.unit_price * item.quantity)}</p>
+                    <p className="text-gray-900 font-bold text-sm mt-1">{formatPrice(item.unit_price * item.quantity)}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="border-t border-gray-100 pt-3 space-y-2">
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>商品合計</span><span>{formatPrice(totalAmount)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>取貨方式</span><span>7-11 門市取貨</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>付款方式</span><span className="text-green-700 font-bold">取貨付款</span>
-              </div>
-              <div className="flex justify-between text-xl font-bold pt-2 border-t border-gray-100">
-                <span className="text-gray-900">應付金額</span>
-                <span className="text-green-700">{formatPrice(totalAmount)}</span>
-              </div>
-            </div>
-            <p className="text-[13px] text-gray-600 mt-3 text-center leading-relaxed">
-              📦 約 3 工作日送達 7-11<br />到店後 LINE 通知您
+            <AmountBreakdown totalItems={totalItems} totalAmount={totalAmount} />
+            <p className="text-[13px] text-gray-500 mt-3 text-center leading-relaxed">
+              📦 約 3 個工作日送到 7-11<br />到店後 7-11 會傳簡訊通知您
             </p>
           </div>
         </div>
       </div>
 
-      {/* Mobile sticky bottom（疊在底部導覽列上方；鍵盤彈出時隱藏，避免蓋住輸入框） */}
-      <div className={`fixed left-0 right-0 md:hidden bg-white border-t-2 border-gray-100 shadow-2xl z-40 ${inputFocused || inlineSubmitVisible ? 'hidden' : ''}`}
+      {/* 手機底部固定條：金額＋下單同一列（疊在底部導覽列上方；鍵盤彈出或已看到內文按鈕時隱藏） */}
+      <div className={`fixed left-0 right-0 md:hidden bg-white border-t border-gray-200 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] z-40 ${inputFocused || inlineSubmitVisible ? 'hidden' : ''}`}
         style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}>
-        <div className="px-4 py-3">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-600 font-semibold">應付金額</span>
-            <span className="text-xl font-bold text-green-700">{formatPrice(totalAmount)}</span>
+        <div className="flex items-center gap-3 px-4 py-2.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] text-gray-500">應付金額・取貨時付款</p>
+            <p className="text-xl font-bold leading-tight text-green-700 tabular-nums">{formatPrice(totalAmount)}</p>
           </div>
-          <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-4">
+          <button onClick={handleSubmit} disabled={submitting} className="btn-primary flex-shrink-0 px-7 py-3.5 text-lg">
             {submitting ? '處理中...' : '確認下單'}
           </button>
         </div>
@@ -593,6 +524,71 @@ export default function CheckoutPage() {
           onSelect={store => { setSelectedStore(store); setStoreFromLast(false); setShowStorePicker(false); setErrors(e => ({ ...e, store: '' })) }}
         />
       )}
+    </div>
+  )
+}
+
+const prettyPhone = (p: string) => {
+  const d = p.trim()
+  return /^09\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 7)}-${d.slice(7)}` : d
+}
+const storeLabel = (name: string | null | undefined) => (!name ? '' : name.endsWith('門市') || name.endsWith('店') ? name : `${name}門市`)
+
+/** 結帳三步驟：購物車 ✓ → 填寫資料（目前） → 完成 */
+function CheckoutSteps() {
+  const steps = ['購物車', '填寫資料', '下單完成']
+  return (
+    <ol className="mx-auto mb-5 mt-3 flex max-w-md items-start" aria-label="結帳步驟">
+      {steps.map((label, i) => (
+        <li key={label} className="relative flex flex-1 flex-col items-center text-center" aria-current={i === 1 ? 'step' : undefined}>
+          {i > 0 && <span className={`absolute right-1/2 top-[13px] h-[3px] w-full -translate-y-1/2 ${i <= 1 ? 'bg-green-600' : 'bg-gray-200'}`} aria-hidden />}
+          <span className={`relative z-10 flex h-[26px] w-[26px] items-center justify-center rounded-full text-[13px] font-bold
+            ${i < 1 ? 'bg-green-600 text-white' : i === 1 ? 'bg-green-600 text-white ring-4 ring-green-100' : 'bg-gray-200 text-gray-500'}`}>
+            {i < 1 ? '✓' : i + 1}
+          </span>
+          <span className={`mt-1.5 text-[13px] ${i === 1 ? 'font-bold text-green-800' : 'text-gray-500'}`}>{label}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function Section({ n, title, id, children }: { n: number; title: string; id?: string; children: ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-24 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
+      <h2 className="mb-3 flex items-center gap-2.5 text-lg font-bold text-gray-900">
+        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-green-700 text-[14px] font-bold text-white" aria-hidden>{n}</span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  )
+}
+
+function ItemThumb({ item, size }: { item: { cover_image_url?: string | null; product_name: string }; size: number }) {
+  return (
+    <div className="relative flex-shrink-0 overflow-hidden rounded-xl bg-gray-100" style={{ width: size, height: size }}>
+      {item.cover_image_url
+        ? <Image src={item.cover_image_url} alt={item.product_name} fill className="object-cover" sizes={`${size}px`} />
+        : <div className="flex h-full w-full items-center justify-center text-xl">💊</div>}
+    </div>
+  )
+}
+
+function AmountBreakdown({ totalItems, totalAmount }: { totalItems: number; totalAmount: number }) {
+  return (
+    <div className="mt-2 space-y-1.5 border-t border-gray-100 pt-3">
+      <div className="flex justify-between text-[15px] text-gray-600">
+        <span>商品小計（{totalItems} 件）</span><span className="tabular-nums">{formatPrice(totalAmount)}</span>
+      </div>
+      <div className="flex justify-between text-[15px] text-gray-600">
+        <span>運費</span><span className="font-bold text-green-700">免運</span>
+      </div>
+      <div className="flex items-baseline justify-between border-t border-gray-100 pt-2">
+        <span className="text-base font-bold text-gray-900">應付金額</span>
+        <span className="text-2xl font-bold text-green-700 tabular-nums">{formatPrice(totalAmount)}</span>
+      </div>
+      <p className="text-right text-[13px] text-gray-500">到 7-11 取貨時付款</p>
     </div>
   )
 }

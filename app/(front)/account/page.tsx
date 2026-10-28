@@ -50,21 +50,55 @@ export default function AccountDashboard() {
   const displayName: string = profile?.name || (user.user_metadata?.name as string) || user.email?.split("@")[0] || "會員"
   const pickup = orders.filter(o => isReadyForPickup(o))
   const active = orders.filter(o => isActiveOrder(o) && !isReadyForPickup(o))
+  const counts = {
+    processing: active.filter(o => orderStage(o).current <= (o.kind === 'shop' ? 1 : 0)).length,
+    shipped: active.filter(o => orderStage(o).current === (o.kind === 'shop' ? 2 : 1)).length,
+    pickup: pickup.length,
+  }
 
   return (
     <div className="min-h-screen bg-canvas">
       <div className="mx-auto max-w-3xl space-y-4 px-4 pb-6 pt-16 sm:py-10">
 
-        {/* ── 招呼 ── */}
-        <section className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-sm">
-          <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-2xl font-bold text-green-800" aria-hidden>
-            {Array.from(displayName)[0]}
-          </span>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-xl font-bold text-gray-900">{displayName}，您好</h1>
-            <p className="mt-0.5 text-[14px] text-gray-500">{maskPhone(profile?.phone) || '還沒填手機'}{profile?.default_store_name && <>・常用 7-11 {profile.default_store_name}</>}</p>
+        {/* ── 招呼＋訂單狀態列（台灣購物 App 常見的「待出貨／待收貨／待評價」） ── */}
+        <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
+          <div className="flex items-center gap-4 p-5 pb-4">
+            <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-2xl font-bold text-green-800" aria-hidden>
+              {Array.from(displayName)[0]}
+            </span>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-xl font-bold text-gray-900">{displayName}，您好</h1>
+              <p className="mt-0.5 text-[14px] leading-snug text-gray-500">
+                <span className="tabular-nums">{maskPhone(profile?.phone) || '還沒填手機'}</span>
+                {profile?.default_store_name && <span className="block truncate">常用門市：7-11 {profile.default_store_name}</span>}
+              </p>
+            </div>
+            <Link href="/account/profile" className="flex-shrink-0 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50">編輯</Link>
           </div>
-          <Link href="/account/profile" className="flex-shrink-0 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50">編輯</Link>
+          <div className="border-t border-gray-100 px-3 pb-3 pt-2">
+            <div className="flex items-center justify-between px-2 py-1.5">
+              <h2 className="text-[15px] font-bold text-gray-900">我的訂單</h2>
+              <Link href="/account/orders" className="text-sm font-bold text-green-700">全部訂單 ›</Link>
+            </div>
+            <ul className="grid grid-cols-4">
+              {[
+                { icon: '🧾', label: '處理中', n: counts.processing, href: '/account/orders?tab=active' },
+                { icon: '🚚', label: '已出貨', n: counts.shipped, href: '/account/orders?tab=active' },
+                { icon: '🏪', label: '待取貨', n: counts.pickup, href: '/account/orders' },
+                { icon: '⭐', label: '待評價', n: reviewable.length, href: reviewable.length ? '#reviews' : '/account/orders?tab=done' },
+              ].map(s => (
+                <li key={s.label}>
+                  <Link href={s.href} className="flex flex-col items-center rounded-2xl py-2 hover:bg-gray-50">
+                    <span className="relative text-[28px] leading-none" aria-hidden>
+                      {s.icon}
+                      {s.n > 0 && <span className="absolute -right-3 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[12px] font-bold leading-none text-white">{s.n}</span>}
+                    </span>
+                    <span className={`mt-1.5 text-[14px] ${s.n > 0 ? 'font-bold text-gray-900' : 'text-gray-600'}`}>{s.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         {/* ── 包裹到店了 ── */}
@@ -151,7 +185,7 @@ export default function AccountDashboard() {
 
         {/* ── 寫評價 ── */}
         {reviewable.length > 0 && (
-          <section className="rounded-3xl bg-white p-5 shadow-sm">
+          <section id="reviews" className="scroll-mt-24 rounded-3xl bg-white p-5 shadow-sm">
             <h2 className="mb-1 text-lg font-bold text-gray-900">分享使用心得</h2>
             <p className="mb-3 text-[13px] text-gray-500">您買過這些商品，寫下感受可以幫助其他人選擇</p>
             <ul className="space-y-2">
@@ -198,17 +232,30 @@ export default function AccountDashboard() {
 
 function ActiveOrder({ order: o }: { order: MemberOrder }) {
   const names = o.items.map(i => i.name)
+  const thumbs = o.items.filter(i => i.image).slice(0, 3)
   return (
     <li className="rounded-2xl border border-gray-100 p-4">
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-[13px] text-gray-500">
-            {o.kind === 'group_buy' && <span className="flex-shrink-0 whitespace-nowrap rounded bg-sky-100 px-1.5 py-0.5 text-[12px] font-bold text-sky-800">團購</span>}
-            {shortDate(o.created_at)} 下單・{o.order_no}
-          </p>
-          <p className="mt-1 line-clamp-1 font-bold text-gray-900">{names.slice(0, 2).join('、')}{names.length > 2 && ` 等 ${names.length} 樣`}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="flex min-w-0 items-center gap-2 text-[13px] text-gray-500">
+          {o.kind === 'group_buy' && <span className="flex-shrink-0 whitespace-nowrap rounded bg-sky-100 px-1.5 py-0.5 text-[12px] font-bold text-sky-800">團購</span>}
+          <span className="truncate">{shortDate(o.created_at)} 下單・{o.order_no}</span>
+        </p>
+        <p className="flex-shrink-0 text-lg font-bold text-green-700 tabular-nums">{formatPrice(o.total)}</p>
+      </div>
+      <div className="mb-3 mt-2.5 flex items-center gap-3">
+        {thumbs.length > 0 && (
+          <span className="flex flex-shrink-0 -space-x-4">
+            {thumbs.map((t, i) => (
+              <span key={i} className="relative h-12 w-12 overflow-hidden rounded-xl bg-gray-100 ring-2 ring-white">
+                <Image src={t.image!} alt="" fill className="object-cover" sizes="48px" />
+              </span>
+            ))}
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 font-bold leading-snug text-gray-900">{names.slice(0, 2).join('、')}{names.length > 2 && ` 等 ${names.length} 樣`}</p>
+          {o.store_name && <p className="mt-0.5 truncate text-[13px] text-gray-500">取貨：7-11 {o.store_name}</p>}
         </div>
-        <p className="flex-shrink-0 font-bold text-green-700">{formatPrice(o.total)}</p>
       </div>
       <OrderProgress stage={orderStage(o)} />
     </li>

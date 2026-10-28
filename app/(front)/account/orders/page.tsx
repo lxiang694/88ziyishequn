@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -27,6 +27,11 @@ export default function MemberOrdersPage() {
   const { orders, loading: loadingOrders, reorder, reviewable } = useMemberOrders(!!user)
   const [tab, setTab] = useState<Tab>('all')
   const [open, setOpen] = useState<string | null>(null)
+  // 從會員中心的「處理中／已出貨…」點進來時帶 ?tab=，直接停在那一頁籤
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab') as Tab | null
+    if (t && TABS.some(x => x.key === t)) setTab(t)
+  }, [])
 
   if (loading || loadingOrders) return <div className="py-20 text-center text-gray-600">載入中...</div>
   if (!user) return null
