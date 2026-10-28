@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -32,16 +32,6 @@ export default function CheckoutPage() {
   const [showAddressList, setShowAddressList] = useState(false)
   const [showNote, setShowNote] = useState(false)
 
-  // 流程內的下單按鈕是否在畫面中 — 若看得到就不再顯示底部固定條，避免同時出現兩顆「確認下單」
-  const inlineSubmitRef = useRef<HTMLDivElement>(null)
-  const [inlineSubmitVisible, setInlineSubmitVisible] = useState(false)
-  useEffect(() => {
-    const el = inlineSubmitRef.current
-    if (!el) return
-    const io = new IntersectionObserver(([e]) => setInlineSubmitVisible(e.isIntersecting), { rootMargin: '0px 0px -80px 0px' })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
 
   // 手機鍵盤彈出時（輸入框聚焦）隱藏底部固定結帳條，避免蓋住正在輸入的欄位
   const [inputFocused, setInputFocused] = useState(false)
@@ -230,7 +220,7 @@ export default function CheckoutPage() {
   const visibleItems = showItems ? items : items.slice(0, 3)
 
   return (
-    <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-8 md:pb-10">
+    <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-28 md:pb-10">
       <h1 className="text-2xl font-bold text-gray-900">確認訂單</h1>
       <CheckoutSteps />
 
@@ -444,9 +434,9 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* 下單按鈕（隨內容捲動；不會被 LINE 內建瀏覽器底部工具列遮住的保底入口） */}
-          <div ref={inlineSubmitRef} className="space-y-2.5 pt-1">
-            <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-4 md:py-5">
+          {/* 下單按鈕：電腦版放在內文；手機版用底部固定條（往下捲一直看得到），這裡只留說明 */}
+          <div className="space-y-2.5 pt-1">
+            <button onClick={handleSubmit} disabled={submitting} className="btn-primary hidden w-full text-xl py-5 md:flex">
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -504,8 +494,8 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* 手機底部固定條：金額＋下單同一列（疊在底部導覽列上方；鍵盤彈出或已看到內文按鈕時隱藏） */}
-      <div className={`fixed left-0 right-0 md:hidden bg-white border-t border-gray-200 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] z-40 ${inputFocused || inlineSubmitVisible ? 'hidden' : ''}`}
+      {/* 手機底部固定條：金額＋下單同一列，捲到哪都在（疊在底部導覽列上方；只有鍵盤彈出時隱藏，避免蓋住輸入框） */}
+      <div className={`fixed left-0 right-0 md:hidden bg-white border-t border-gray-200 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] z-40 ${inputFocused ? 'hidden' : ''}`}
         style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}>
         <div className="flex items-center gap-3 px-4 py-2.5">
           <div className="min-w-0 flex-1">
