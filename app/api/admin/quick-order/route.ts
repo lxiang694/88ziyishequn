@@ -10,6 +10,8 @@ import {
 import { refreshStorefront } from '@/lib/storefrontCache'
 import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
 import { SITE_URL } from '@/lib/siteUrl'
+import { loadShipGroups } from '@/lib/shipPackagesRepo'
+import { packagesMessage, splitPackages } from '@/lib/shipPackages'
 
 /**
  * POST /api/admin/quick-order —— 後台代客下單。
@@ -183,16 +185,24 @@ export async function POST(req: NextRequest) {
   // 回傳一段可以直接貼回 Line 的確認訊息 ——
   // 下單後還要自己打一次確認訊息，是這個流程剩下最花時間的一步
   const total = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+  // 現貨＋預購會分兩包寄、分兩次付款：確認訊息裡就寫清楚每包多少，客人取第一包時才不會以為寄錯
+  const shipGroups = await loadShipGroups(items.map(i => i.variant_id)).catch(() => ({}))
+  const packages = splitPackages(items.map(i => ({
+    variant_id: i.variant_id, name: `${i.product_name}${i.variant_name ? ` ${i.variant_name}` : ''}`,
+    quantity: i.quantity, subtotal: i.unit_price * i.quantity,
+  })), shipGroups)
   const confirmText = [
     `${customer_name} 您好，訂單已成立 👌`,
     '',
-    ...items.map(i => `・${i.product_name}${i.variant_name ? ` ${i.variant_name}` : ''} ×${i.quantity}`),
+    ...(packages
+      ? packagesMessage(packages)
+      : items.map(i => `・${i.product_name}${i.variant_name ? ` ${i.variant_name}` : ''} ×${i.quantity}`)),
     '',
-    `金額：NT$${total.toLocaleString('en-US')}（貨到付款）`,
+    `金額：NT$${total.toLocaleString('en-US')}（${packages ? `${packages.length} 包合計，` : ''}貨到付款）`,
     `取貨門市：7-11 ${store.store_name}（${store.county}${store.district}）`,
     '',
     // 代客下單不用給訂單編號（客人用不到）；出貨不另外通知，貨到門市 7-11 會發簡訊
-    '商品到店後，7-11 會傳簡訊通知您取貨 📩',
+    packages ? '每個包裹到店後，7-11 都會傳簡訊通知您取貨 📩' : '商品到店後，7-11 會傳簡訊通知您取貨 📩',
     '取貨時再付款即可，謝謝您的訂購 🙏',
     '',
     '🌿 健康優選線上商城',

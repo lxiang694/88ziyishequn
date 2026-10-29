@@ -89,4 +89,4 @@ export function priceOrderItems(items: RequestItem[], variants: VariantRow[]): {
 export const PUBLIC_ORDER_COLUMNS = `
   id, order_no, order_status, total_amount, items_count, created_at,
   store_id, store_name, store_address, county, district,
-  order_items(id, product_name_snapshot, product_image_snapshot, variant_name_snapshot, unit_price, quantity, subtotal)`
+  order_items(id, variant_id, product_name_snapshot, product_image_snapshot, variant_name_snapshot, unit_price, quantity, subtotal)`

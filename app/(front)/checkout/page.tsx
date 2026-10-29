@@ -10,6 +10,8 @@ import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
 import { getStoredRef } from '@/components/front/referral/referralClient'
 import StorePickerModal, { Store } from '@/components/front/StorePickerModal'
 import { trackFunnel } from '@/lib/funnel'
+import { splitPackages, type ShipGroups } from '@/lib/shipPackages'
+import { CheckoutPackages, type PackageLine } from '@/components/front/ShipPackages'
 import toast from 'react-hot-toast'
 
 export default function CheckoutPage() {
@@ -25,6 +27,17 @@ export default function CheckoutPage() {
 
   // 手機版訂單商品摘要：預設收起（縮圖＋件數＋金額一眼可見），點「明細」展開逐項，讓姓名／手機／門市不需下拉即可看到
   const [showItems, setShowItems] = useState(false)
+
+  // 現貨＋預購會從兩個賣貨便賣場分兩包寄、分兩次付款：查出每個規格屬於哪一包，下單前就講清楚
+  const [shipGroups, setShipGroups] = useState<ShipGroups>({})
+  const variantKey = items.map(i => i.variant_id).sort((a, b) => a - b).join(',')
+  useEffect(() => {
+    if (!variantKey.includes(',')) { setShipGroups({}); return }
+    let alive = true
+    fetch('/api/shipping/packages?v=' + variantKey).then(r => r.json())
+      .then(d => { if (alive && d.success) setShipGroups(d.data || {}) }).catch(() => {})
+    return () => { alive = false }
+  }, [variantKey])
 
   // 收件人已確認（會員資料帶入、或選了常用收件人）時收成一張小卡，按「修改」才展開表單；
   // 訪客邊打字邊收起會嚇到人，所以只在這兩種情況才收
@@ -218,6 +231,10 @@ export default function CheckoutPage() {
   const recipientValid = !recipientNameError(form.customer_name) && validateTWPhone(form.phone)
   const recipientCollapsed = recipientLocked && recipientValid
   const visibleItems = showItems ? items : items.slice(0, 3)
+  const packages = splitPackages<PackageLine & { variant_id: number }>(items.map(i => ({
+    key: i.variant_id, variant_id: i.variant_id, name: i.product_name, variant: i.variant_name,
+    quantity: i.quantity, subtotal: i.unit_price * i.quantity, image: i.cover_image_url,
+  })), shipGroups)
 
   return (
     <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-28 md:pb-10">
@@ -398,6 +415,7 @@ export default function CheckoutPage() {
           {/* 訂單明細（手機；電腦版在右側） */}
           <section className="md:hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
             <h2 className="mb-2 text-lg font-bold text-gray-900">訂單明細<span className="ml-1.5 text-base font-semibold text-gray-500">（{totalItems} 件）</span></h2>
+            {packages ? <CheckoutPackages packages={packages} /> : <>
             <ul className="divide-y divide-gray-100">
               {visibleItems.map(item => (
                 <li key={item.variant_id} className="flex items-center gap-3 py-2.5">
@@ -416,7 +434,8 @@ export default function CheckoutPage() {
                 {showItems ? '收起' : `看全部 ${items.length} 樣商品`}
               </button>
             )}
-            <AmountBreakdown totalItems={totalItems} totalAmount={totalAmount} />
+            </>}
+            <AmountBreakdown totalItems={totalItems} totalAmount={totalAmount} parts={packages?.length} />
           </section>
 
           {/* 備註：多數人用不到，收起來 */}
@@ -474,6 +493,7 @@ export default function CheckoutPage() {
             <h2 className="font-bold text-gray-800 text-lg mb-3 pb-3 border-b border-gray-100">
               訂單明細（{totalItems} 件）
             </h2>
+            {packages ? <div className="mb-2"><CheckoutPackages packages={packages} compact /></div> : (
             <div className="space-y-3 mb-2 max-h-72 overflow-y-auto">
               {items.map(item => (
                 <div key={item.variant_id} className="flex gap-3 items-start">
@@ -486,9 +506,10 @@ export default function CheckoutPage() {
                 </div>
               ))}
             </div>
-            <AmountBreakdown totalItems={totalItems} totalAmount={totalAmount} />
+            )}
+            <AmountBreakdown totalItems={totalItems} totalAmount={totalAmount} parts={packages?.length} />
             <p className="text-[13px] text-gray-500 mt-3 text-center leading-relaxed">
-              📦 約 3 個工作日送到 7-11<br />到店後 7-11 會傳簡訊通知您
+              {packages ? <>📦 分 {packages.length} 個包裹寄出，各自到店、各自付款</> : <>📦 約 3 個工作日送到 7-11</>}<br />到店後 7-11 會傳簡訊通知您
             </p>
           </div>
         </div>
@@ -499,7 +520,7 @@ export default function CheckoutPage() {
         style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}>
         <div className="flex items-center gap-3 px-4 py-2.5">
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] text-gray-500">應付金額・取貨時付款</p>
+            <p className="text-[12px] text-gray-500">{packages ? `分 ${packages.length} 包・各自取貨付款` : '應付金額・取貨時付款'}</p>
             <p className="text-xl font-bold leading-tight text-green-700 tabular-nums">{formatPrice(totalAmount)}</p>
           </div>
           <button onClick={handleSubmit} disabled={submitting} className="btn-primary flex-shrink-0 px-7 py-3.5 text-lg">
@@ -565,7 +586,7 @@ function ItemThumb({ item, size }: { item: { cover_image_url?: string | null; pr
   )
 }
 
-function AmountBreakdown({ totalItems, totalAmount }: { totalItems: number; totalAmount: number }) {
+function AmountBreakdown({ totalItems, totalAmount, parts }: { totalItems: number; totalAmount: number; parts?: number }) {
   return (
     <div className="mt-2 space-y-1.5 border-t border-gray-100 pt-3">
       <div className="flex justify-between text-[15px] text-gray-600">
@@ -575,10 +596,10 @@ function AmountBreakdown({ totalItems, totalAmount }: { totalItems: number; tota
         <span>運費</span><span className="font-bold text-green-700">免運</span>
       </div>
       <div className="flex items-baseline justify-between border-t border-gray-100 pt-2">
-        <span className="text-base font-bold text-gray-900">應付金額</span>
+        <span className="text-base font-bold text-gray-900">應付金額{parts ? `（${parts} 包合計）` : ''}</span>
         <span className="text-2xl font-bold text-green-700 tabular-nums">{formatPrice(totalAmount)}</span>
       </div>
-      <p className="text-right text-[13px] text-gray-500">到 7-11 取貨時付款</p>
+      <p className="text-right text-[13px] text-gray-500">{parts ? '每包到店時分別付款' : '到 7-11 取貨時付款'}</p>
     </div>
   )
 }

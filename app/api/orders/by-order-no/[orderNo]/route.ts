@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { PUBLIC_ORDER_COLUMNS } from '@/lib/orderSecurity'
+import { loadShipGroups } from '@/lib/shipPackagesRepo'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,8 +30,12 @@ export async function GET(
     return NextResponse.json({ success: false, error: '訂單不存在' }, { status: 404 })
   }
 
+  // 現貨＋預購分兩包寄：下單成功頁要告訴客人每包各付多少
+  const variantIds = ((data as any).order_items || []).map((i: any) => i.variant_id).filter(Boolean)
+  const ship_groups = await loadShipGroups(variantIds).catch(() => ({}))
+
   return NextResponse.json(
-    { success: true, data },
+    { success: true, data: { ...(data as any), ship_groups } },
     { headers: { 'Cache-Control': 'no-store, must-revalidate' } }
   )
 }

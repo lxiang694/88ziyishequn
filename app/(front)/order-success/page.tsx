@@ -1,5 +1,7 @@
 'use client'
 import ShareCard from '@/components/front/referral/ShareCard'
+import { SuccessPackages, type PackageLine } from '@/components/front/ShipPackages'
+import { splitPackages, type ShipGroups } from '@/lib/shipPackages'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
@@ -8,6 +10,7 @@ import { formatPrice, formatDateTime } from '@/lib/utils'
 
 interface OrderItem {
   id: number
+  variant_id?: number | null
   product_name_snapshot: string
   product_image_snapshot: string | null
   variant_name_snapshot: string
@@ -29,6 +32,7 @@ interface Order {
   district: string
   created_at: string
   order_items: OrderItem[]
+  ship_groups?: ShipGroups
 }
 
 function OrderSuccessContent() {
@@ -73,6 +77,15 @@ function OrderSuccessContent() {
           </p>
         </div>
       )}
+
+      {/* 現貨＋預購分兩包寄：先到的那包金額比較少，客人常以為寄錯，這裡講清楚 */}
+      {!loading && order && (() => {
+        const packages = splitPackages<PackageLine & { variant_id?: number | null }>((order.order_items || []).map(i => ({
+          key: i.id, variant_id: i.variant_id, name: i.product_name_snapshot, variant: i.variant_name_snapshot,
+          quantity: i.quantity, subtotal: i.subtotal,
+        })), order.ship_groups || {})
+        return packages ? <SuccessPackages packages={packages} total={order.total_amount} /> : null
+      })()}
 
       {/* Loading */}
       {loading && (
