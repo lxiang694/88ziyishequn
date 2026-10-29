@@ -313,3 +313,16 @@ describe('拆單：沒拆的訂單完全照舊', () => {
     } finally { await db.close() }
   })
 })
+
+describe('門市店號改過', () => {
+  test('批次建立後店號改了：找得出來，沒改的不算', async () => {
+    const { staleStoreCodes } = await import('../lib/myship/domain.ts')
+    const row = (code: string, marker: string) => ['王小明', '0912345678', code, '常溫', '商品', '100', '0', '2026/10/29', '', marker]
+    const stale = staleStoreCodes([
+      { import_row: row('123456', '健康優選訂單：TW1'), store_id: 1 },
+      { import_row: row('222222', '健康優選訂單：TW2'), store_id: 2 },
+      { import_row: row('333333', '健康優選訂單：TW3'), store_id: null },
+    ], new Map([[1, '296045'], [2, '222222']]))
+    assert.deepEqual(stale, [{ marker: '健康優選訂單：TW1', was: '123456', now: '296045' }])
+  })
+})

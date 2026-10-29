@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isDeepStrictEqual } from 'node:util'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authorize, failure } from '@/lib/myship/server'
-import { snapshot, type TransferOrder, type ImportRow } from '@/lib/myship/domain'
+import { snapshot, staleStoreCodes, type TransferOrder, type ImportRow } from '@/lib/myship/domain'
 import { buildWorkbook } from '@/lib/myship/workbook'
 
 export const runtime = 'nodejs'
@@ -34,6 +34,26 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       for (const t of shopRows) {
         const order = orders?.find(o => o.id === t.order_id)
         if (!order || !isDeepStrictEqual(snapshot(order as TransferOrder), t.snapshot)) return failure('原訂單已變更，請人工核對此批次', 409)
+      }
+    }
+    // 建立批次後才改過門市店號：存下的檔案還是舊店號，賣貨便會說查無此編號。擋下並說明怎麼重做。
+    const storeOf = new Map<string, number | null>()
+    if (shopRows.length) {
+      const { data: rows } = await supabaseAdmin.from('orders').select('id, store_id').in('id', shopRows.map(t => t.order_id))
+      for (const r of rows || []) storeOf.set(`shop:${r.id}`, r.store_id)
+    }
+    if (gbRows.length) {
+      const { data: rows } = await supabaseAdmin.from('group_buy_orders').select('id, store_id').in('id', gbRows.map(t => t.group_buy_order_id))
+      for (const r of rows || []) storeOf.set(`gb:${r.id}`, r.store_id)
+    }
+    const storeIdOf = (t: any) => storeOf.get(t.source === 'group_buy' ? `gb:${t.group_buy_order_id}` : `shop:${t.order_id}`) ?? null
+    const storeIds = [...new Set(data.map(storeIdOf).filter((v): v is number => !!v))]
+    if (storeIds.length) {
+      const { data: stores } = await supabaseAdmin.from('stores_711').select('id, store_code').in('id', storeIds)
+      const stale = staleStoreCodes(data.map(t => ({ import_row: t.import_row, store_id: storeIdOf(t) })), new Map((stores || []).map(s => [s.id, s.store_code])))
+      if (stale.length) {
+        const list = stale.slice(0, 3).map(s => `${s.marker}（檔案裡是 ${s.was}，現在是 ${s.now}）`).join('；')
+        return failure(`門市店號在建立這批之後改過，這批檔案還是舊店號，賣貨便會說查無此編號：${list}。請在批次紀錄對這筆按「核對」→「未匯入或明確失敗」解除保留，再回待處理訂單重新匯出，新檔案就會用新店號。`, 409)
       }
     }
     const file = await buildWorkbook(data.map(t => t.import_row as ImportRow))

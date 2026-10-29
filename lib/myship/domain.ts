@@ -198,6 +198,21 @@ export function prepareOrder(order: TransferOrder, mappings: Mapping[], markets:
   return prepareOrderParts(order, mappings, markets, store)[0]
 }
 
+/**
+ * 批次建立之後，門市店號才在後台改過的轉單。
+ *
+ * 匯入檔的內容（含店號）在建立批次時就存下來，重新下載用的是存下的那份。
+ * 門市店號後來改了（例如門市換了店號），重新下載還是舊店號，賣貨便會回
+ * 「查無此編號」—— 看起來像是改了沒生效。這裡把這種轉單找出來，下載時擋下並說明。
+ */
+export function staleStoreCodes(rows: { import_row: readonly string[]; store_id: number | null | undefined }[], currentCode: Map<number, string | null>) {
+  return rows.flatMap(r => {
+    const now = r.store_id ? currentCode.get(r.store_id) : undefined
+    const was = r.import_row[2]
+    return now && was && now !== was ? [{ marker: r.import_row[9] || '', was, now }] : []
+  })
+}
+
 export function parseIds(value: unknown): number[] {
   if (!Array.isArray(value) || !value.length || value.length > MAX_ROWS || value.some(v => !Number.isSafeInteger(v) || v < 1) || new Set(value).size !== value.length) throw new Error('請選擇1至500筆不重複的訂單')
   return [...value].sort((a, b) => a - b)
