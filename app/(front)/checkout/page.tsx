@@ -13,6 +13,7 @@ import { trackFunnel } from '@/lib/funnel'
 import { splitPackages, type ShipGroups } from '@/lib/shipPackages'
 import { CheckoutPackages, type PackageLine } from '@/components/front/ShipPackages'
 import toast from 'react-hot-toast'
+import { useKeyboardOpen } from '@/components/front/useKeyboardOpen'
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -47,20 +48,8 @@ export default function CheckoutPage() {
 
 
   // 手機鍵盤彈出時（輸入框聚焦）隱藏底部固定結帳條，避免蓋住正在輸入的欄位
-  const [inputFocused, setInputFocused] = useState(false)
-  useEffect(() => {
-    const onFocusIn = (e: FocusEvent) => {
-      const t = e.target as HTMLElement | null
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) setInputFocused(true)
-    }
-    const onFocusOut = () => setInputFocused(false)
-    document.addEventListener('focusin', onFocusIn)
-    document.addEventListener('focusout', onFocusOut)
-    return () => {
-      document.removeEventListener('focusin', onFocusIn)
-      document.removeEventListener('focusout', onFocusOut)
-    }
-  }, [])
+  // 打字時（鍵盤開著）隱藏，避免蓋住輸入框；判斷方式見 useKeyboardOpen
+  const inputFocused = useKeyboardOpen()
 
   // "上次選擇的門市" — 依手機號查到後「直接帶入」為已選門市（可更換），避免使用者以為已選卻未實際選取而卡在驗證
   const [storeFromLast, setStoreFromLast] = useState(false)
@@ -453,9 +442,10 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* 下單按鈕：電腦版放在內文；手機版用底部固定條（往下捲一直看得到），這裡只留說明 */}
+          {/* 下單按鈕：手機另有底部固定條，這顆仍保留在內文當保底 ——
+              固定條萬一被藏住（鍵盤、內建瀏覽器工具列），捲到最下面一定按得到 */}
           <div className="space-y-2.5 pt-1">
-            <button onClick={handleSubmit} disabled={submitting} className="btn-primary hidden w-full text-xl py-5 md:flex">
+            <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full text-xl py-4 md:py-5">
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">

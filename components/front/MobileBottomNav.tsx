@@ -1,28 +1,14 @@
 'use client'
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCart } from './CartContext'
+import { useKeyboardOpen } from './useKeyboardOpen'
 
 export default function MobileBottomNav() {
   const pathname = usePathname()
   const { totalItems } = useCart()
-  const [inputFocused, setInputFocused] = useState(false)
-
-  // 鍵盤彈出時（輸入框聚焦）隱藏底部導覽列，避免浮起蓋住輸入欄位
-  useEffect(() => {
-    const onFocusIn = (e: FocusEvent) => {
-      const t = e.target as HTMLElement | null
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) setInputFocused(true)
-    }
-    const onFocusOut = () => setInputFocused(false)
-    document.addEventListener('focusin', onFocusIn)
-    document.addEventListener('focusout', onFocusOut)
-    return () => {
-      document.removeEventListener('focusin', onFocusIn)
-      document.removeEventListener('focusout', onFocusOut)
-    }
-  }, [])
+  // 打字時（鍵盤開著）隱藏，避免蓋住輸入框；判斷方式見 useKeyboardOpen
+  const inputFocused = useKeyboardOpen()
 
   // 後台不顯示
   if (pathname.startsWith('/admin')) return null
