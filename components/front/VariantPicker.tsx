@@ -40,6 +40,16 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
     }
   }, [product])
 
+  // 開著時鎖住後面的頁面：不然手指在面板上滑，後面的首頁跟著捲，
+  // iPhone Safari 網址列一收一放，面板底下就露出一條縫
+  useEffect(() => {
+    if (!product) return
+    const html = document.documentElement, body = document.body
+    const prev = [html.style.overflow, body.style.overflow, html.style.overscrollBehavior]
+    html.style.overflow = 'hidden'; body.style.overflow = 'hidden'; html.style.overscrollBehavior = 'none'
+    return () => { [html.style.overflow, body.style.overflow, html.style.overscrollBehavior] = prev }
+  }, [product])
+
   if (!product) return null
 
   const activeVariants = product.product_variants.filter(v => v.is_active)
@@ -63,17 +73,17 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
   }
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-50 transition-opacity"
-        onClick={onClose}
-      />
+    // 外框高度用「目前看得到的畫面高度」(100dvh)，面板貼著外框底部：
+    // iPhone Safari 網址列收起、畫面變高時，面板會跟著貼到真正的螢幕底部，不會留縫。
+    // 不支援 dvh 的舊瀏覽器忽略這個高度，退回 inset-0。
+    <div className="fixed inset-0 z-50 flex flex-col justify-end md:items-center md:justify-center" style={{ height: '100dvh' }}>
+      {/* Backdrop：往下多延伸一段，網址列伸縮時底部也是暗的 */}
+      <div className="absolute inset-x-0 top-0 -bottom-40 bg-black/50" onClick={onClose} />
 
       {/* Drawer - slides up from bottom on mobile, centered modal on desktop */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bottom-skirt bg-white rounded-t-2xl shadow-2xl
-                      md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
-                      md:max-w-lg md:w-full md:rounded-2xl animate-slide-up">
+      <div className="relative bottom-skirt bg-white rounded-t-2xl shadow-2xl
+                      md:max-w-lg md:w-full md:rounded-2xl animate-slide-up"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
         {/* Handle bar (mobile) */}
         <div className="flex justify-center pt-3 pb-1 md:hidden">
@@ -194,6 +204,6 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
           }
         }
       `}</style>
-    </>
+    </div>
   )
 }
