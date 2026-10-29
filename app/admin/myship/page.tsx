@@ -97,7 +97,6 @@ export default function MyshipPage() {
   const gbOtherTemp = gbAll.filter(o => !o.errors.length && o.temperature && o.temperature !== currentMarket?.temperature)
   const otherTemp = gbOtherTemp[0]?.temperature
   const otherTempMarket = otherTemp ? data?.markets.find(m => m.enabled && m.temperature === otherTemp) : undefined
-  const gbCampaigns = Array.from(new Map(gbAll.map(o => [o.campaign_id, o.campaign_title])).entries())
   const toggleGb = (id: number) => setSelectedGb(old => old.includes(id) ? old.filter(v => v !== id) : [...old, id].slice(0, 500))
   const exportGroupBuyBatch = () => run(async () => {
     const batch = crypto.randomUUID()
@@ -139,25 +138,97 @@ export default function MyshipPage() {
     await load()
   })
 
-  return <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-8 text-slate-800">
+  // ── 依賣場整理：選了哪個賣場，就只看那個賣場的訂單 ──
+  const shopRows = unreserved.filter(o => o.marketplace_id === market)
+  const shopReady = available
+  const shopIssues = shopRows.filter(o => o.errors.length)
+  // 商品還沒配賣場、或分屬多個賣場又沒辦法判斷的訂單：不屬於任何賣場，另外提醒
+  const unmapped = unreserved.filter(o => !o.marketplace_id)
+  const gbRows = gbAll.filter(o => o.temperature === currentMarket?.temperature || (!o.temperature && o.errors.length))
+  const gbIssues = gbRows.filter(o => o.errors.length)
+  const marketName = (id: string | null) => data?.markets.find(m => m.id === id)?.name || id || ''
+  const countsFor = (m: Marketplace) => view === 'shop'
+    ? { ready: unreserved.filter(o => o.marketplace_id === m.id && !o.errors.length).length, issues: unreserved.filter(o => o.marketplace_id === m.id && o.errors.length).length }
+    : { ready: m.enabled ? gbAll.filter(o => !o.errors.length && o.temperature === m.temperature).length : 0, issues: gbAll.filter(o => o.errors.length && o.temperature === m.temperature).length }
+  const pendingFor = (m: Marketplace) => (data?.transfers || []).filter(t => t.marketplace_id === m.id && t.status === 'exported').length
+  const allShop = shopReady.length > 0 && shopReady.every(o => selected.includes(o.order_id))
+  const allGb = gbAvailable.length > 0 && gbAvailable.every(o => selectedGb.includes(o.id))
+  const selCount = view === 'shop' ? selected.length : selectedGb.length
+  const selTotal = view === 'shop'
+    ? shopReady.filter(o => selected.includes(o.order_id)).reduce((s, o) => s + o.total_amount, 0)
+    : gbAvailable.filter(o => selectedGb.includes(o.id)).reduce((s, o) => s + o.total_amount, 0)
+  const switchMarket = (id: string) => { setMarket(id); setSelected([]); setSelectedGb([]) }
+  const kindOf = (m: Marketplace) => (m as Marketplace & { ship_kind?: string | null }).ship_kind
+
+  const checkAll = (checked: boolean, some: boolean) => (el: HTMLInputElement | null) => { if (el) el.indeterminate = some && !checked }
+  const cols = 'md:grid md:grid-cols-[13rem_minmax(0,1fr)_10rem_8rem] md:items-start md:gap-4'
+
+  const shopRow = (o: Row, selectable: boolean) => {
+    const on = selectable && selected.includes(o.order_id)
+    const others = o.parts > 1 ? (data?.orders || []).filter(x => x.order_id === o.order_id && x.marketplace_id !== o.marketplace_id).map(x => marketName(x.marketplace_id)) : []
+    const body = <>
+      <div className={`min-w-0 flex-1 space-y-1.5 md:space-y-0 ${cols}`}>
+        <div>
+          <p className="font-mono text-[15px] font-semibold text-slate-900">{o.order_no}</p>
+          <p className="text-slate-600">{o.customer_name}</p>
+          {o.parts > 1 && <p className="mt-1 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">拆單 {o.part}/{o.parts}{others.length > 0 && `・另一包在 ${others.join('、')}`}</p>}
+        </div>
+        <div className="text-sm leading-relaxed text-slate-700">{o.items.map((i, n) => <p key={n}>{i.sku && <span className="text-slate-400">{i.sku} </span>}{i.name}<span className="text-slate-500"> · {i.variant}</span></p>)}</div>
+        <p className="text-sm text-slate-600">🏪 {o.store_name}</p>
+        <div className="md:text-right"><p className="font-semibold tabular-nums text-slate-900">{money(o.total_amount)}</p>{o.parts > 1 && <p className="text-xs text-slate-500">原訂單 {money(o.order_total)}</p>}</div>
+      </div>
+    </>
+    if (!selectable) return <li key={`${o.order_id}:${o.marketplace_id}`} className="p-4">
+      {body}
+      <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm">{errorList(o.errors, o.store_fix, o.store_name, () => fixName('shop', o.order_id, o.customer_name))}</div>
+    </li>
+    return <li key={`${o.order_id}:${o.marketplace_id}`}>
+      <label className={`flex cursor-pointer gap-3 p-4 transition-colors ${on ? 'bg-green-50' : 'hover:bg-slate-50'}`}>
+        <input aria-label={`選取 ${o.order_no}`} type="checkbox" className="mt-1 h-5 w-5 flex-shrink-0 accent-green-700" checked={on} disabled={busy} onChange={() => toggle(o.order_id)} />
+        {body}
+      </label>
+    </li>
+  }
+
+  const gbRow = (o: GbRow, selectable: boolean) => {
+    const on = selectable && selectedGb.includes(o.id)
+    const body = <div className={`min-w-0 flex-1 space-y-1.5 md:space-y-0 ${cols}`}>
+      <div>
+        <p className="font-mono text-[15px] font-semibold text-slate-900">{o.order_no}</p>
+        <p className="text-slate-600">{o.customer_name}</p>
+        <p className="mt-1 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">{o.campaign_title || '團購'}</p>
+      </div>
+      <div className="text-sm leading-relaxed text-slate-700">{o.items.map((i, n) => <p key={n}>{i.name}{i.spec && <span className="text-slate-500">（{i.spec}）</span>} ×{i.quantity}</p>)}</div>
+      <p className="text-sm text-slate-600">{o.temperature === '冷凍' ? '🧊' : '🏪'} {o.store_name ? `${o.store_name}門市` : '—'}</p>
+      <div className="md:text-right"><p className="font-semibold tabular-nums text-slate-900">{money(o.total_amount)}</p>{o.shipping_fee > 0 && <p className="text-xs text-slate-500">含運費 {money(o.shipping_fee)}</p>}</div>
+    </div>
+    if (!selectable) return <li key={o.id} className="p-4">
+      {body}
+      <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm">{o.errors.length ? errorList(o.errors, o.store_fix, o.store_name, () => fixName('group_buy', o.id, o.customer_name)) : <span className="text-slate-600">賣場未啟用</span>}</div>
+    </li>
+    return <li key={o.id}>
+      <label className={`flex cursor-pointer gap-3 p-4 transition-colors ${on ? 'bg-sky-50' : 'hover:bg-slate-50'}`}>
+        <input aria-label={`選取 ${o.order_no}`} type="checkbox" className="mt-1 h-5 w-5 flex-shrink-0 accent-sky-700" checked={on} disabled={busy} onChange={() => toggleGb(o.id)} />
+        {body}
+      </label>
+    </li>
+  }
+
+  const listHead = <div className={`hidden border-b bg-white px-4 py-2 pl-12 text-xs font-semibold text-slate-500 ${cols}`}><span>訂單／收件人</span><span>商品</span><span>取貨門市</span><span className="text-right">代收金額</span></div>
+
+  return <main className={`mx-auto max-w-7xl space-y-6 p-4 md:p-8 text-slate-800 ${selCount && tab === 'orders' ? 'pb-32 md:pb-32' : ''}`}>
     <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-6">
-      <div><p className="mb-2 text-sm text-slate-500">健康優選／訂單作業</p><h1 className="text-3xl font-bold tracking-tight">賣貨便轉單</h1><p className="mt-3 text-sm text-slate-600">整理待確認訂單、下載匯入檔，核對成功後更新出貨。</p></div>
+      <div><p className="mb-2 text-sm text-slate-500">健康優選／訂單作業</p><h1 className="text-3xl font-bold tracking-tight">賣貨便轉單</h1><p className="mt-3 text-sm text-slate-600">選賣場 → 勾訂單（可一鍵全選）→ 下載匯入檔 → 到賣貨便匯入 → 回批次紀錄核對。</p></div>
       <button className={outline} disabled={busy} onClick={() => run(load)}>重新整理</button>
     </header>
     {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     {message && <div role="status" className="rounded-lg bg-green-50 p-4 text-green-800">{message}</div>}
     {view === 'shop' && <AssistantPanel selected={selected} market={market} disabled={busy} onChange={load}/>}
-    <div className="flex flex-wrap items-center gap-3">
-      <label htmlFor="market" className="font-medium">處理賣場</label>
-      <select id="market" className="rounded-lg border p-2.5" value={market} disabled={busy || !data} onChange={e => { setMarket(e.target.value); setSelected([]); setSelectedGb([]) }}>
-        {!data && <option>載入中</option>}{data?.markets.map(m => <option key={m.id} value={m.id} disabled={!m.enabled}>{m.name}（{m.temperature}）{m.enabled ? '' : '（未啟用）'}</option>)}
-      </select>
-      <span className="text-sm text-slate-500">代收原訂單總額（團購含運費），運費欄填 0 元</span>
-    </div>
     <nav aria-label="轉單工作區" className="flex gap-6 border-b">
       {([['orders','待處理訂單'],['mapping','商品賣場配對'],['history','批次紀錄']] as const).map(([key, label]) => <button key={key} onClick={() => setTab(key)} className={`pb-3 text-sm font-semibold ${tab === key ? 'border-b-2 border-slate-900 text-slate-900' : 'text-slate-500'}`} aria-current={tab === key ? 'page' : undefined}>{label}</button>)}
     </nav>
     {!data && !error && <p role="status">正在讀取訂單…</p>}
+
     {/* ── 一般訂單／團購訂單切換：顏色區分（一般＝深灰、團購＝藍） ── */}
     {data && tab === 'orders' && <div role="tablist" aria-label="訂單種類" className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1.5 sm:inline-grid sm:w-auto">
       {([
@@ -172,75 +243,103 @@ export default function MyshipPage() {
       ))}
     </div>}
 
+    {/* ── 選賣場：每個賣場一張卡，直接看到有幾筆可以匯出 ── */}
+    {data && (tab === 'orders' || tab === 'history') && <section aria-label="選擇賣場">
+      <p className="mb-2 text-sm font-semibold text-slate-600">{tab === 'orders' ? (view === 'shop' ? '選擇要處理的賣場（依商品賣場配對分好）' : '選擇要處理的賣場（團購依溫層對應）') : '查看哪個賣場的批次'}</p>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+        {data.markets.map(m => {
+          const c = countsFor(m), active = m.id === market, kind = kindOf(m)
+          return <button key={m.id} type="button" disabled={busy || !m.enabled} onClick={() => switchMarket(m.id)} aria-pressed={active}
+            className={`rounded-2xl border-2 p-3 text-left transition-colors sm:p-4 disabled:cursor-not-allowed disabled:opacity-50 ${active ? (view === 'group_buy' && tab === 'orders' ? 'border-sky-600 bg-sky-50' : 'border-green-600 bg-green-50') : 'border-slate-200 bg-white hover:border-slate-400'}`}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-base font-bold text-slate-900 sm:text-lg">{m.name}</p>
+              {active && <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-bold text-white ${view === 'group_buy' && tab === 'orders' ? 'bg-sky-600' : 'bg-green-600'}`}>目前</span>}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-1.5 text-xs font-bold">
+              {kind && <span className={`rounded px-1.5 py-0.5 ${kind === '預購' ? 'bg-sky-100 text-sky-800' : 'bg-green-100 text-green-800'}`}>{kind}</span>}
+              <span className={`rounded px-1.5 py-0.5 ${m.temperature === '冷凍' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>{m.temperature}</span>
+              {!m.enabled && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-slate-600">未啟用</span>}
+            </div>
+            {tab === 'orders'
+              ? <p className="mt-2 sm:mt-3"><span className="text-2xl font-bold tabular-nums text-slate-900 sm:text-3xl">{c.ready}</span><span className="ml-1 text-sm text-slate-600">筆可匯出</span>{c.issues > 0 && <span className="block text-sm font-semibold text-amber-700 sm:ml-2 sm:inline">{c.issues} 筆要先處理</span>}</p>
+              : <p className="mt-3"><span className="text-3xl font-bold tabular-nums text-slate-900">{pendingFor(m)}</span><span className="ml-1 text-sm text-slate-600">筆待核對</span></p>}
+          </button>
+        })}
+      </div>
+      {tab === 'orders' && <p className="mt-2 text-xs text-slate-500">代收原訂單總額（團購含運費），運費欄填 0 元。同一張訂單有不同賣場的商品時會自動拆單，各賣場各收各的。</p>}
+    </section>}
+
+    {/* ── 一般訂單 ── */}
+    {data && tab === 'orders' && view === 'shop' && <section className="space-y-5" aria-label="一般訂單">
+      {unmapped.length > 0 && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+        <b>另有 {unmapped.length} 筆訂單的商品還沒設定賣場</b>，所以不會出現在任何賣場：{unmapped.slice(0, 5).map(o => o.order_no).join('、')}{unmapped.length > 5 && ' …'}
+        <button className="ml-2 font-bold underline" onClick={() => setTab('mapping')}>去設定商品賣場 →</button>
+      </div>}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-slate-50 px-4 py-3">
+          <label className={`flex items-center gap-3 text-[15px] font-bold ${shopReady.length ? 'cursor-pointer' : 'text-slate-400'}`}>
+            <input type="checkbox" className="h-5 w-5 accent-green-700" checked={allShop} ref={checkAll(allShop, selected.length > 0)} disabled={busy || !shopReady.length}
+              onChange={() => setSelected(allShop ? [] : shopReady.slice(0, 500).map(o => o.order_id))} />
+            全選「{currentMarket?.name}」可匯出的 {shopReady.length} 筆
+          </label>
+          <span className="text-sm text-slate-500">已選 {selected.length} 筆{shopReady.length > 500 && '・一次最多 500 筆'}</span>
+        </div>
+        {shopReady.length > 0 && listHead}
+        {shopReady.length ? <ul className="divide-y">{shopReady.map(o => shopRow(o, true))}</ul>
+          : <p className="p-10 text-center text-slate-500">「{currentMarket?.name}」目前沒有可匯出的訂單{shopIssues.length > 0 && '，下面有要先處理的訂單'}</p>}
+      </div>
+      {shopIssues.length > 0 && <div className="overflow-hidden rounded-2xl border border-amber-200 bg-white">
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="font-bold text-amber-900">⚠️ 需要先處理（{shopIssues.length} 筆）</p>
+          <p className="mt-0.5 text-sm text-amber-800">依下面的提示修正後按「重新整理」，就會移到上面可以勾選</p>
+        </div>
+        <ul className="divide-y">{shopIssues.map(o => shopRow(o, false))}</ul>
+      </div>}
+      {!unreserved.length && <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">沒有尚未匯出的待確認訂單。已匯出的訂單請到批次紀錄核對。</p>}
+    </section>}
+
     {/* ── 團購訂單 ── */}
-    {data && tab === 'orders' && view === 'group_buy' && <section className="space-y-4" aria-label="團購訂單">
+    {data && tab === 'orders' && view === 'group_buy' && <section className="space-y-5" aria-label="團購訂單">
       {!data.groupBuyReady && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
         團購轉單尚未啟用：請先在 Supabase SQL Editor 執行 <code className="rounded bg-white px-1">migrations/myship_group_buy.sql</code>。
       </div>}
-      <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-relaxed text-sky-900">
-        <p className="font-bold">團購訂單依溫層自動對應賣場，不需要商品配對</p>
-        <p className="mt-1">7-11 冷凍 → 冷凍賣場　·　7-11 常溫 → 常溫賣場　·　代收金額＝團購應收總額（含團購運費）　·　黑貓宅配不走賣貨便</p>
-        <p className="mt-2">目前賣場：<b>{currentMarket ? `${currentMarket.name}（${currentMarket.temperature}）` : '—'}</b>，可匯出 <b>{gbAvailable.length}</b> 筆 7-11 {currentMarket?.temperature || ''}訂單</p>
-        {gbOtherTemp.length > 0 && <p className="mt-1 font-semibold text-sky-800">
-          另有 {gbOtherTemp.length} 筆 7-11 {otherTemp}訂單，{otherTempMarket
-            ? <button className="underline" onClick={() => { setMarket(otherTempMarket.id); setSelectedGb([]) }}>切換到「{otherTempMarket.name}」處理 →</button>
-            : <span className="text-amber-800">尚未設定{otherTemp}賣場（複製 migrations/myship_add_marketplace.sql，溫層填「{otherTemp}」）</span>}
-        </p>}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p><strong>{gbAvailable.length}</strong> 筆可匯出 · 已選 {selectedGb.length} 筆 / 上限 500</p>
-        <div className="flex gap-2">
-          <button className={outline} disabled={busy || !gbAvailable.length} onClick={() => setSelectedGb(gbAvailable.slice(0, 500).map(o => o.id))}>選取可匯出團購訂單</button>
-          <button className="rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-40" disabled={busy || !selectedGb.length} onClick={exportGroupBuyBatch}>{busy ? '處理中…' : '建立並下載團購匯入檔'}</button>
+      <p className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-relaxed text-sky-900">
+        團購訂單依溫層自動對應賣場，不需要商品配對：7-11 冷凍 → 冷凍賣場、7-11 常溫 → 常溫賣場。代收金額＝團購應收總額（含團購運費）。黑貓宅配不走賣貨便。
+        {otherTemp && !otherTempMarket && <span className="mt-1 block font-semibold text-amber-800">有 7-11 {otherTemp}訂單，但還沒有{otherTemp}賣場（複製 migrations/myship_add_marketplace.sql，溫層填「{otherTemp}」）</span>}
+      </p>
+      <div className="overflow-hidden rounded-2xl border border-sky-200 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-200 bg-sky-50 px-4 py-3">
+          <label className={`flex items-center gap-3 text-[15px] font-bold ${gbAvailable.length ? 'cursor-pointer' : 'text-slate-400'}`}>
+            <input type="checkbox" className="h-5 w-5 accent-sky-700" checked={allGb} ref={checkAll(allGb, selectedGb.length > 0)} disabled={busy || !gbAvailable.length}
+              onChange={() => setSelectedGb(allGb ? [] : gbAvailable.slice(0, 500).map(o => o.id))} />
+            全選「{currentMarket?.name}」可匯出的 {gbAvailable.length} 筆團購訂單
+          </label>
+          <span className="text-sm text-slate-500">已選 {selectedGb.length} 筆</span>
         </div>
+        {gbAvailable.length > 0 && listHead}
+        {gbAvailable.length ? <ul className="divide-y">{gbAvailable.map(o => gbRow(o, true))}</ul>
+          : <p className="p-10 text-center text-slate-500">「{currentMarket?.name}」目前沒有可匯出的 7-11 {currentMarket?.temperature}團購訂單</p>}
       </div>
-      {/* 依團購檔期分組 */}
-      {gbCampaigns.map(([campaignId, title]) => {
-        const rows = gbAll.filter(o => o.campaign_id === campaignId)
-        return <div key={campaignId} className="overflow-hidden rounded-xl border border-sky-200">
-          <div className="flex flex-wrap items-center gap-2 bg-sky-50 px-4 py-3">
-            <span className="rounded-full bg-sky-600 px-2.5 py-0.5 text-xs font-bold text-white">團購</span>
-            <h3 className="font-bold text-slate-900">{title || '團購'}</h3>
-            <span className="text-sm text-slate-500">{rows.length} 筆待出貨</span>
-          </div>
-          <div className="overflow-x-auto bg-white"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-slate-600"><tr>{['選取', '訂單／收件人', '商品', '取貨', '代收金額', '檢查結果'].map(h => <th key={h} className="p-3 whitespace-nowrap">{h}</th>)}</tr></thead><tbody className="divide-y">
-            {rows.map(o => {
-              const selectable = gbAvailable.some(a => a.id === o.id)
-              const tempMismatch = !o.errors.length && o.temperature !== currentMarket?.temperature
-              return <tr key={o.id} className={`align-top ${selectedGb.includes(o.id) ? 'bg-sky-50/60' : ''}`}>
-                <td className="p-3"><input aria-label={`選取 ${o.order_no}`} type="checkbox" className="h-4 w-4 accent-sky-700" checked={selectable && selectedGb.includes(o.id)} disabled={busy || !selectable} onChange={() => toggleGb(o.id)}/></td>
-                <td className="p-3 whitespace-nowrap"><p className="font-mono font-medium">{o.order_no}</p><p className="mt-1 text-slate-600">{o.customer_name}</p></td>
-                <td className="p-3">{o.items.map((i, n) => <p key={n}>{i.name}{i.spec && <span className="text-slate-500">（{i.spec}）</span>} ×{i.quantity}</p>)}</td>
-                <td className="p-3 whitespace-nowrap">
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${o.temperature === '冷凍' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>{o.temperature === '冷凍' ? '🧊 7-11 冷凍' : '🏪 7-11 常溫'}</span>
-                  <p className="mt-1 text-slate-600">{o.store_name}門市</p>
-                </td>
-                <td className="p-3 whitespace-nowrap tabular-nums"><p className="font-semibold">{money(o.total_amount)}</p>{o.shipping_fee > 0 && <p className="text-xs text-slate-500">含運費 {money(o.shipping_fee)}</p>}</td>
-                <td className="p-3 min-w-44">{o.errors.length ? errorList(o.errors, o.store_fix, o.store_name, () => fixName('group_buy', o.id, o.customer_name))
-                  : tempMismatch ? <span className="text-slate-500">屬於{o.temperature}賣場</span>
-                  : !currentMarket?.enabled ? <span className="text-slate-500">賣場未啟用</span>
-                  : <span className="font-semibold text-green-800">可匯出</span>}</td>
-              </tr>
-            })}
-          </tbody></table></div>
-        </div>
-      })}
+      {gbIssues.length > 0 && <div className="overflow-hidden rounded-2xl border border-amber-200 bg-white">
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-3"><p className="font-bold text-amber-900">⚠️ 需要先處理（{gbIssues.length} 筆）</p></div>
+        <ul className="divide-y">{gbIssues.map(o => gbRow(o, false))}</ul>
+      </div>}
       {!gbAll.length && <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">沒有尚未匯出的團購訂單（待出貨、7-11 取貨）。已匯出的請到批次紀錄核對。</p>}
     </section>}
 
-    {data && tab === 'orders' && view === 'shop' && <section className="space-y-4" aria-label="一般訂單">
-      <div className="flex flex-wrap items-center justify-between gap-3"><p><strong>{available.length}</strong> 筆可匯出 · 已選 {selected.length} 筆 / 上限 500</p><div className="flex gap-2"><button className={outline} disabled={busy || !available.length} onClick={() => setSelected(available.slice(0, 500).map(o => o.order_id))}>選取可匯出訂單</button><button className={button} disabled={busy || !selected.length} onClick={exportBatch}>{busy ? '處理中…' : '建立並下載匯入檔'}</button></div></div>
-      <div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-slate-600"><tr>{['選取','訂單／收件人','商品','門市','代收金額','檢查結果'].map(s => <th key={s} className="p-4">{s}</th>)}</tr></thead><tbody className="divide-y">
-        {/* 拆單的訂單在清單裡會有兩列、共用同一個 order_id，所以 key 與勾選都要
-            連同賣場一起判斷 —— 只看 order_id 的話 key 會重複，勾一列兩列一起勾。
-            勾選本身只存 order_id 沒問題：可勾的永遠只有目前賣場那一列。 */}
-        {unreserved.map(o => {
-          const selectable = o.marketplace_id === market && available.some(a => a.order_id === o.order_id && a.marketplace_id === o.marketplace_id)
-          return <tr key={`${o.order_id}:${o.marketplace_id}`} className="align-top"><td className="p-4"><input aria-label={`選取 ${o.order_no}`} type="checkbox" checked={selectable && selected.includes(o.order_id)} disabled={busy || !selectable} onChange={() => toggle(o.order_id)}/></td><td className="p-4 whitespace-nowrap"><p className="font-medium">{o.order_no}</p><p className="mt-1 text-slate-500">{o.customer_name}</p>{o.parts > 1 && <p className="mt-1.5 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">拆單 {o.part}/{o.parts}</p>}</td><td className="p-4">{o.items.map((i, n) => <p key={n}>{i.sku} {i.name} · {i.variant}</p>)}</td><td className="p-4 whitespace-nowrap">{o.store_name}</td><td className="p-4 whitespace-nowrap tabular-nums">{money(o.total_amount)}{o.parts > 1 && <p className="mt-1 text-xs text-slate-500">原訂單 {money(o.order_total)}</p>}</td><td className="p-4 min-w-48">{o.errors.length ? errorList(o.errors, o.store_fix, o.store_name, () => fixName('shop', o.order_id, o.customer_name)) : o.marketplace_id === market ? <span className="text-green-800">可匯出</span> : o.parts > 1 ? `這一半屬於其他賣場（${(data?.markets || []).find(m => m.id === o.marketplace_id)?.name || o.marketplace_id}）` : '屬於其他賣場'}</td></tr>
-        })}
-        {!unreserved.length && <tr><td colSpan={6} className="p-8 text-center text-slate-500">沒有尚未匯出的待確認訂單。已匯出的訂單請到批次紀錄核對。</td></tr>}
-      </tbody></table></div>
-    </section>}
+    {/* ── 底部操作列：選了幾筆、代收多少、一鍵下載 ── */}
+    {data && tab === 'orders' && selCount > 0 && <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur lg:left-60">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+        <p className="text-[15px] text-slate-700"><b className="text-slate-900">{currentMarket?.name}</b>・已選 <b className="tabular-nums text-slate-900">{selCount}</b> 筆・代收合計 <b className="tabular-nums text-slate-900">{money(selTotal)}</b></p>
+        <div className="flex gap-2">
+          <button className={outline} disabled={busy} onClick={() => { setSelected([]); setSelectedGb([]) }}>取消選取</button>
+          <button className={`rounded-lg px-5 py-2.5 text-[15px] font-bold text-white disabled:opacity-40 ${view === 'shop' ? 'bg-green-700 hover:bg-green-800' : 'bg-sky-700 hover:bg-sky-800'}`}
+            disabled={busy} onClick={view === 'shop' ? exportBatch : exportGroupBuyBatch}>
+            {busy ? '處理中…' : `建立並下載匯入檔（${selCount} 筆）`}
+          </button>
+        </div>
+      </div>
+    </div>}
     {data && tab === 'mapping' && <section className="space-y-4"><p className="text-sm text-slate-600">為待處理商品設定一次所屬賣場，之後相同規格會自動套用。未設定的商品不會匯出。<span className="ml-1 text-sky-800">團購訂單依溫層自動對應賣場，不需要在這裡設定。</span></p>
       <div className="divide-y rounded-xl border">{variants.map(([id, item]) => <div key={id} className="flex flex-wrap items-center justify-between gap-4 p-4"><div><p className="font-semibold">{item.sku} {item.name}</p><p className="text-sm text-slate-500">{item.variant}</p></div><select aria-label={`${item.name} ${item.variant} 所屬賣場`} className="rounded-lg border p-2" disabled={busy} value={data.mappings.find(m => m.variant_id === id)?.marketplace_id || ''} onChange={e => { const value = e.target.value; run(async () => { await post('mappings', { variant_id: id, marketplace_id: value }); await load() }) }}><option value="">尚未配對</option>{data.markets.filter(m => m.enabled).map(m => <option value={m.id} key={m.id}>{m.name}</option>)}</select></div>)}{!variants.length && <p className="p-6 text-slate-500">目前沒有待設定的商品。</p>}</div>
     </section>}
