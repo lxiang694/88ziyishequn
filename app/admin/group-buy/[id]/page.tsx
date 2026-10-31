@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { compressImage } from '@/lib/imageCompress'
 import { isoToTwLocal, slugForStart, twLocalToIso } from '@/lib/groupBuy/domain'
 import { insertImage, listImages, removeImageLine } from '@/lib/groupBuy/textImages'
+import GroupBuyBanner from '@/components/front/groupBuy/GroupBuyBanner'
 
 type ItemForm = {
   key: string
@@ -17,7 +18,7 @@ type ItemForm = {
   sold: number
 }
 type CampaignForm = {
-  title: string; slug: string; subtitle: string; description: string; cover_image_url: string
+  title: string; slug: string; subtitle: string; description: string; cover_image_url: string; banner_image_url: string
   starts_at_local: string; ends_at_local: string; ship_note: string
   ship_711_enabled: boolean; ship_711_normal_enabled: boolean; ship_home_enabled: boolean
   fee_711: string; fee_711_normal: string; fee_home: string; free_shipping_threshold: string
@@ -35,7 +36,7 @@ function defaultCampaign(): CampaignForm {
   const y = tw.getUTCFullYear(), m = tw.getUTCMonth() + 2
   const ym = new Date(Date.UTC(y, m - 1, 1)).toISOString().slice(0, 7)
   return {
-    title: `${Number(ym.slice(5))} 月團購`, slug: ym, subtitle: '', description: '', cover_image_url: '',
+    title: `${Number(ym.slice(5))} 月團購`, slug: ym, subtitle: '', description: '', cover_image_url: '', banner_image_url: '',
     starts_at_local: `${ym}-01T10:00`, ends_at_local: `${ym}-10T23:59`, ship_note: '截單後約 7～10 天出貨',
     ship_711_enabled: true, ship_711_normal_enabled: false, ship_home_enabled: false, fee_711: '0', fee_711_normal: '0', fee_home: '0', free_shipping_threshold: '',
     is_published: false,
@@ -60,14 +61,22 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState('')
+  // 資料庫有沒有「首頁入口背景圖」欄位（還沒執行 SQL 時不顯示上傳、也不送這個欄位）
+  const [bannerReady, setBannerReady] = useState(false)
+
+  useEffect(() => {
+    if (!isNew) return
+    fetch('/api/admin/group-buy', { cache: 'no-store' }).then(r => r.json()).then(d => setBannerReady(!!d.banner_ready)).catch(() => {})
+  }, [isNew])
 
   useEffect(() => {
     if (isNew) return
     fetch(`/api/admin/group-buy/${params.id}`, { cache: 'no-store' }).then(r => r.json()).then(d => {
       if (!d.success) { toast.error(d.error || '讀取失敗'); return }
       const x = d.data.campaign
+      setBannerReady('banner_image_url' in x)
       setC({
-        title: x.title, slug: x.slug, subtitle: x.subtitle, description: x.description, cover_image_url: x.cover_image_url || '',
+        title: x.title, slug: x.slug, subtitle: x.subtitle, description: x.description, cover_image_url: x.cover_image_url || '', banner_image_url: x.banner_image_url || '',
         starts_at_local: isoToTwLocal(x.starts_at), ends_at_local: isoToTwLocal(x.ends_at), ship_note: x.ship_note,
         ship_711_enabled: x.ship_711_enabled, ship_711_normal_enabled: !!x.ship_711_normal_enabled, ship_home_enabled: x.ship_home_enabled,
         fee_711: str(x.fee_711), fee_711_normal: str(x.fee_711_normal ?? 0), fee_home: str(x.fee_home), free_shipping_threshold: str(x.free_shipping_threshold),
@@ -100,6 +109,7 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
     try {
       const u = await upload(file)
       if (target === 'cover') set('cover_image_url', u)
+      else if (target === 'banner') set('banner_image_url', u)
       else setItem(target, { image_url: u })
     } catch (e) {
       toast.error(e instanceof Error ? e.message : '上傳失敗')
@@ -107,7 +117,9 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
   }
 
   const save = async (publish?: boolean) => {
-    const campaign = { ...c, is_published: publish ?? c.is_published }
+    const { banner_image_url, ...rest } = c
+    // 背景圖欄位還沒建立時不送，免得整個儲存失敗
+    const campaign = { ...rest, ...(bannerReady ? { banner_image_url } : {}), is_published: publish ?? c.is_published }
     const payload = {
       campaign,
       items: items.map(i => ({
@@ -132,7 +144,7 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
       }
       toast.success(campaign.is_published ? '已儲存，團購開啟中' : '已儲存（團購關閉中）')
       if (isNew) router.replace(`/admin/group-buy/${id}`)
-      else { setC(campaign); router.refresh() }
+      else { setC(prev => ({ ...prev, is_published: campaign.is_published })); router.refresh() }
     } finally { setSaving(false) }
   }
 
@@ -171,6 +183,32 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
               <input type="file" accept="image/*" className="hidden" onChange={e => onUpload('cover', e.target.files?.[0])} />
             </label>
             {c.cover_image_url && <button className="text-sm text-red-600" onClick={() => set('cover_image_url', '')}>移除</button>}
+          </div>
+        </div>
+
+        {/* 首頁「每月團購」入口的背景圖，下面直接預覽首頁看到的樣子 */}
+        <div className="rounded-xl border border-gray-200 p-3">
+          <p className={label}>首頁入口背景圖（選填）</p>
+          <p className="mt-0.5 text-xs text-gray-500">首頁「每月團購」那一塊的背景。建議橫式、寬 1200 像素以上，主體放中間（左右上下會依手機寬度裁切）。圖上會自動加一層深色，白字一樣清楚。沒放就用綠色背景。</p>
+          {!bannerReady ? (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">要先在 Supabase SQL Editor 執行 <code className="rounded bg-white px-1">migrations/group_buy_banner_image.sql</code>，重新整理這頁就能上傳。</p>
+          ) : (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <label className="cursor-pointer rounded-lg border-2 border-green-600 bg-white px-3 py-2 text-sm font-bold text-green-700 hover:bg-green-50">
+                {uploading === 'banner' ? '上傳中…' : c.banner_image_url ? '更換背景圖' : '🖼️ 上傳背景圖'}
+                <input type="file" accept="image/*" className="hidden" onChange={e => { onUpload('banner', e.target.files?.[0]); e.target.value = '' }} />
+              </label>
+              {c.banner_image_url && <button className="text-sm text-red-600" onClick={() => set('banner_image_url', '')}>移除，改回綠色背景</button>}
+            </div>
+          )}
+          <div className="mx-auto mt-3 max-w-md">
+            <p className="text-xs font-bold text-gray-500">首頁預覽（手機）</p>
+            <GroupBuyBanner preview campaign={{
+              slug: c.slug, title: c.title || '本月團購', is_published: true,
+              starts_at: twLocalToIso(c.starts_at_local) || new Date().toISOString(),
+              ends_at: twLocalToIso(c.ends_at_local) || new Date(Date.now() + 7 * 86_400_000).toISOString(),
+              banner_image_url: c.banner_image_url || null,
+            }} />
           </div>
         </div>
 

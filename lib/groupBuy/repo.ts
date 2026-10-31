@@ -49,13 +49,16 @@ export async function loadPublicCampaign(slug: string, db: Db = supabaseStorefro
  * /group-buy 要導去哪一檔：開團中的優先（多檔同時開時取最早截單的），
  * 沒有就取最近要開的預告，再沒有就取最近一檔已截單的（讓人看得到「下次開團」的說明）。
  */
-export type CampaignTeaser = Pick<Campaign, 'slug' | 'title' | 'starts_at' | 'ends_at' | 'is_published'>
+export type CampaignTeaser = Pick<Campaign, 'slug' | 'title' | 'starts_at' | 'ends_at' | 'is_published'> & { banner_image_url?: string | null }
 
 export async function currentCampaign(db: Db = supabaseStorefront, now = new Date()): Promise<CampaignTeaser | null> {
-  const { data, error } = await db.from('group_buy_campaigns').select('slug, title, starts_at, ends_at, is_published')
+  const query = (cols: string) => db.from('group_buy_campaigns').select(cols)
     .eq('is_published', true).order('starts_at', { ascending: false }).limit(50)
+  let { data, error } = await query('slug, title, starts_at, ends_at, is_published, banner_image_url')
+  // 還沒執行 migrations/group_buy_banner_image.sql：沒有背景圖欄位，照舊讀其他欄位
+  if (error) ({ data, error } = await query('slug, title, starts_at, ends_at, is_published'))
   if (error) return null   // 資料表還沒建立時當成沒有團購，頁面照常顯示
-  const list = (data || []) as CampaignTeaser[]
+  const list = (data || []) as unknown as CampaignTeaser[]
   const by = (phase: string) => list.filter(c => campaignPhase(c, now) === phase)
   const open = by('open').sort((a, b) => a.ends_at.localeCompare(b.ends_at))[0]
   if (open) return open

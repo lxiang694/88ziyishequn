@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
     if (missingTable(error.code)) return NextResponse.json({ success: true, data: [], needsMigration: true })
     return NextResponse.json({ success: false, error: '讀取檔期失敗' }, { status: 500 })
   }
+  // 首頁入口背景圖的欄位加了沒（新增檔期時後台用來決定要不要顯示上傳）
+  const { error: bannerProbe } = await supabaseAdmin.from('group_buy_campaigns').select('banner_image_url').limit(0)
   const ids = (data || []).map(c => c.id)
   const totals = new Map<number, { orders: number; revenue: number }>()
   if (ids.length) {
@@ -33,7 +35,7 @@ export async function GET(req: NextRequest) {
       if (!orders || orders.length < 1000) break
     }
   }
-  return NextResponse.json({ success: true, data: (data || []).map(c => ({ ...c, ...(totals.get(c.id) || { orders: 0, revenue: 0 }) })) })
+  return NextResponse.json({ success: true, banner_ready: !bannerProbe, data: (data || []).map(c => ({ ...c, ...(totals.get(c.id) || { orders: 0, revenue: 0 }) })) })
 }
 
 /**

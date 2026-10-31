@@ -128,6 +128,12 @@ describe('後台檔期資料檢查', () => {
     assert.match(parseCampaignInput({ ...base, fee_711: '-1' }).error!, /運費/)
     assert.equal(parseCampaignInput({ ...base, cover_image_url: 'javascript:alert(1)' }).value!.cover_image_url, null)
   })
+  test('首頁入口背景圖：有送才帶（資料庫還沒加欄位時後台不送），只收 http(s)', () => {
+    assert.equal('banner_image_url' in parseCampaignInput(base).value!, false)
+    assert.equal(parseCampaignInput({ ...base, banner_image_url: 'https://x.co/a.jpg' }).value!.banner_image_url, 'https://x.co/a.jpg')
+    assert.equal(parseCampaignInput({ ...base, banner_image_url: '' }).value!.banner_image_url, null)
+    assert.equal(parseCampaignInput({ ...base, banner_image_url: 'javascript:alert(1)' }).value!.banner_image_url, null)
+  })
   test('只開 7-11 常溫也可以，常溫運費另外存', () => {
     const { value, error } = parseCampaignInput({ ...base, ship_711_enabled: false, ship_711_normal_enabled: true, fee_711_normal: '60' })
     assert.equal(error, undefined)

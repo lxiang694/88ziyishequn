@@ -11,6 +11,8 @@ export interface CampaignInput {
   subtitle: string
   description: string
   cover_image_url: string | null
+  /** 首頁入口背景圖；資料庫還沒加欄位時後台不送，這裡也就不帶（不然整個儲存會失敗） */
+  banner_image_url?: string | null
   starts_at: string
   ends_at: string
   ship_note: string
@@ -75,6 +77,7 @@ export function parseCampaignInput(body: any): { value?: CampaignInput; error?: 
       subtitle: str(body?.subtitle, 200),
       description: str(body?.description, 5000),
       cover_image_url: url(body?.cover_image_url),
+      ...(body && 'banner_image_url' in body ? { banner_image_url: url(body.banner_image_url) } : {}),
       starts_at, ends_at,
       ship_note: str(body?.ship_note, 200),
       ship_711_enabled, ship_711_normal_enabled, ship_home_enabled,
