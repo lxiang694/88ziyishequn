@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { parseArticle, type Block } from '@/lib/articleBlocks'
 import { normalizeGroupBuyText } from '@/lib/groupBuy/text'
+import { isSafeImageUrl } from '@/lib/groupBuy/textImages'
 
 /**
  * 團購頁的文字排版（團購說明、商品介紹）。
@@ -80,6 +81,16 @@ function renderBlock(b: Block, k: number, size: 'lg' | 'md'): React.ReactNode {
       )
     case 'hr':
       return <hr key={k} className="my-6 border-t border-dashed border-gray-200" />
+    case 'image':
+      // 後台「插入圖片」放進來的圖：整張寬、圓角；只顯示 http(s) 網址
+      if (!isSafeImageUrl(b.src)) return null
+      return (
+        <figure key={k} className="mt-4 first:mt-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={b.src} alt={b.alt} loading="lazy" className="mx-auto w-full max-w-xl rounded-2xl bg-gray-50" />
+          {b.alt && <figcaption className="mt-1.5 text-center text-[13px] text-gray-500">{b.alt}</figcaption>}
+        </figure>
+      )
     default:
       return null
   }

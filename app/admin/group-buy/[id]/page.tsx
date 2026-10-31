@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { compressImage } from '@/lib/imageCompress'
 import { isoToTwLocal, slugForStart, twLocalToIso } from '@/lib/groupBuy/domain'
+import { insertImage, listImages, removeImageLine } from '@/lib/groupBuy/textImages'
 
 type ItemForm = {
   key: string
@@ -194,10 +195,8 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
           </label>
         </div>
 
-        <label className={label}>團購說明（選填，顯示在商品下方）
-          <textarea className={input} rows={5} value={c.description} onChange={e => set('description', e.target.value)} maxLength={5000}
-            placeholder={'品牌介紹、保存方式、食用方式…\n（文案請避免「治療」「預防疾病」等療效用語）'} />
-        </label>
+        <DescriptionEditor label="團購說明（選填，顯示在商品下方）" value={c.description} onChange={v => set('description', v)} max={5000} rows={6}
+          placeholder={'品牌介紹、保存方式、食用方式…\n（文案請避免「治療」「預防疾病」等療效用語）'} />
       </section>
 
       {/* ── 團購商品 ─────────────────────────────── */}
@@ -234,9 +233,9 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
                 <label className={label}>每人限購（選填）<input className={input} inputMode="numeric" value={it.per_person_limit} onChange={e => setItem(it.key, { per_person_limit: e.target.value })} placeholder="不限" /></label>
                 <label className={label}>總量（選填）<input className={input} inputMode="numeric" value={it.total_quota} onChange={e => setItem(it.key, { total_quota: e.target.value })} placeholder="不限" /></label>
               </div>
-              <label className={`${label} mt-2`}>商品介紹（選填）
-                <textarea className={input} rows={3} value={it.description} onChange={e => setItem(it.key, { description: e.target.value })} maxLength={3000} />
-              </label>
+              <div className="mt-2">
+                <DescriptionEditor label="商品介紹（選填）" value={it.description} onChange={v => setItem(it.key, { description: v })} max={3000} rows={4} />
+              </div>
             </div>
           ))}
         </div>
@@ -254,6 +253,68 @@ export default function GroupBuyEditPage({ params }: { params: { id: string } })
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * 團購說明／商品介紹的編輯框：可以插入圖片。
+ * 按「插入圖片」選照片 → 自動上傳 → 插在游標的位置（自成一行），前台顯示成整張圖。
+ * 文字框裡看到的是 ![](網址)，不用動它；下面的縮圖列可以看到插了哪些圖、一鍵移除。
+ */
+function DescriptionEditor({ label: title, value, onChange, max, rows, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; max: number; rows: number; placeholder?: string
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const [busy, setBusy] = useState(false)
+  const images = listImages(value)
+
+  const addImages = async (files: FileList | null) => {
+    if (!files?.length) return
+    setBusy(true)
+    let text = value
+    let pos = ref.current?.selectionStart ?? text.length
+    try {
+      for (const file of Array.from(files).slice(0, 10)) {
+        const url = await upload(file)
+        const next = insertImage(text, pos, url)
+        if (next.text.length > max) { toast.error(`字數超過上限 ${max}，這張圖放不進去，請刪掉一些文字或圖片`); break }
+        text = next.text; pos = next.cursor
+        onChange(text)
+      }
+      requestAnimationFrame(() => { ref.current?.focus(); ref.current?.setSelectionRange(pos, pos) })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '上傳失敗')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <span className="text-sm font-bold text-gray-700">{title}</span>
+        <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-2 border-green-600 bg-white px-3 py-1.5 text-sm font-bold text-green-700 hover:bg-green-50 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+          🖼️ {busy ? '上傳中…' : '插入圖片'}
+          <input type="file" accept="image/*" multiple className="hidden" disabled={busy} onChange={e => { addImages(e.target.files); e.target.value = '' }} />
+        </label>
+      </div>
+      <textarea ref={ref} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-[15px] focus:border-green-600 focus:outline-none"
+        rows={rows} value={value} onChange={e => onChange(e.target.value)} maxLength={max} placeholder={placeholder} />
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+        <span>先把游標點在要放圖的地方，再按「插入圖片」（可一次選多張）</span>
+        <span className={value.length > max * 0.9 ? 'font-bold text-amber-700' : ''}>{value.length} / {max} 字</span>
+      </div>
+      {images.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-2">
+          {images.map((img, i) => (
+            <li key={`${img.line}-${img.url}`} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={img.url} alt={`第 ${i + 1} 張`} className="h-20 w-20 rounded-lg border border-gray-200 object-cover" />
+              <button type="button" onClick={() => onChange(removeImageLine(value, img.line))}
+                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white shadow" aria-label={`移除第 ${i + 1} 張圖`}>✕</button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
