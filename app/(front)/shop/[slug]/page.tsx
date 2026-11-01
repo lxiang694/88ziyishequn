@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import ShopBrowser from '@/components/front/ShopBrowser'
+import { currentCampaign } from '@/lib/groupBuy/repo'
 import { fetchShopCategories, fetchShopProducts } from '@/lib/shopQuery'
 import { SITE_URL } from '@/lib/siteUrl'
 import { SHOP_CATEGORIES } from '@/lib/shopCategories'
@@ -51,7 +52,10 @@ export default async function ShopCategoryPage({ params }: { params: { slug: str
   // 不存在的分類給 404，而不是靜靜顯示一個空賣場 —— 網址打錯要看得出來
   if (!category) notFound()
 
-  const products = await fetchShopProducts(slug)
+  const [products, groupBuy] = await Promise.all([
+    fetchShopProducts(slug),
+    currentCampaign().catch(() => null),
+  ])
 
   // 麵包屑結構化資料：讓搜尋結果顯示「健康優選 › 養身茶飲」而不是一串網址
   const jsonLd = {
@@ -68,6 +72,7 @@ export default async function ShopCategoryPage({ params }: { params: { slug: str
       <script type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }} />
       <ShopBrowser
+        groupBuy={groupBuy}
         categories={categories}
         activeSlug={slug}
         initialProducts={products as any}

@@ -18,6 +18,8 @@ import { useRouter } from 'next/navigation'
 import { useCart } from './CartContext'
 import VariantPicker from './VariantPicker'
 import ProductRow from './ProductRow'
+import GroupBuyBanner from './groupBuy/GroupBuyBanner'
+import type { CampaignTeaser } from '@/lib/groupBuy/repo'
 import type { CardProduct } from './ProductCard'
 
 export interface ShopCategory {
@@ -29,6 +31,7 @@ export interface ShopCategory {
 }
 
 interface Props {
+  groupBuy: CampaignTeaser | null
   categories: ShopCategory[]
   /** 目前選到的分類 slug；空字串代表「全部商品」 */
   activeSlug: string
@@ -55,7 +58,7 @@ const REVEAL_BATCH = 12
 const RAIL_STICKY = 'top-[137px] sm:top-[153px] h-[calc(100vh-137px)] sm:h-[calc(100vh-153px)]'
 
 export default function ShopBrowser({
-  categories, activeSlug, initialProducts, heading, subheading,
+  categories, activeSlug, initialProducts, heading, subheading, groupBuy,
 }: Props) {
   const router = useRouter()
   const { addItem } = useCart()
@@ -167,6 +170,12 @@ export default function ShopBrowser({
           </label>
         </div>
       </div>
+
+      {groupBuy && (
+        <div className="mx-auto max-w-5xl px-4 pb-4">
+          <GroupBuyBanner campaign={groupBuy} />
+        </div>
+      )}
 
       <div className="mx-auto flex max-w-5xl">
         {/* ── 左側分類欄 ─────────────────────────────────── */}

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import ShopBrowser from '@/components/front/ShopBrowser'
+import { currentCampaign } from '@/lib/groupBuy/repo'
 import { fetchShopCategories, fetchShopProducts, NEW_ARRIVALS_SLUG, NEW_ARRIVALS_LIMIT } from '@/lib/shopQuery'
 import { SITE_URL } from '@/lib/siteUrl'
 
@@ -13,13 +14,15 @@ export const metadata: Metadata = {
 }
 
 export default async function NewArrivalsPage() {
-  const [categories, products] = await Promise.all([
+  const [categories, products, groupBuy] = await Promise.all([
     fetchShopCategories(),
     fetchShopProducts(NEW_ARRIVALS_SLUG),
+    currentCampaign().catch(() => null),
   ])
 
   return (
     <ShopBrowser
+      groupBuy={groupBuy}
       categories={categories}
       activeSlug={NEW_ARRIVALS_SLUG}
       initialProducts={products as any}
