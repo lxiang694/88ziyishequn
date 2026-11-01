@@ -43,7 +43,7 @@ interface Props {
 const REVEAL_BATCH = 12
 
 /**
- * 左側分類欄要黏在搜尋列正下方，所以要知道上面兩塊有多高。
+ * 左側分類欄與右側商品標題共用搜尋列下緣的位置。
  *
  *   固定表頭 h-16 / sm:h-20   →  64 / 80
  *   搜尋列 py-3 ＋ 輸入框 h-12 ＋ 下框線  →  12 + 48 + 12 + 1 = 73
@@ -55,7 +55,8 @@ const REVEAL_BATCH = 12
  * 不能用樣板字串把數字拼進 class —— Tailwind 是掃原始碼字面量產生
  * 樣式的，拼出來的 class 不會被產生，畫面上會完全看不出錯，只是沒黏住。
  */
-const RAIL_STICKY = 'top-[137px] sm:top-[153px] h-[calc(100vh-137px)] sm:h-[calc(100vh-153px)]'
+const BELOW_SEARCH = 'top-[137px] sm:top-[153px]'
+const RAIL_HEIGHT = 'h-[calc(100vh-137px)] sm:h-[calc(100vh-153px)]'
 
 export default function ShopBrowser({
   categories, activeSlug, initialProducts, heading, subheading, groupBuy,
@@ -180,7 +181,7 @@ export default function ShopBrowser({
       <div className="mx-auto flex max-w-5xl">
         {/* ── 左側分類欄 ─────────────────────────────────── */}
         <nav ref={railRef} aria-label="商品分類"
-          className={`sticky ${RAIL_STICKY} w-[88px] flex-shrink-0 overflow-y-auto bg-sage sm:w-28`}>
+          className={`sticky ${BELOW_SEARCH} ${RAIL_HEIGHT} w-[88px] flex-shrink-0 overflow-y-auto bg-sage sm:w-28`}>
           <Link href="/shop" data-active={activeSlug === ''} className={railItem(activeSlug === '')}>
             全部商品
           </Link>
@@ -197,8 +198,8 @@ export default function ShopBrowser({
         </nav>
 
         {/* ── 右側商品列 ─────────────────────────────────── */}
-        <div className="min-w-0 flex-1 px-3 py-4 sm:px-4">
-          <header className="mb-3">
+        <div className="min-w-0 flex-1 px-3 pb-4 sm:px-4">
+          <header className={`sticky ${BELOW_SEARCH} z-10 -mx-3 border-b border-line bg-canvas px-3 py-3 sm:-mx-4 sm:px-4`}>
             <h1 className="flex flex-wrap items-baseline gap-x-2 text-lg font-bold text-gray-800 sm:text-xl">
               {searching ? `搜尋「${search.trim()}」` : heading}
               <span className="text-sm font-normal text-gray-500">
