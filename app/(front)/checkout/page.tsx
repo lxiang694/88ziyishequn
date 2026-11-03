@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useCart } from '@/components/front/CartContext'
 import { useUserAuth } from '@/components/front/UserAuthContext'
 import { formatPrice, validateTWPhone } from '@/lib/utils'
-import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
+import { honorificHint, recipientNameError, suggestRecipientName } from '@/lib/recipientName'
 import { getStoredRef } from '@/components/front/referral/referralClient'
 import StorePickerModal, { Store } from '@/components/front/StorePickerModal'
 import { trackFunnel } from '@/lib/funnel'
@@ -219,6 +219,9 @@ export default function CheckoutPage() {
   const totalItems = items.reduce((s, i) => s + i.quantity, 0)
   const recipientValid = !recipientNameError(form.customer_name) && validateTWPhone(form.phone)
   const recipientCollapsed = recipientLocked && recipientValid
+  const nameOk = !recipientNameError(form.customer_name)
+  const nameHint = nameOk ? honorificHint(form.customer_name) : null
+  const phoneOk = validateTWPhone(form.phone)
   const visibleItems = showItems ? items : items.slice(0, 3)
   const packages = splitPackages<PackageLine & { variant_id: number }>(items.map(i => ({
     key: i.variant_id, variant_id: i.variant_id, name: i.product_name, variant: i.variant_name,
@@ -252,49 +255,68 @@ export default function CheckoutPage() {
                 <p className="mt-2 text-[13px] text-gray-500">7-11 取貨時，報這個姓名或手機號碼即可</p>
               </>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div id="field-customer_name" className="scroll-mt-24">
-                  <label className="form-label">取件人姓名 <span className="text-red-500">*</span></label>
-                  <input
-                    className={`form-input ${errors.customer_name ? 'border-red-400 bg-red-50' : ''}`}
-                    placeholder="例如：王小明" autoComplete="name"
-                    value={form.customer_name}
-                    onChange={e => { setForm(f => ({ ...f, customer_name: e.target.value })); setErrors(er => ({ ...er, customer_name: '' })) }}
-                    // 離開欄位就先檢查：「鄭景耀,」這種多打一個符號的，當下就提醒
-                    onBlur={() => { if (form.customer_name.trim()) setErrors(er => ({ ...er, customer_name: recipientNameError(form.customer_name) || '' })) }}
-                  />
+                  <FieldLabel htmlFor="customer_name" required>取件人姓名</FieldLabel>
+                  <div className="relative">
+                    <input id="customer_name"
+                      className={`form-input pr-12 ${errors.customer_name ? 'border-red-400 bg-red-50' : nameHint ? 'border-amber-400' : nameOk ? 'border-green-500' : ''}`}
+                      placeholder="請輸入真實姓名" autoComplete="name"
+                      value={form.customer_name}
+                      onChange={e => { setForm(f => ({ ...f, customer_name: e.target.value })); setErrors(er => ({ ...er, customer_name: '' })) }}
+                      // 離開欄位就先檢查：「鄭景耀,」這種多打一個符號的，當下就提醒
+                      onBlur={() => { if (form.customer_name.trim()) setErrors(er => ({ ...er, customer_name: recipientNameError(form.customer_name) || '' })) }}
+                    />
+                    {nameOk && !nameHint && <OkMark />}
+                  </div>
                   {errors.customer_name ? (
-                    <div className="mt-1.5">
-                      <p className="text-red-600 text-sm">⚠️ {errors.customer_name}</p>
+                    <div className="mt-2">
+                      <p className="text-[15px] font-semibold text-red-600">⚠️ {errors.customer_name}</p>
                       {suggestRecipientName(form.customer_name) && (
                         <button type="button"
                           onClick={() => { setForm(f => ({ ...f, customer_name: suggestRecipientName(f.customer_name) || f.customer_name })); setErrors(er => ({ ...er, customer_name: '' })) }}
-                          className="mt-1.5 rounded-lg border border-green-600 bg-green-50 px-3 py-1.5 text-sm font-bold text-green-800">
+                          className="mt-2 rounded-lg border-2 border-green-600 bg-green-50 px-3 py-2 text-[15px] font-bold text-green-800">
                           改成「{suggestRecipientName(form.customer_name)}」
                         </button>
                       )}
                     </div>
+                  ) : nameHint ? (
+                    // 「邱先生」這種稱呼：只提醒，不擋單
+                    <div className="mt-2 rounded-xl bg-amber-50 px-3 py-2.5">
+                      <p className="text-[15px] font-semibold leading-relaxed text-amber-900">💡 {nameHint.message}</p>
+                      {nameHint.suggestion && (
+                        <button type="button" onClick={() => setForm(f => ({ ...f, customer_name: nameHint.suggestion! }))}
+                          className="mt-2 rounded-lg border-2 border-green-600 bg-white px-3 py-2 text-[15px] font-bold text-green-800">
+                          改成「{nameHint.suggestion}」
+                        </button>
+                      )}
+                    </div>
                   ) : (
-                    <p className="text-gray-500 text-[13px] mt-1.5">請填真實姓名，7-11 取貨時會核對（不要加符號或稱謂）</p>
+                    <p className="mt-2 text-[14px] leading-relaxed text-gray-600">7-11 取貨時會核對，請填真實全名</p>
                   )}
                 </div>
                 <div id="field-phone" className="scroll-mt-24">
-                  <label className="form-label">手機號碼 <span className="text-red-500">*</span></label>
-                  <input
-                    className={`form-input tabular-nums ${errors.phone ? 'border-red-400 bg-red-50' : ''}`}
-                    type="tel" inputMode="numeric" autoComplete="tel" placeholder="0912345678"
-                    value={form.phone}
-                    onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(er => ({ ...er, phone: '' })) }}
-                  />
+                  <FieldLabel htmlFor="phone" required>手機號碼</FieldLabel>
+                  <div className="relative">
+                    <input id="phone"
+                      className={`form-input pr-12 tracking-wide tabular-nums ${errors.phone ? 'border-red-400 bg-red-50' : phoneOk ? 'border-green-500' : ''}`}
+                      type="tel" inputMode="numeric" autoComplete="tel" placeholder="請輸入手機號碼" maxLength={10}
+                      value={form.phone}
+                      // 客人常打成「0912-345-678」或含空白：只留數字
+                      onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 10); setForm(f => ({ ...f, phone: v })); setErrors(er => ({ ...er, phone: '' })) }}
+                    />
+                    {phoneOk && <OkMark />}
+                  </div>
                   {errors.phone
-                    ? <p className="text-red-600 text-sm mt-1.5">⚠️ {errors.phone}</p>
-                    : <p className="text-gray-500 text-[13px] mt-1.5">之後用這支手機就能查訂單進度</p>
+                    ? <p className="mt-2 text-[15px] font-semibold text-red-600">⚠️ {errors.phone}</p>
+                    : <p className="mt-2 text-[14px] leading-relaxed text-gray-600">09 開頭共 10 碼。之後用這支手機就能查訂單進度</p>
                   }
                 </div>
                 <div>
-                  <label className="form-label">LINE ID <span className="text-gray-500 font-normal text-sm">（選填，方便客服聯絡您）</span></label>
-                  <input className="form-input" placeholder="選填"
+                  <FieldLabel htmlFor="line_id">LINE ID</FieldLabel>
+                  <input id="line_id" className="form-input" placeholder="可以不填"
                     value={form.line_id} onChange={e => setForm(f => ({ ...f, line_id: e.target.value }))} />
+                  <p className="mt-2 text-[14px] leading-relaxed text-gray-600">訂單有問題時，客服可以用 LINE 聯絡您</p>
                 </div>
                 {user && (
                   <label className="flex items-center gap-2.5 rounded-xl bg-gray-50 px-3 py-2.5 text-sm text-gray-700 cursor-pointer">
@@ -551,6 +573,23 @@ function CheckoutSteps() {
         </li>
       ))}
     </ol>
+  )
+}
+
+/** 欄位標題：右邊用「必填／選填」小標籤，比紅色星號好懂 */
+function FieldLabel({ htmlFor, required = false, children }: { htmlFor: string; required?: boolean; children: ReactNode }) {
+  return (
+    <label htmlFor={htmlFor} className="mb-2 flex items-center gap-2 text-[16px] font-bold text-gray-900">
+      {children}
+      <span className={`rounded-md px-1.5 py-0.5 text-[12px] font-bold ${required ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{required ? '必填' : '選填'}</span>
+    </label>
+  )
+}
+
+/** 填對了：輸入框右邊打勾，客人知道這格好了 */
+function OkMark() {
+  return (
+    <span className="pointer-events-none absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-green-600 text-[15px] font-bold text-white" aria-hidden>✓</span>
   )
 }
 

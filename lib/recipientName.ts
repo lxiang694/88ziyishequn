@@ -28,3 +28,20 @@ export function suggestRecipientName(raw: string | null | undefined): string | n
   if (!cleaned || cleaned === name || recipientNameError(cleaned)) return null
   return cleaned
 }
+
+const HONORIFIC = /(先生|小姐|太太|女士|媽媽|阿姨|阿伯|伯伯|老師|哥|姐|姊)$/
+
+/**
+ * 姓名看起來是稱呼（「邱先生」「王小姐」「陳媽媽」）時給一個提醒。
+ * 這種寫法賣貨便收得下，但 7-11 櫃台對不到人，取貨時容易卡住，所以下單時先提醒。
+ * 只提醒、不擋單：去掉稱呼後還有 2 個字以上（「邱志明先生」）就建議改成那個名字。
+ */
+export function honorificHint(raw: string | null | undefined): { message: string; suggestion: string | null } | null {
+  const name = (raw || '').trim()
+  if (recipientNameError(name)) return null
+  const m = name.match(HONORIFIC)
+  if (!m) return null
+  const rest = name.slice(0, -m[1].length).trim()
+  if (Array.from(rest).length >= 2) return { message: `姓名後面不用加「${m[1]}」`, suggestion: rest }
+  return { message: `「${name}」看起來是稱呼，請填完整姓名（例如：${rest || '王'}小明），取貨時比較好核對`, suggestion: null }
+}

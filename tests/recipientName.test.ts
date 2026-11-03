@@ -24,3 +24,12 @@ test('團購 7-11 取貨也要符合姓名規則；宅配不受限', () => {
   assert.match(checkoutProblem({ ...base, customer_name: '鄭景耀,', shipping_method: '711', store_id: 3 }, ['711'])!, /標點/)
   assert.equal(checkoutProblem({ ...base, customer_name: '鄭景耀,', shipping_method: 'home', home_address: '台北市大安區建國南路一段28號', delivery_time: '不指定' }, ['home']), null)
 })
+
+test('姓名寫成稱呼時提醒（不擋單）', async () => {
+  const { honorificHint } = await import('../lib/recipientName.ts')
+  assert.deepEqual(honorificHint('邱先生'), { message: '「邱先生」看起來是稱呼，請填完整姓名（例如：邱小明），取貨時比較好核對', suggestion: null })
+  assert.equal(honorificHint('王小姐')!.suggestion, null)
+  assert.deepEqual(honorificHint('邱志明先生'), { message: '姓名後面不用加「先生」', suggestion: '邱志明' })
+  for (const ok of ['王小明', '歐陽慧霞', '鄭景耀', 'Mary Lin', '']) assert.equal(honorificHint(ok), null, ok)
+  assert.equal(honorificHint('邱先生,'), null) // 有符號的先由格式錯誤處理
+})
