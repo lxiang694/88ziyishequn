@@ -93,6 +93,18 @@ export default function QuickOrderPage() {
   const textRef = useRef<HTMLTextAreaElement>(null)
   const resultRef = useRef<HTMLDivElement>(null)
 
+  // 往下核對商品時，貼上的原文會捲出畫面：捲出去後在最上面固定一條「訂單原文」，可收合
+  const pasteRef = useRef<HTMLDivElement>(null)
+  const [pasteVisible, setPasteVisible] = useState(true)
+  const [floatOpen, setFloatOpen] = useState(true)
+  useEffect(() => {
+    const el = pasteRef.current
+    if (!el) return
+    const io = new IntersectionObserver(([e]) => setPasteVisible(e.isIntersecting))
+    io.observe(el)
+    return () => io.disconnect()
+  }, [result])
+
   useEffect(() => {
     fetch('/api/admin/quick-order/catalog')
       .then(r => r.json())
@@ -326,6 +338,7 @@ export default function QuickOrderPage() {
       </div>
 
       {/* ① 貼上 */}
+      <div ref={pasteRef}>
       <Card step={1} title="貼上訂單訊息">
         <button onClick={pasteFromClipboard} disabled={parsing}
           className="btn-primary w-full min-h-[56px] text-lg disabled:opacity-50">
@@ -379,6 +392,23 @@ export default function QuickOrderPage() {
           <button onClick={() => setText(SAMPLE)} className="mt-2 font-bold text-green-700 underline">填入範例試試看</button>
         </details>
       </Card>
+      </div>
+
+      {/* 捲過貼上區後：最上面固定顯示客人的原文，往下核對商品、數量時一直看得到 */}
+      {parsed && text.trim() && !pasteVisible && (
+        <div className="fixed inset-x-0 top-0 z-30 !mt-0 border-b-2 border-amber-300 bg-amber-50/95 shadow-md backdrop-blur lg:left-60">
+          <div className="mx-auto max-w-3xl px-4 py-2">
+            <button type="button" onClick={() => setFloatOpen(o => !o)} aria-expanded={floatOpen}
+              className="flex w-full items-center justify-between gap-2 py-1 text-left">
+              <span className="text-[14px] font-bold text-amber-900">📋 客人的訂單原文</span>
+              <span className="rounded-lg bg-white px-2.5 py-1 text-[13px] font-bold text-amber-900">{floatOpen ? '收起 ▲' : '展開 ▼'}</span>
+            </button>
+            {floatOpen && (
+              <pre className="mt-1 max-h-[28vh] overflow-y-auto overscroll-contain whitespace-pre-wrap rounded-xl bg-white px-3 py-2 font-sans text-[15px] leading-relaxed text-gray-900">{text.trim()}</pre>
+            )}
+          </div>
+        </div>
+      )}
 
       {warnings.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
