@@ -14,6 +14,7 @@ import {
 } from '@/lib/groupBuy/domain'
 import type { PublicCampaign, PublicItem } from '@/lib/groupBuy/repo'
 import { Collapsible, GroupBuyText } from './GroupBuyText'
+import styles from './HongtangLayout.module.css'
 
 const money = (n: number) => `$${n.toLocaleString('zh-TW')}`
 const LINE_URL = 'https://line.me/ti/p/yJdrshwviU'
@@ -43,6 +44,7 @@ function useBasket(slug: string) {
 
 export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
   const { campaign, items, buyers } = data
+  const isHongtang = campaign.slug === 'hongtangtuangou'
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => {
     setNow(new Date())
@@ -92,7 +94,7 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
   ]
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-8 pt-14 md:pt-6">
+    <div className={`mx-auto max-w-3xl px-4 pb-8 pt-14 md:pt-6 ${isHongtang ? styles.page : ''}`}>
       {/* ── 檔期標題與倒數 ───────────────────────────── */}
       <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
         {campaign.cover_image_url && (
@@ -134,6 +136,13 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
         </div>
       </section>
 
+      {isHongtang && (
+        <nav className={styles.navigation} aria-label="團購內容導覽">
+          <a href="#group-buy-products">選購口味 <span aria-hidden>↓</span></a>
+          {campaign.description && <a href="#group-buy-story">認識紅糖 <span aria-hidden>↓</span></a>}
+        </nav>
+      )}
+
       {/* ── 怎麼跟團 ─────────────────────────────── */}
       <section className="mt-4 rounded-3xl bg-white px-4 py-4 shadow-sm" aria-label="怎麼跟團">
         <h2 className="text-center text-[15px] font-bold text-gray-500">跟團只要 3 步</h2>
@@ -149,7 +158,7 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
       </section>
 
       {/* ── 商品 ───────────────────────────────────── */}
-      <section className="mt-5 space-y-5" aria-label="團購商品">
+      <section id="group-buy-products" className="mt-5 space-y-5" aria-label="團購商品">
         {items.map(item => {
           const soldOut = item.remaining === 0
           const q = qty[item.id] || 0
@@ -252,11 +261,15 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
       </section>
 
       {campaign.description && (
-        <section className="mt-5 rounded-3xl bg-white p-5 shadow-sm">
+        <section id="group-buy-story" className={`mt-5 rounded-3xl bg-white p-5 shadow-sm ${isHongtang ? styles.story : ''}`}>
           <h2 className="mb-4 text-center text-[20px] font-bold text-gray-900">團購說明</h2>
-          <Collapsible collapsedHeight={520} moreLabel="展開完整說明 ▼">
+          {isHongtang ? (
             <GroupBuyText text={campaign.description} />
-          </Collapsible>
+          ) : (
+            <Collapsible collapsedHeight={520} moreLabel="展開完整說明 ▼">
+              <GroupBuyText text={campaign.description} />
+            </Collapsible>
+          )}
         </section>
       )}
 
