@@ -1,0 +1,146 @@
+.page {
+  --sugar-ink: #623e2b;
+  --sugar-line: #e8daca;
+}
+
+.page > section:first-child {
+  border: 1px solid var(--sugar-line);
+  background: #fffcf7;
+}
+
+.page > section:first-child > div:last-child {
+  padding: 24px;
+}
+
+.page h1 {
+  color: var(--sugar-ink);
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+.navigation {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.navigation a {
+  display: flex;
+  flex: 1;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--sugar-line);
+  border-radius: 16px;
+  background: #fffcf7;
+  padding: 12px 20px;
+  color: var(--sugar-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.navigation a:hover {
+  background: #f4e9db;
+}
+
+.navigation a:focus-visible {
+  outline: 3px solid var(--sugar-ink);
+  outline-offset: 3px;
+}
+
+.page > section[id] {
+  scroll-margin-top: 110px;
+}
+
+.page section[aria-label="團購商品"] article {
+  border: 1px solid var(--sugar-line);
+}
+
+.page section[aria-label="團購商品"] article > div:first-child:has(img) {
+  aspect-ratio: 4 / 3;
+  background: #fffcf7;
+}
+
+.page section[aria-label="團購商品"] h2 {
+  color: var(--sugar-ink);
+}
+
+.story {
+  margin-top: 32px;
+  border: 1px solid var(--sugar-line);
+  padding: 28px 22px;
+  overflow-wrap: anywhere;
+}
+
+.story > h2 {
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--sugar-line);
+  padding-bottom: 20px;
+  color: var(--sugar-ink);
+  font-size: 24px;
+  letter-spacing: 0.12em;
+}
+
+.story h3 {
+  margin-top: 40px;
+  color: var(--sugar-ink);
+  font-size: 22px;
+  line-height: 1.6;
+}
+
+.story h3 > span[aria-hidden] {
+  background: #b78350;
+}
+
+.story h4 {
+  margin-top: 32px;
+  border-left: 3px solid #bd9162;
+  padding: 8px 14px;
+  background: #faf4eb;
+  color: var(--sugar-ink);
+  font-size: 19px;
+  line-height: 1.7;
+}
+
+.story p {
+  margin-top: 16px;
+  color: #514b45;
+  font-size: 17px;
+  line-height: 2;
+}
+
+.story strong {
+  color: var(--sugar-ink);
+}
+
+.story figure {
+  margin-top: 28px;
+  margin-bottom: 32px;
+}
+
+.story figure img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+}
+
+@media (min-width: 640px) {
+  .page > section:first-child > div:last-child {
+    padding: 32px;
+  }
+
+  .page section[aria-label="團購商品"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .page section[aria-label="團購商品"] > article {
+    margin: 0;
+  }
+
+  .story {
+    padding: 40px 48px;
+  }
+}
