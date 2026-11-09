@@ -1,5 +1,6 @@
 import React from 'react'
-import { parseArticle, type Block } from './articleBlocks'
+import { parseArticle } from './articleBlocks'
+import { polishProductBlocks, type ProductBlock } from './productText'
 
 /**
  * 商品描述欄位的排版（適合誰 / 使用方法 / 成分說明 / 注意事項 / 怎麼搭…）。
@@ -48,7 +49,7 @@ function labeled(text: string, k: string): React.ReactNode {
   return <><strong className="font-bold">{m[1]}</strong><span className="opacity-50">：</span>{inline(m[2], k)}</>
 }
 
-function block(b: Block, key: number): React.ReactNode {
+function block(b: ProductBlock, key: number): React.ReactNode {
   const k = `pb${key}`
   switch (b.type) {
     // 商品欄位裡的「標題」是小節名（例如「每日建議量」），
@@ -56,11 +57,17 @@ function block(b: Block, key: number): React.ReactNode {
     case 'h2':
     case 'h3':
     case 'h4':
-      return <p key={k} className="mt-4 first:mt-0 text-[1.05em] font-bold">{inline(b.text, k)}</p>
+      return <p key={k} className="mt-6 first:mt-0 text-[1.05em] font-bold">{inline(b.text, k)}</p>
 
-    // 短的「材質：艾絨」這種規格行，標籤一樣加粗；長段落照原樣
+    // 開頭的一句話（「這款牙刷我自己用了快一年，今天終於上架了！」）：放大、底色框起來，先抓住目光。
+    // 底色用半透明黑，灰色卡片、琥珀色卡片都協調
+    case 'lead':
+      return <p key={k} className="mt-4 first:mt-0 rounded-xl bg-black/[0.04] px-4 py-3 text-[1.08em] font-bold leading-relaxed">{inline(b.text, k)}</p>
+
+    // 短的「材質：艾絨」這種規格行，標籤一樣加粗；長段落照原樣。
+    // 段落之間留寬一點（mt-4），一小段一小段讀起來不擠
     case 'p':
-      return <p key={k} className="mt-3 first:mt-0">{b.text.length <= 40 ? labeled(b.text, k) : inline(b.text, k)}</p>
+      return <p key={k} className="mt-4 first:mt-0">{b.text.length <= 40 ? labeled(b.text, k) : inline(b.text, k)}</p>
 
     // 條列：自己畫圓點（顏色跟著外層文字色，琥珀色卡片裡也協調），
     // 項目之間留距離，長的一項折行時對齊文字而不是對齊圓點。
@@ -117,7 +124,8 @@ function block(b: Block, key: number): React.ReactNode {
  * 但空白字串或只有空行的欄位也該當成沒有內容。
  */
 export function renderProductText(content: string | null | undefined): React.ReactNode {
-  const blocks = parseArticle(content)
+  // 貼上的口語長文自動整理：導言、問句小標、符號條列、長段切小段（規則見 productText.ts）
+  const blocks = polishProductBlocks(parseArticle(content))
   if (blocks.length === 0) return null
   return <>{blocks.map(block)}</>
 }
