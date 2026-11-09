@@ -139,7 +139,12 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
       const method = productId ? 'PUT' : 'POST'
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await res.json()
-      if (d.success) { toast.success(productId ? '商品已更新' : '商品已新增'); onSuccess() }
+      if (d.success) {
+        toast.success(productId ? '商品已更新' : '商品已新增')
+        // 有訂單的規格刪不掉、改成下架了：講清楚，不然會以為沒刪成功
+        if (d.notice) toast(d.notice, { icon: 'ℹ️', duration: 8000 })
+        onSuccess()
+      }
       else toast.error(d.error || '儲存失敗')
     } catch { toast.error('儲存失敗') }
     finally { setSaving(false) }
@@ -372,9 +377,13 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
         </div>
         <div className="space-y-4">
           {variants.map((v, i) => (
-            <div key={i} className="border-2 border-gray-100 rounded-xl p-4 space-y-3">
+            <div key={i} className={`border-2 rounded-xl p-4 space-y-3 ${v.is_active ? 'border-gray-100' : 'border-dashed border-gray-300 bg-gray-50'}`}>
               <div className="flex justify-between items-center">
-                <span className="font-semibold text-gray-700 text-sm">規格 {i + 1}</span>
+                <span className="font-semibold text-gray-700 text-sm">
+                  規格 {i + 1}
+                  {/* 有訂單的規格刪不掉、會改成下架；標清楚，才不會以為沒刪成功 */}
+                  {!v.is_active && <span className="ml-2 rounded bg-gray-200 px-1.5 py-0.5 text-[12px] font-bold text-gray-600">已下架・前台不顯示</span>}
+                </span>
                 {variants.length > 1 && <button onClick={() => removeVariant(i)} className="text-red-500 text-sm font-semibold hover:underline">刪除</button>}
               </div>
               <div className="grid grid-cols-2 gap-3">

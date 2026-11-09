@@ -6,6 +6,7 @@ import { HOME_SECTION_KEYS } from '@/lib/homeSections'
 import { normalizeCategoryIds } from '@/lib/shopCategories'
 import { saveShopCategories, shopCategoriesByProduct } from '@/lib/shopCategoryRepo'
 import { refreshStorefront } from '@/lib/storefrontCache'
+import { saveVariants } from '@/lib/productVariants'
 
 function requireProductPerm(req: NextRequest) {
   const result = requireAdmin(req)
@@ -90,32 +91,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       await saveShopCategories(productId, normalizeCategoryIds(shop_category_ids))
     }
 
-    // Update variants
+    // 規格：沒賣過的刪除，被訂單連著的改下架（原因見 lib/productVariants.ts）
+    let retired: string[] = []
     if (variants !== undefined) {
-      const { data: existing } = await supabaseAdmin
-        .from('product_variants').select('id').eq('product_id', productId)
-      const existingIds = (existing || []).map((v: any) => v.id)
-      const keepIds = variants.filter((v: any) => v.id).map((v: any) => v.id)
-      const toDelete = existingIds.filter((id: number) => !keepIds.includes(id))
-      if (toDelete.length > 0) {
-        await supabaseAdmin.from('product_variants').delete().in('id', toDelete)
-      }
-      for (const [i, v] of variants.entries()) {
-        const vData = {
-          product_id: productId,
-          variant_name: v.variant_name,
-          sale_price: parseFloat(v.sale_price) || 0,
-          original_price: v.original_price ? parseFloat(v.original_price) : null,
-          stock_qty: parseInt(v.stock_qty) || 0,
-          sku_code: v.sku_code || null,
-          sort_order: i,
-          is_active: v.is_active !== false,
-        }
-        if (v.id) {
-          await supabaseAdmin.from('product_variants').update(vData).eq('id', v.id)
-        } else {
-          await supabaseAdmin.from('product_variants').insert(vData)
-        }
+      const saved = await saveVariants(supabaseAdmin, productId, variants)
+      retired = saved.retired
+      if (saved.error) {
+        refreshStorefront()
+        return NextResponse.json({ success: false, error: saved.error }, { status: 500 })
       }
     }
 
@@ -134,7 +117,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     refreshStorefront()
-    return NextResponse.json({ success: true, message: '商品更新成功' })
+    return NextResponse.json({
+      success: true,
+      message: '商品更新成功',
+      retired,
+      ...(retired.length ? { notice: `「${retired.join('、')}」已經有人訂過，不能刪除（舊訂單要對得到），已改成下架：前台不會再顯示。` } : {}),
+    })
   } catch (err) {
     console.error('Update product error:', err)
     return NextResponse.json({ success: false, error: '更新商品失敗' }, { status: 500 })
