@@ -56,7 +56,8 @@ const REVEAL_BATCH = 12
  * 樣式的，拼出來的 class 不會被產生，畫面上會完全看不出錯，只是沒黏住。
  */
 const BELOW_SEARCH = 'top-[137px] sm:top-[153px]'
-const RAIL_HEIGHT = 'h-[calc(100vh-137px)] sm:h-[calc(100vh-153px)]'
+// 分類欄高度寫在 globals.css 的 .shop-rail：除了上面的表頭＋搜尋列，手機還要扣掉
+// 底部導覽列（60px＋iPhone 安全區）。以前沒扣，最後幾個分類一直被底部導覽列蓋住、也捲不上來。
 
 export default function ShopBrowser({
   categories, activeSlug, initialProducts, heading, subheading, groupBuy,
@@ -70,6 +71,17 @@ export default function ShopBrowser({
   const [visibleCount, setVisibleCount] = useState(REVEAL_BATCH * 2)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const railRef = useRef<HTMLElement>(null)
+  // 分類欄下面還有沒有看不到的分類：有的話底部顯示「更多分類 ▼」
+  const [railMore, setRailMore] = useState(false)
+  useEffect(() => {
+    const el = railRef.current
+    if (!el) return
+    const check = () => setRailMore(el.scrollTop + el.clientHeight < el.scrollHeight - 8)
+    check()
+    el.addEventListener('scroll', check, { passive: true })
+    window.addEventListener('resize', check)
+    return () => { el.removeEventListener('scroll', check); window.removeEventListener('resize', check) }
+  }, [categories.length])
 
   // 伺服器換頁送來新的商品時，狀態要跟著換掉
   useEffect(() => {
@@ -181,7 +193,7 @@ export default function ShopBrowser({
       <div className="mx-auto flex max-w-5xl">
         {/* ── 左側分類欄 ─────────────────────────────────── */}
         <nav ref={railRef} aria-label="商品分類"
-          className={`sticky ${BELOW_SEARCH} ${RAIL_HEIGHT} w-[88px] flex-shrink-0 overflow-y-auto bg-sage sm:w-28`}>
+          className={`shop-rail sticky ${BELOW_SEARCH} w-[88px] flex-shrink-0 overflow-y-auto overscroll-contain bg-sage sm:w-28`}>
           <Link href="/shop" data-active={activeSlug === ''} className={railItem(activeSlug === '')}>
             全部商品
           </Link>
@@ -195,6 +207,13 @@ export default function ShopBrowser({
               {cat.name}
             </Link>
           ))}
+          {/* 還有分類在下面：淡出＋提示，點一下往下捲 */}
+          {railMore && (
+            <button type="button" onClick={() => railRef.current?.scrollBy({ top: 240, behavior: 'smooth' })}
+              className="sticky bottom-0 block w-full bg-gradient-to-t from-sage via-sage to-sage/0 pb-2 pt-7 text-center text-[13px] font-bold text-green-800">
+              更多分類 ▼
+            </button>
+          )}
         </nav>
 
         {/* ── 右側商品列 ─────────────────────────────────── */}

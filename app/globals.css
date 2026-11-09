@@ -239,3 +239,25 @@
   background: #fff;
   pointer-events: none;
 }
+
+/*
+  商品分類頁左側分類欄的高度：畫面高度 − 表頭與搜尋列 − 手機底部導覽列。
+  手機底部導覽列 60px（md 以上不顯示）＋ iPhone 安全區；dvh 是「目前看得到的高度」，
+  Safari 網址列伸縮時跟著變，不支援的舊瀏覽器退回 vh。
+*/
+.shop-rail {
+  height: calc(100vh - 137px - 60px - env(safe-area-inset-bottom));
+  height: calc(100dvh - 137px - 60px - env(safe-area-inset-bottom));
+}
+@media (min-width: 640px) {
+  .shop-rail {
+    height: calc(100vh - 153px - 60px - env(safe-area-inset-bottom));
+    height: calc(100dvh - 153px - 60px - env(safe-area-inset-bottom));
+  }
+}
+@media (min-width: 768px) {
+  .shop-rail {
+    height: calc(100vh - 153px);
+    height: calc(100dvh - 153px);
+  }
+}
