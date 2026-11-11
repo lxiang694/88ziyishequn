@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { supabaseStorefront as supabaseAdmin } from '@/lib/supabase'
 import ProductDetailClient from '@/components/front/ProductDetailClient'
-import { fetchPublishedProduct, fetchRelatedArticles } from '@/lib/productQuery'
+import { fetchPublishedProduct, fetchRelatedArticles, fetchRecommendedProducts } from '@/lib/productQuery'
 import { lowestActivePrice, isInStock } from '@/lib/productPricing'
 import { SITE_URL } from '@/lib/siteUrl'
 import { jsonLdHtml } from '@/lib/jsonLd'
@@ -107,13 +107,14 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
   const slug = decodeURIComponent(params.slug)
   const product = await fetchPublishedProduct(slug)
   // 相關文章：商品頁連到健康知識，補上原本缺的反方向內部連結
-  const [relatedArticles, reviewSummary, firstReviews] = product
+  const [relatedArticles, recommended, reviewSummary, firstReviews] = product
     ? await Promise.all([
       fetchRelatedArticles(product),
+      fetchRecommendedProducts(product),
       fetchReviewSummary(supabaseAdmin, product.id),
       fetchReviews(supabaseAdmin, product.id, { limit: 5 }),
     ])
-    : [[], null, null]
+    : [[], [], null, null]
   const initialReviews = reviewSummary && firstReviews ? { ...reviewSummary, ...firstReviews } : undefined
   const summary = reviewSummary?.summary
 
@@ -167,7 +168,7 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
         <script type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }} />
       )}
-      <ProductDetailClient slug={slug} initialProduct={product} relatedArticles={relatedArticles} initialReviews={initialReviews} />
+      <ProductDetailClient slug={slug} initialProduct={product} relatedArticles={relatedArticles} recommended={recommended} initialReviews={initialReviews} />
     </>
   )
 }

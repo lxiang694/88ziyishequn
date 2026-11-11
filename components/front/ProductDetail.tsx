@@ -11,9 +11,11 @@ import ProductGallery from './ProductGallery'
 import VariantPicker from './VariantPicker'
 import toast from 'react-hot-toast'
 import SocialShareButtons from './SocialShareButtons'
+import ProductRecommendations from './ProductRecommendations'
 import { PRESALE } from '@/lib/presale/camelliaOil'
 import { SITE_URL } from '@/lib/siteUrl'
 import type { ScoredArticle } from '@/lib/productArticleMatcher'
+import type { RecItem } from './ProductRecommendations'
 import { EMPTY_SUMMARY } from '@/lib/reviews'
 import ProductReviews, { type InitialReviews } from './ProductReviews'
 import SectionTabs, { type TabItem } from './SectionTabs'
@@ -60,10 +62,12 @@ interface Product {
   sales_count?: number
 }
 
-export default function ProductDetail({ product, relatedArticles = [], initialReviews = NO_REVIEWS }: {
+export default function ProductDetail({ product, relatedArticles = [], recommended = [], initialReviews = NO_REVIEWS }: {
   product: Product
   /** 由伺服器算好傳進來；沒有夠相關的文章時為空陣列 */
   relatedArticles?: ScoredArticle[]
+  /** 「你可能也會喜歡」的 6 件商品，由伺服器算好 */
+  recommended?: RecItem[]
   /** 評價摘要與第一頁，由伺服器查好；沒有時當成還沒有評價 */
   initialReviews?: InitialReviews
 }) {
@@ -350,47 +354,45 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
         </div>
       </div>
 
-      {/*
-        ─── 相關健康知識 ───
-        站上原本只有「文章 → 商品」的推薦，沒有反方向。像紫蘇油這種
-        主題，兩篇文章加一個商品三個頁面互不連結，客人看完商品不知道
-        有文章可讀，搜尋引擎也看不出它們是同一個主題。
-        沒有夠相關的文章時整區不顯示 —— 在紫蘇油頁推一篇講膝蓋的文章
-        比沒有推薦更傷信任。
-      */}
-      {relatedArticles.length > 0 && (
-        <section className="mt-8" aria-labelledby="related-articles-heading">
-          <h2 id="related-articles-heading" className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
-            <span className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-lg">📚</span>
-            延伸閱讀
-          </h2>
-          <p className="text-gray-600 text-sm mb-4">想先了解再決定？這幾篇跟這款商品有關</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {relatedArticles.map(({ article, reason }) => (
-              <Link key={article.id} href={`/health-articles/${article.slug}`}
-                className="group block rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                {article.cover_image_url && (
-                  <div className="relative aspect-[16/9] bg-gray-100">
-                    <Image src={article.cover_image_url} alt="" fill className="object-cover"
-                      sizes="(max-width: 640px) 100vw, 220px" />
-                  </div>
-                )}
-                <div className="p-3.5">
-                  <span className="inline-block text-[12px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full mb-1.5">
-                    {reason}
-                  </span>
-                  <p className="font-bold text-gray-800 text-sm leading-snug line-clamp-3 group-hover:text-green-700 transition-colors">
-                    {article.title}
-                  </p>
-                  {article.reading_minutes && (
-                    <p className="text-gray-500 text-[13px] mt-1.5">閱讀約 {article.reading_minutes} 分鐘</p>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <div className="mx-auto max-w-3xl">
+        {/* ─── 你可能也會喜歡 ─── 伺服器算好的 6 件：常一起買 > 同類 > 熱銷 */}
+        <ProductRecommendations items={recommended} />
+
+        {/*
+          ─── 延伸閱讀（健康知識）───
+          商品頁連到文章，補上「商品 → 文章」這個方向的內部連結。
+          以前是三張大圖卡，手機上疊起來將近一整屏半，把頁面拉得很長；
+          現在改成精簡清單：小縮圖＋標題＋閱讀時間，一篇一列約 80px。
+          沒有夠相關的文章時整區不顯示 —— 推不相關的文章比不推更傷信任。
+        */}
+        {relatedArticles.length > 0 && (
+          <section className="mt-8 rounded-2xl border border-gray-100 bg-white px-4 pb-1 pt-4 shadow-sm" aria-labelledby="related-articles-heading">
+            <h2 id="related-articles-heading" className="text-[17px] font-bold text-gray-900">📚 延伸閱讀</h2>
+            <ul className="mt-1 divide-y divide-gray-100">
+              {relatedArticles.map(({ article, reason }) => (
+                <li key={article.id}>
+                  <Link href={`/health-articles/${article.slug}`} className="group flex items-center gap-3 py-3">
+                    <span className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-green-50">
+                      {article.cover_image_url
+                        ? <Image src={article.cover_image_url} alt="" fill className="object-cover" sizes="56px" />
+                        : <span className="flex h-full items-center justify-center text-xl">📖</span>}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="line-clamp-2 text-[15px] font-bold leading-snug text-gray-800 group-hover:text-green-700">
+                        {article.title}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[13px] text-gray-500">
+                        {reason}{article.reading_minutes ? `・閱讀約 ${article.reading_minutes} 分鐘` : ''}
+                      </span>
+                    </span>
+                    <span className="flex-shrink-0 text-xl text-gray-300 group-hover:text-green-700" aria-hidden>›</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
 
       {/* Social share — LINE / Facebook / Copy */}
       <SocialShareButtons

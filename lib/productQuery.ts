@@ -1,7 +1,9 @@
 // 只給前台頁面用，所以走會快取 60 秒的用戶端（見 lib/supabase.ts）
 import { supabaseStorefront as supabaseAdmin } from '@/lib/supabase'
-import { getSalesCountForProduct } from '@/lib/salesUtils'
 import { rankProductArticles } from '@/lib/productArticleMatcher'
+import { buildSalesMap, getSalesCountForProduct } from '@/lib/salesUtils'
+import { shopCategoriesByProduct } from '@/lib/shopCategoryRepo'
+import { rankRecommendations, countCoBought, REC_COUNT } from '@/lib/productRecommend'
 
 /**
  * 讀取一個已上架商品的完整資料（含規格、相簿、分類、銷量）。
@@ -63,4 +65,69 @@ export async function fetchRelatedArticles(product: any, topN = 3) {
 
   if (error || !data) return []
   return rankProductArticles(data as any, product, topN)
+}
+
+/**
+ * 商品頁底部「你可能也會喜歡」：6 件客人可能也想買的商品。
+ *
+ * 排序規則在 lib/productRecommend.ts（純函式，有測試）；這裡只負責
+ * 把訊號查出來。任何一步查不到都只是少一個訊號、不會整區消失 ——
+ * 最差也還有「同類＋熱銷」可以推。
+ */
+export async function fetchRecommendedProducts(product: any, n = REC_COUNT) {
+  if (!product?.id) return []
+  try {
+    const [candRes, coBought, salesMap] = await Promise.all([
+      supabaseAdmin
+        .from('products')
+        .select(`id, product_name, slug, cover_image_url,
+          product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, sort_order, is_active),
+          product_category_relations(health_categories(id))`)
+        .eq('is_published', true)
+        .limit(300),
+      fetchCoBought(product.id),
+      buildSalesMap(supabaseAdmin),
+    ])
+    if (candRes.error || !candRes.data) return []
+    const candidates = candRes.data as any[]
+
+    // 同賣場分類
+    const shopMap = await shopCategoriesByProduct([product.id, ...candidates.map(p => p.id)], supabaseAdmin)
+    const myShop = new Set((shopMap.get(product.id) || []).map(c => c.id))
+    const sameShop = new Set(candidates.filter(p => (shopMap.get(p.id) || []).some(c => myShop.has(c.id))).map(p => p.id))
+
+    // 同健康訴求
+    const healthIds = (p: any) => (p.product_category_relations || [])
+      .map((r: any) => r.health_categories?.id).filter((x: any) => x != null)
+    const myHealth = new Set(healthIds(product))
+    const sameHealth = new Set(candidates.filter(p => healthIds(p).some((id: number) => myHealth.has(id))).map(p => p.id))
+
+    return rankRecommendations(product.id, candidates, { coBought, sameShop, sameHealth, sales: salesMap }, n)
+      .map(({ product: p, reason }) => {
+        const { product_category_relations: _drop, ...rest } = p
+        if (rest.product_variants) rest.product_variants.sort((a: any, b: any) => a.sort_order - b.sort_order)
+        return { product: rest, reason }
+      })
+  } catch {
+    return []
+  }
+}
+
+/** 最近 300 張買過這件商品的訂單裡，其他商品各出現幾次 */
+async function fetchCoBought(productId: number): Promise<Map<number, number>> {
+  const { data: mine, error } = await supabaseAdmin
+    .from('order_items')
+    .select('order_id')
+    .eq('product_id', productId)
+    .order('id', { ascending: false })
+    .limit(300)
+  if (error || !mine?.length) return new Map()
+  const orderIds = Array.from(new Set((mine as any[]).map(r => r.order_id)))
+  const { data: rows, error: e2 } = await supabaseAdmin
+    .from('order_items')
+    .select('order_id, product_id')
+    .in('order_id', orderIds)
+    .limit(3000)
+  if (e2 || !rows) return new Map()
+  return countCoBought(productId, rows as any[])
 }

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import ProductDetail from './ProductDetail'
 import type { ScoredArticle } from '@/lib/productArticleMatcher'
+import type { RecItem } from './ProductRecommendations'
 import type { InitialReviews } from './ProductReviews'
 
 /**
@@ -10,11 +11,13 @@ import type { InitialReviews } from './ProductReviews'
  * 裡（搜尋引擎、LINE/FB 預覽、關閉 JS 的情況都讀得到）。
  * 沒有傳時退回原本的前端抓取，不影響其他呼叫端。
  */
-export default function ProductDetailClient({ slug, initialProduct = null, relatedArticles = [], initialReviews }: {
+export default function ProductDetailClient({ slug, initialProduct = null, relatedArticles = [], recommended = [], initialReviews }: {
   slug: string
   initialProduct?: any | null
   /** 伺服器算好的相關文章；只有伺服器渲染時會有 */
   relatedArticles?: ScoredArticle[]
+  /** 伺服器算好的「你可能也會喜歡」 */
+  recommended?: RecItem[]
   /** 伺服器查好的評價摘要與第一頁 */
   initialReviews?: InitialReviews
 }) {
@@ -54,5 +57,5 @@ export default function ProductDetailClient({ slug, initialProduct = null, relat
     </div>
   )
 
-  return <ProductDetail product={product} relatedArticles={relatedArticles} initialReviews={initialReviews} />
+  return <ProductDetail product={product} relatedArticles={relatedArticles} recommended={recommended} initialReviews={initialReviews} />
 }
