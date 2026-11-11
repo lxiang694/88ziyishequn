@@ -29,9 +29,26 @@ export interface RecProduct {
   product_variants: any[]
 }
 
-export type RecItem = { product: RecProduct; reason: RecReason }
+export type RecItem = {
+  product: RecProduct
+  reason?: RecReason
+  /** 圖片左上角的小標籤（例如「✨ 新品」）；reason 為 together 時預設「常一起買」 */
+  badge?: string | null
+  /** 品名上方一行綠色小字（例如文章頁的「🎯 含 Omega-3」） */
+  note?: string | null
+}
 
-export default function ProductRecommendations({ items }: { items: RecItem[] }) {
+/**
+ * 商品頁與健康知識文章頁共用。
+ * 手機一律兩欄：一屏至少看得到兩件，每件都能直接加入購物車。
+ */
+export default function ProductRecommendations({ items, heading = '你可能也會喜歡', subtitle, desktopCols = 3, className = 'mt-8' }: {
+  items: RecItem[]
+  heading?: string
+  subtitle?: string
+  desktopCols?: 3 | 4
+  className?: string
+}) {
   const { addItem } = useCart()
   const [picker, setPicker] = useState<RecProduct | null>(null)
   if (items.length === 0) return null
@@ -49,15 +66,15 @@ export default function ProductRecommendations({ items }: { items: RecItem[] }) 
   }
 
   const anyTogether = items.some(i => i.reason === 'together')
+  const sub = subtitle ?? (anyTogether ? '買這件的客人，也常一起帶這些' : '同類好物，可以一起下單')
 
   return (
-    <section className="mt-8" aria-labelledby="rec-heading">
-      <h2 id="rec-heading" className="text-[19px] font-bold text-gray-900">你可能也會喜歡</h2>
-      <p className="mb-3 mt-0.5 text-sm text-gray-600">
-        {anyTogether ? '買這件的客人，也常一起帶這些' : '同類好物，可以一起下單'}
-      </p>
-      <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
-        {items.map(({ product: p, reason }) => {
+    <section className={className} aria-labelledby="rec-heading">
+      <h2 id="rec-heading" className="text-[19px] font-bold text-gray-900">{heading}</h2>
+      {sub && <p className="mb-3 mt-0.5 text-sm text-gray-600">{sub}</p>}
+      <ul className={`grid grid-cols-2 gap-2.5 sm:gap-3 ${desktopCols === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
+        {items.map(({ product: p, reason, badge, note }) => {
+          const tag = badge ?? (reason === 'together' ? '常一起買' : null)
           const price = lowestActivePrice(p)
           const buyable = buyableVariants(p)
           const multi = buyable.length > 1
@@ -72,13 +89,14 @@ export default function ProductRecommendations({ items }: { items: RecItem[] }) 
                 ) : (
                   <span className="flex h-full items-center justify-center text-4xl text-gray-200">💊</span>
                 )}
-                {reason === 'together' && (
+                {tag && (
                   <span className="absolute left-1.5 top-1.5 rounded-md bg-amber-500 px-1.5 py-0.5 text-[12px] font-bold text-white">
-                    常一起買
+                    {tag}
                   </span>
                 )}
               </Link>
               <div className="flex flex-1 flex-col p-2.5">
+                {note && <p className="mb-0.5 truncate text-[12px] font-bold text-green-700">{note}</p>}
                 <Link href={`/products/${p.slug}`}
                   className="line-clamp-2 min-h-[2.75em] text-[15px] font-bold leading-snug text-gray-800 hover:text-green-700">
                   {p.product_name}

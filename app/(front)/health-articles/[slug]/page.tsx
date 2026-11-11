@@ -8,8 +8,8 @@ import { renderArticle } from '@/lib/articleRenderer'
 import { DIRECTION_INFO } from '@/lib/quizData'
 import { rankArticleProducts } from '@/lib/articleProductMatcher'
 import { buildSalesMap } from '@/lib/salesUtils'
-import { formatPrice } from '@/lib/utils'
 import SocialShareButtons from '@/components/front/SocialShareButtons'
+import ProductRecommendations from '@/components/front/ProductRecommendations'
 import LoginPrompt from '@/components/front/LoginPrompt'
 import ArticleAudioPlayer from '@/components/front/ArticleAudioPlayer'
 import { SITE_URL } from '@/lib/siteUrl'
@@ -43,7 +43,7 @@ const getRelatedProducts = cache(async (categorySlug: string | null) => {
       .from('products')
       .select(`
         id, product_name, slug, short_intro, ingredients, cover_image_url, created_at,
-        product_variants(id, sale_price, original_price, stock_qty, is_active)
+        product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, sort_order, is_active)
       `)
       .eq('is_published', true)
       .in('id', productIds),
@@ -51,7 +51,10 @@ const getRelatedProducts = cache(async (categorySlug: string | null) => {
   ])
 
   // Smart scoring: keyword match + sales + recency + stock availability
-  return rankArticleProducts(products || [], salesMap, categorySlug, 3)
+  const ranked = rankArticleProducts(products || [], salesMap, categorySlug, 4)
+  // 規格依後台排序，選規格面板的順序才對
+  for (const r of ranked) r.product.product_variants?.sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  return ranked
 })
 
 export async function generateMetadata(
@@ -206,71 +209,23 @@ export default async function ArticleDetailPage({ params }: { params: { slug: st
           next={`/health-articles/${article.slug}`}
         />
 
-        {/* Related products — smart matching */}
+        {/* 相關商品：依文章主題的關鍵成分挑選。手機兩欄小卡，一屏看得到兩件，可直接加入購物車 */}
         {relatedProducts.length > 0 && (
-          <section className="mt-12 mb-8">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl p-6 sm:p-8">
-              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {dirInfo ? `為您智能推薦的${dirInfo.name}保健品` : '為您智能推薦'}
-                </h2>
-                <span className="text-[13px] text-gray-500 whitespace-nowrap">依成分匹配 · 自動更新</span>
-              </div>
-              <p className="text-gray-600 text-sm mb-6">根據文章主題自動匹配關鍵成分，新上架商品會即時加入推薦池</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {relatedProducts.map(({ product, reason, isNew }) => {
-                  const variants = (product.product_variants || []).filter((v: any) => v.is_active)
-                  const minPrice = variants.length ? Math.min(...variants.map((v: any) => v.sale_price)) : null
-                  return (
-                    <Link
-                      key={product.id}
-                      href={`/products/${product.slug}`}
-                      className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-md transition-shadow flex flex-col"
-                    >
-                      <div className="aspect-square bg-gray-50 relative overflow-hidden">
-                        {product.cover_image_url ? (
-                          <Image
-                            src={product.cover_image_url}
-                            alt={product.product_name}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 640px) 100vw, 33vw"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-5xl">💊</div>
-                        )}
-                        {isNew && (
-                          <span className="absolute top-2 left-2 bg-amber-500 text-white text-[13px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                            ✨ 新品
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3 flex flex-col flex-1">
-                        {/* Match reason */}
-                        <div className="mb-1.5">
-                          <span className="inline-flex items-center gap-1 text-[13px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full leading-tight">
-                            🎯 {reason}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-1">
-                          {product.product_name}
-                        </h3>
-                        {minPrice !== null && (
-                          <p className="text-green-700 font-bold text-base mt-auto">{formatPrice(minPrice)}</p>
-                        )}
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-              <Link
-                href="/"
-                className="mt-5 text-green-700 hover:text-green-800 font-bold text-sm flex items-center justify-center gap-1"
-              >
-                查看更多商品 →
-              </Link>
-            </div>
-          </section>
+          <div className="mb-8 mt-10 rounded-3xl bg-gradient-to-br from-green-50 to-emerald-50 px-3 pb-4 pt-5 sm:p-6">
+            <ProductRecommendations
+              className=""
+              heading={dirInfo ? `${dirInfo.name}・推薦商品` : '推薦商品'}
+              subtitle="依這篇文章提到的關鍵成分挑選"
+              desktopCols={relatedProducts.length >= 4 ? 4 : 3}
+              items={relatedProducts.map(({ product, reason, isNew }) => ({
+                // 圖片上已有「新品」標籤，綠色小字就不再重複
+                product, note: `🎯 ${reason.replace(/^新品上架\s*·\s*/, '')}`, badge: isNew ? '✨ 新品' : null,
+              }))}
+            />
+            <Link href="/shop" className="mt-4 flex items-center justify-center gap-1 text-sm font-bold text-green-700 hover:text-green-800">
+              查看更多商品 →
+            </Link>
+          </div>
         )}
 
         {/* Disclaimer */}
