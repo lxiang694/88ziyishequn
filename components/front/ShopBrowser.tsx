@@ -42,6 +42,8 @@ interface Props {
 }
 
 const REVEAL_BATCH = 12
+/** 上一次顯示的分類（跨頁面保留），用來判斷是「換分類」還是「按上一頁回來」 */
+let lastShopSlug: string | null = null
 
 /**
  * 左側分類欄與右側商品標題共用搜尋列下緣的位置。
@@ -97,9 +99,21 @@ export default function ShopBrowser({
 
   // 把目前分類捲進可視範圍 —— 分類多的時候，從頁尾點進來的那一個
   // 可能在欄位下方看不到，使用者會以為自己沒選到
+  //
+  // 只捲分類欄自己，不用 scrollIntoView —— 它會連整個頁面一起捲，
+  // 換分類後頁面停在半中間，第一件商品被固定的標題列蓋住一截。
   useEffect(() => {
-    railRef.current?.querySelector('[data-active="true"]')
-      ?.scrollIntoView({ block: 'nearest' })
+    const rail = railRef.current
+    const item = rail?.querySelector<HTMLElement>('[data-active="true"]')
+    if (rail && item) {
+      const top = item.offsetTop, bottom = top + item.offsetHeight
+      if (top < rail.scrollTop) rail.scrollTop = top
+      else if (bottom > rail.scrollTop + rail.clientHeight) rail.scrollTop = bottom - rail.clientHeight
+    }
+    // 換到另一個分類：頁面回到最上面，從第一件商品開始看。
+    // 同一個分類（例如從商品頁按上一頁回來）不動，保留瀏覽器記住的位置。
+    if (lastShopSlug !== null && lastShopSlug !== activeSlug) window.scrollTo(0, 0)
+    lastShopSlug = activeSlug
   }, [activeSlug])
 
   const runSearch = useCallback(async (term: string) => {
@@ -243,7 +257,7 @@ export default function ShopBrowser({
               <div role="radiogroup" aria-label="排序" className="mt-2 flex gap-1.5">
                 {SHOP_SORTS.map(o => (
                   <button key={o.key} type="button" role="radio" aria-checked={sort === o.key}
-                    onClick={() => { setSort(o.key); setVisibleCount(REVEAL_BATCH * 2) }}
+                    onClick={() => { setSort(o.key); setVisibleCount(REVEAL_BATCH * 2); window.scrollTo(0, 0) }}
                     className={`min-h-[36px] flex-1 rounded-full border px-2 text-[14px] font-semibold transition-colors sm:flex-none sm:px-4 ${
                       sort === o.key ? 'border-green-700 bg-green-700 text-white' : 'border-gray-300 bg-white text-gray-700'}`}>
                     {o.label}
@@ -275,7 +289,7 @@ export default function ShopBrowser({
             </div>
           ) : (
             <>
-              <div className="space-y-3">
+              <div className="space-y-3 pt-3">
                 {visible.map(p => (
                   <ProductRow key={p.id} product={p} onAddToCart={handleAddToCart} showListedDate={activeSlug === 'new' && !searching} />
                 ))}
