@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
         // 拆單時只列出這一張的商品，看的人才知道這個賣場要寄什麼
         items: order.order_items
           .filter(i => p.parts === 1 || marketOf.get(i.variant_id as number) === p.marketplace_id)
-          .map(i => ({ variant_id: i.variant_id, name: i.product_name_snapshot, variant: i.variant_name_snapshot, sku: i.sku_snapshot })),
+          .map(i => ({ id: i.id, variant_id: i.variant_id, name: i.product_name_snapshot, variant: i.variant_name_snapshot, sku: i.sku_snapshot, quantity: i.quantity })),
       }))
     })
     // ── 團購訂單：待出貨、7-11 取貨。整張依溫層對應賣場，不用商品配對 ──

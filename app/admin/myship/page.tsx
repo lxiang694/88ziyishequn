@@ -5,8 +5,9 @@ import type { Marketplace, Mapping, PreparedOrder } from '@/lib/myship/domain'
 import AssistantPanel from './AssistantPanel'
 import { recipientNameError, suggestRecipientName } from '@/lib/recipientName'
 import BatchHistory from './BatchHistory'
+import GoodsNameEditor from './GoodsNameEditor'
 
-type Item = { variant_id: number | null; name: string; variant: string; sku: string | null }
+type Item = { id: number; variant_id: number | null; name: string; variant: string; sku: string | null; quantity: number }
 type StoreFix = { id: number; store_name: string; address: string } | null
 type Row = PreparedOrder & { store_fix?: StoreFix; customer_name: string; total_amount: number; order_total: number; store_name: string; reserved: boolean; items: Item[] }
 type Transfer = { id: string; order_id: number | null; group_buy_order_id?: number | null; source?: string; marketplace_id: string; batch_id: string; status: string; external_order_no: string | null; created_at: string; import_row: string[] }
@@ -157,6 +158,13 @@ export default function MyshipPage() {
   const selTotal = view === 'shop'
     ? shopReady.filter(o => selected.includes(o.order_id)).reduce((s, o) => s + o.total_amount, 0)
     : gbAvailable.filter(o => selectedGb.includes(o.id)).reduce((s, o) => s + o.total_amount, 0)
+  // 商品明細超過 200 字：把這張訂單的品名改短
+  const saveItemNames = (orderNo: string, changes: { id: number; name: string }[]) =>
+    run(async () => {
+      for (const c of changes) await post('item-name', { item_id: c.id, name: c.name })
+      await load()
+      setMessage(`已更新 ${orderNo} 的 ${changes.length} 個品名`)
+    })
   const switchMarket = (id: string) => { setMarket(id); setSelected([]); setSelectedGb([]) }
   const kindOf = (m: Marketplace) => (m as Marketplace & { ship_kind?: string | null }).ship_kind
 
@@ -173,7 +181,10 @@ export default function MyshipPage() {
           <p className="text-slate-600">{o.customer_name}</p>
           {o.parts > 1 && <p className="mt-1 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">拆單 {o.part}/{o.parts}{others.length > 0 && `・另一包在 ${others.join('、')}`}</p>}
         </div>
-        <div className="text-sm leading-relaxed text-slate-700">{o.items.map((i, n) => <p key={n}>{i.sku && <span className="text-slate-400">{i.sku} </span>}{i.name}<span className="text-slate-500"> · {i.variant}</span></p>)}</div>
+        {!selectable && o.errors.some(e => e.includes('商品明細')) && o.items.every(i => i.id)
+          // 商品明細超過 200 字：品名直接變成輸入框，改短就能存
+          ? <GoodsNameEditor key={o.items.map(i => i.id + i.name).join()} items={o.items} busy={busy} onSave={changes => saveItemNames(o.order_no, changes)} />
+          : <div className="text-sm leading-relaxed text-slate-700">{o.items.map((i, n) => <p key={n}>{i.sku && <span className="text-slate-400">{i.sku} </span>}{i.name}<span className="text-slate-500"> · {i.variant}</span></p>)}</div>}
         <p className="text-sm text-slate-600">🏪 {o.store_name}</p>
         <div className="md:text-right"><p className="font-semibold tabular-nums text-slate-900">{money(o.total_amount)}</p>{o.parts > 1 && <p className="text-xs text-slate-500">原訂單 {money(o.order_total)}</p>}</div>
       </div>

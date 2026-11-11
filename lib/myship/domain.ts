@@ -82,7 +82,7 @@ export function validateRow(row: readonly string[]): string[] {
   if (!/^09\d{8}$/.test(phone)) errors.push('手機需為09開頭的10碼數字')
   if (!/^\d{6}$/.test(store)) errors.push('缺少有效的6碼門市店號')
   if (!['常溫', '冷凍'].includes(temperature)) errors.push('溫層需為常溫或冷凍')
-  if (!goods || textLength(goods) > 200) errors.push('商品明細不可空白或超過200字')
+  if (!goods || textLength(goods) > GOODS_MAX) errors.push('商品明細不可空白或超過200字')
   const integer = (s: string) => /^(0|[1-9]\d*)$/.test(s)
   if (!integer(amount) || Number(amount) > 20000) errors.push('訂單金額需為0至20000的整數')
   if (!integer(freight) || Number(freight) > 100) errors.push('運費需為0至100的整數')
@@ -93,8 +93,16 @@ export function validateRow(row: readonly string[]): string[] {
   return errors
 }
 
-const goodsText = (items: TransferItem[]) =>
+/** 匯入檔「商品明細」欄：SKU 品名（規格）×數量，用；隔開。賣貨便上限 200 字 */
+export const GOODS_MAX = 200
+/** 轉單頁上手動縮短品名時，單一品名的上限 */
+export const ITEM_NAME_MAX = 60
+export const goodsText = (items: Pick<TransferItem, 'sku_snapshot' | 'product_name_snapshot' | 'variant_name_snapshot' | 'quantity'>[]) =>
   items.map(i => `${i.sku_snapshot ? i.sku_snapshot + ' ' : ''}${i.product_name_snapshot}（${i.variant_name_snapshot}）×${i.quantity}`).join('；')
+/** 去掉品名最後面的括號說明：「布拉迪益生菌(需發冷鏈 請洽詢LINE購買)」→「布拉迪益生菌」；整個都是括號就不動 */
+export const stripNote = (name: string) => name.replace(/\s*[（(][^（）()]*[)）]\s*$/, '').trim() || name
+/** 跟驗證用同一種算法（一個字算一個，不分中英文） */
+export const goodsLength = (items: Parameters<typeof goodsText>[0]) => textLength(goodsText(items))
 
 /**
  * 把一張健康優選訂單整理成要匯入賣貨便的一或多列。
