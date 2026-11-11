@@ -35,11 +35,13 @@ interface Props {
   banner?: HomeBanner | null
   /** 目前的團購檔期（開團中／預告／最近一檔）；沒有時橫幅仍顯示，點進去是「目前沒有開團」 */
   groupBuy?: CampaignTeaser | null
+  /** 第一屏「最近大家都在買」的三件（伺服器算好） */
+  hero?: { ids: number[]; label: string }
 }
 
 const HOT_TAGS = ['維生素C', '魚油', '葉黃素', '益生菌', '鈣', '維他命B群']
 
-export default function HomeClient({ initialProducts, initialTotal, categories, openEvent = null, banner = null, groupBuy = null }: Props) {
+export default function HomeClient({ initialProducts, initialTotal, categories, openEvent = null, banner = null, groupBuy = null, hero }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { addItem } = useCart()
@@ -197,7 +199,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
   return (
     <div className="min-h-screen bg-canvas">
 
-      <HomeHero products={initialProducts} groupBuy={groupBuy} onAddToCart={handleAddToCart as any} onShop={() => isDefaultView ? scrollToId(hotProducts.length ? 'sec-hot' : 'home-product-search') : scrollToProducts()} />
+      <HomeHero products={initialProducts} hero={hero} groupBuy={groupBuy} onAddToCart={handleAddToCart as any} onShop={() => isDefaultView ? scrollToId(hotProducts.length ? 'sec-hot' : 'home-product-search') : scrollToProducts()} />
 
       <div className="max-w-5xl mx-auto px-4">
 

@@ -27,18 +27,23 @@ const SOLD_MIN = 5
  * 第一屏要讓第一次來的客人在三秒內知道三件事：
  *   1. 這裡賣什麼（日常吃的、用的，幫你挑過）
  *   2. 怎麼買、安不安心（7-11 取貨付款、免註冊、LINE 客服）—— 以前放在最下面一排小灰字
- *   3. 從哪裡開始（熱銷三件，直接加入購物車）
+ *   3. 從哪裡開始（最近 7 天賣最多的三件，直接加入購物車）
  * 有團購開團時，最上面多一條細長的提醒；沒開團就不出現。
  *
  * 文案只講挑選、取貨、付款，不寫功效（食品廣告不得宣稱療效）。
  */
-export default function HomeHero({ products, onShop, onAddToCart, groupBuy = null }: {
+export default function HomeHero({ products, hero, onShop, onAddToCart, groupBuy = null }: {
   products: HeroProduct[]
+  /** 伺服器挑好的三件與標題（lib/homeTrending.ts）；沒有時退回累計熱銷前三 */
+  hero?: { ids: number[]; label: string }
   onShop: () => void
   onAddToCart: (product: HeroProduct) => void
   groupBuy?: CampaignTeaser | null
 }) {
-  const featured = products.filter(p => p.cover_image_url && p.product_variants.some(v => v.is_active && v.stock_qty > 0)).slice(0, 3)
+  const inStock = (p: HeroProduct) => !!p.cover_image_url && p.product_variants.some(v => v.is_active && v.stock_qty > 0)
+  const picked = (hero?.ids || []).map(id => products.find(p => p.id === id)).filter((p): p is HeroProduct => !!p && inStock(p))
+  const featured = picked.length ? picked.slice(0, 3) : products.filter(inStock).slice(0, 3)
+  const title = picked.length ? hero!.label : '大家都在買'
 
   return (
     <section aria-labelledby="home-hero-title" className="border-b border-line bg-canvas text-[#173e30]">
@@ -76,7 +81,7 @@ export default function HomeHero({ products, onShop, onAddToCart, groupBuy = nul
 
           {featured.length > 0 && (
             <div className="min-w-0 lg:rounded-[28px] lg:bg-sage lg:p-5">
-              <h2 className="mb-2 text-[15px] font-bold text-[#284b36] lg:mb-3">大家都在買</h2>
+              <h2 className="mb-2 text-[15px] font-bold text-[#284b36] lg:mb-3">{title}</h2>
               <ul className="grid grid-cols-3 gap-2 sm:gap-3">
                 {featured.map((product, index) => {
                   const available = product.product_variants.filter(v => v.is_active && v.stock_qty > 0)
