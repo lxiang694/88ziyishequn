@@ -8,6 +8,7 @@ import { formatPrice } from '@/lib/utils'
 import { timingLabels } from '@/lib/productMeta'
 import { renderProductText } from '@/lib/productBlocks'
 import ProductGallery from './ProductGallery'
+import VariantPicker from './VariantPicker'
 import toast from 'react-hot-toast'
 import SocialShareButtons from './SocialShareButtons'
 import { PRESALE } from '@/lib/presale/camelliaOil'
@@ -90,11 +91,22 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
     setTimeout(() => { goReviews(); setReviewFormOpen(true) }, 300)
   }, [])
 
+  // 有兩種以上規格時不先幫客人選：以前預設第一個，客人往下看完介紹直接按底部的「立即購買」，
+  // 常常買到不是自己要的規格。沒選就按購買 → 跳出規格面板，一定要點選過才會加入。
+  const activeVariants = product.product_variants?.filter(v => v.is_active) || []
+  const multiVariant = activeVariants.length > 1
   const firstAvailable = product.product_variants?.find(v => v.is_active && v.stock_qty > 0)
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
-    firstAvailable || product.product_variants?.[0] || null
+    multiVariant ? null : (firstAvailable || product.product_variants?.[0] || null)
   )
   const [qty, setQty] = useState(1)
+  // 規格面板：cart＝選好後加入購物車、buy＝選好後去結帳、choose＝只是選／換規格
+  const [sheet, setSheet] = useState<null | 'cart' | 'buy' | 'choose'>(null)
+  const prices = activeVariants.map(v => v.sale_price)
+  const minPrice = prices.length ? Math.min(...prices) : 0
+  const maxPrice = prices.length ? Math.max(...prices) : 0
+  const priceRange = minPrice === maxPrice ? formatPrice(minPrice) : `${formatPrice(minPrice)}～${formatPrice(maxPrice)}`
+  const anyInStock = activeVariants.some(v => v.stock_qty > 0)
 
   const allImages = [
     ...(product.cover_image_url ? [product.cover_image_url] : []),
@@ -102,29 +114,37 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
   ]
   const cats = product.product_category_relations?.map(r => r.health_categories).filter(Boolean) || []
   const inStock = (selectedVariant?.stock_qty ?? 0) > 0
+  // 還沒選規格時，只要有任何一種有貨，按鈕就能按（按了會先跳出規格面板）
+  const canBuy = selectedVariant ? inStock : anyInStock
+
+  const addVariant = (v: Variant, n: number) => addItem({
+    product_id: product.id, product_name: product.product_name,
+    product_slug: product.slug, cover_image_url: product.cover_image_url,
+    variant_id: v.id, variant_name: v.variant_name,
+    sku_code: v.sku_code, unit_price: v.sale_price,
+    quantity: n, stock_qty: v.stock_qty,
+  })
 
   const handleAddToCart = () => {
-    if (!selectedVariant) { toast.error('請選擇規格'); return }
+    if (!selectedVariant) { if (multiVariant) setSheet('cart'); else toast.error('請選擇規格'); return }
     if (!inStock) { toast.error('此規格已售完'); return }
-    addItem({
-      product_id: product.id, product_name: product.product_name,
-      product_slug: product.slug, cover_image_url: product.cover_image_url,
-      variant_id: selectedVariant.id, variant_name: selectedVariant.variant_name,
-      sku_code: selectedVariant.sku_code, unit_price: selectedVariant.sale_price,
-      quantity: qty, stock_qty: selectedVariant.stock_qty,
-    })
+    addVariant(selectedVariant, qty)
   }
 
   const handleBuyNow = () => {
-    if (!selectedVariant || !inStock) return
-    addItem({
-      product_id: product.id, product_name: product.product_name,
-      product_slug: product.slug, cover_image_url: product.cover_image_url,
-      variant_id: selectedVariant.id, variant_name: selectedVariant.variant_name,
-      sku_code: selectedVariant.sku_code, unit_price: selectedVariant.sale_price,
-      quantity: qty, stock_qty: selectedVariant.stock_qty,
-    })
+    if (!selectedVariant) { if (multiVariant) setSheet('buy'); return }
+    if (!inStock) return
+    addVariant(selectedVariant, qty)
     router.push('/checkout')
+  }
+
+  // 規格面板選好後：記住選的規格（頁面上也跟著變），再依按的是哪個按鈕去做
+  const confirmSheet = (picked: { id: number }, n: number) => {
+    const v = product.product_variants.find(x => x.id === picked.id)
+    if (!v) return
+    setSelectedVariant(v); setQty(n)
+    if (sheet === 'cart') addVariant(v, n)
+    if (sheet === 'buy') { addVariant(v, n); router.push('/checkout') }
   }
 
   return (
@@ -181,6 +201,12 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
             </div>
           )}
 
+          {!selectedVariant && multiVariant && (
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
+              <span className="text-3xl font-bold text-green-700">{priceRange}</span>
+              <span className="text-sm text-gray-500">依規格不同</span>
+            </div>
+          )}
           {selectedVariant && (
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
               <span className="text-3xl font-bold text-green-700">{formatPrice(selectedVariant.sale_price)}</span>
@@ -203,7 +229,10 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
 
           {product.product_variants?.length > 0 && (
             <div id="variant-picker" className="mb-5 scroll-mt-24">
-              <p className="text-sm font-bold text-gray-700 mb-2">選擇規格</p>
+              <p className="text-sm font-bold text-gray-700 mb-2">
+                選擇規格
+                {!selectedVariant && multiVariant && <span className="ml-2 rounded-md bg-amber-100 px-2 py-0.5 text-[13px] font-bold text-amber-900">👇 請先點選一種</span>}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {product.product_variants.filter(v => v.is_active).map(v => {
                   const oos = v.stock_qty <= 0
@@ -216,6 +245,8 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
                           : oos ? 'border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed'
                           : 'border-gray-200 text-gray-700 hover:border-green-400 hover:bg-green-50/50'}`}>
                       {v.variant_name}
+                      {/* 多種規格時每顆按鈕直接寫價格，比較時不用一個一個點 */}
+                      {multiVariant && !oos && <span className={`ml-1.5 font-bold ${sel ? 'text-green-700' : 'text-gray-500'}`}>{formatPrice(v.sale_price)}</span>}
                       {oos && <span className="ml-1 text-red-400 font-normal">(售完)</span>}
                     </button>
                   )
@@ -230,7 +261,7 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
             </div>
           )}
 
-          {inStock && (
+          {selectedVariant && inStock && (
             <div className="flex items-center gap-4 mb-6">
               <span className="text-sm font-bold text-gray-700">數量</span>
               <div className="flex items-center gap-3">
@@ -244,13 +275,13 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
           )}
 
           <div className="hidden md:flex flex-row gap-3">
-            <button onClick={handleAddToCart} disabled={!inStock}
+            <button onClick={handleAddToCart} disabled={!canBuy}
               className="flex-1 border-2 border-green-700 text-green-700 hover:bg-green-700 hover:text-white font-bold py-3.5 rounded-xl text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-              {inStock ? '加入購物車' : '已售完'}
+              {canBuy ? '加入購物車' : '已售完'}
             </button>
-            <button onClick={handleBuyNow} disabled={!inStock}
+            <button onClick={handleBuyNow} disabled={!canBuy}
               className="flex-1 bg-green-700 hover:bg-green-800 text-white font-bold py-3.5 rounded-xl text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-              {inStock ? '立即購買' : '已售完'}
+              {canBuy ? '立即購買' : '已售完'}
             </button>
           </div>
 
@@ -373,6 +404,17 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
       {/* 底部固定購買列的墊片：FrontShell 已經墊了導覽列的 60px，這裡補上購買列多出來的高度 */}
       <div className="md:hidden h-12" aria-hidden />
 
+      {sheet && (
+        <VariantPicker
+          product={{ id: product.id, product_name: product.product_name, product_slug: product.slug, cover_image_url: product.cover_image_url, short_intro: product.short_intro, product_variants: product.product_variants }}
+          preselect={false}
+          initialVariantId={selectedVariant?.id}
+          confirmLabel={sheet === 'buy' ? '立即購買' : sheet === 'cart' ? '加入購物車' : '確定'}
+          onConfirm={confirmSheet}
+          onClose={() => setSheet(null)}
+        />
+      )}
+
       {/*
         手機底部固定購買列。商品頁打開時，購買按鈕原本要往下捲過圖片、介紹、
         規格才看得到；改成一直固定在畫面底部，任何位置都能直接買。
@@ -381,21 +423,27 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
       */}
       <div className="md:hidden fixed inset-x-0 bottom-0 z-40 bottom-skirt border-t border-gray-200 bg-white px-3 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
         style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
-        {selectedVariant && (
+        {selectedVariant ? (
           <div className="mb-1.5 flex items-center justify-between gap-2 text-[13px]">
             <span className="min-w-0 truncate text-gray-600">
               已選：<b className="text-gray-800">{selectedVariant.variant_name}</b>{qty > 1 && <> × {qty}</>}
             </span>
             <span className="flex flex-shrink-0 items-center gap-2">
               <b className="text-base text-green-700">{formatPrice(selectedVariant.sale_price * qty)}</b>
-              {product.product_variants.filter(v => v.is_active).length > 1 && (
-                <button type="button" className="font-bold text-green-700 underline underline-offset-2"
-                  onClick={() => document.getElementById('variant-picker')?.scrollIntoView({ behavior: 'smooth' })}>
+              {multiVariant && (
+                <button type="button" className="font-bold text-green-700 underline underline-offset-2" onClick={() => setSheet('choose')}>
                   更換規格
                 </button>
               )}
             </span>
           </div>
+        ) : multiVariant && (
+          // 還沒選規格：講清楚，點了直接跳出規格面板
+          <button type="button" onClick={() => setSheet('choose')}
+            className="mb-1.5 flex w-full items-center justify-between gap-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-left text-[13px]">
+            <span className="font-bold text-amber-900">⚠️ 尚未選擇規格（共 {activeVariants.length} 種）</span>
+            <span className="flex flex-shrink-0 items-center gap-1.5"><b className="text-green-700">{priceRange}</b><span className="font-bold text-green-700 underline underline-offset-2">選規格</span></span>
+          </button>
         )}
         <div className="flex items-stretch gap-2">
           <Link href="/cart" aria-label="購物車"
@@ -405,13 +453,13 @@ export default function ProductDetail({ product, relatedArticles = [], initialRe
               <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[12px] font-bold text-white">{totalItems > 9 ? '9+' : totalItems}</span>
             )}
           </Link>
-          <button onClick={handleAddToCart} disabled={!inStock}
+          <button onClick={handleAddToCart} disabled={!canBuy}
             className="min-h-[48px] flex-1 rounded-xl border-2 border-green-700 text-[15px] font-bold text-green-700 active:bg-green-50 disabled:opacity-40">
-            {inStock ? '加入購物車' : '已售完'}
+            {canBuy ? '加入購物車' : '已售完'}
           </button>
-          <button onClick={handleBuyNow} disabled={!inStock}
+          <button onClick={handleBuyNow} disabled={!canBuy}
             className="min-h-[48px] flex-1 rounded-xl bg-green-700 text-[15px] font-bold text-white active:bg-green-800 disabled:opacity-40">
-            {inStock ? '立即購買' : '已售完'}
+            {canBuy ? '立即購買' : '已售完'}
           </button>
         </div>
       </div>

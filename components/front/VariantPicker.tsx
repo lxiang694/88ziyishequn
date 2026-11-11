@@ -25,9 +25,18 @@ interface Props {
   } | null
   onClose: () => void
   onAdded?: () => void
+  /**
+   * 商品頁用：不先幫客人選規格（preselect=false），按鈕上寫要做的事（例如「立即購買」），
+   * 選好後交給 onConfirm 處理（加入購物車、去結帳，或只是換規格）。
+   * 沒給 onConfirm 時維持原本行為：直接加入購物車。
+   */
+  preselect?: boolean
+  confirmLabel?: string
+  initialVariantId?: number | null
+  onConfirm?: (variant: Variant, qty: number) => void
 }
 
-export default function VariantPicker({ product, onClose, onAdded }: Props) {
+export default function VariantPicker({ product, onClose, onAdded, preselect = true, confirmLabel = '加入購物車', initialVariantId, onConfirm }: Props) {
   const { addItem } = useCart()
   const [selected, setSelected] = useState<Variant | null>(null)
   const [qty, setQty] = useState(1)
@@ -35,7 +44,8 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
   useEffect(() => {
     if (product) {
       const firstAvailable = product.product_variants.find(v => v.is_active && v.stock_qty > 0)
-      setSelected(firstAvailable || null)
+      const initial = product.product_variants.find(v => v.id === initialVariantId && v.is_active && v.stock_qty > 0)
+      setSelected(initial || (preselect ? firstAvailable || null : null))
       setQty(1)
     }
   }, [product])
@@ -56,6 +66,7 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
 
   const handleAdd = () => {
     if (!selected) return
+    if (onConfirm) { onConfirm(selected, qty); onClose(); return }
     addItem({
       product_id: product.id,
       product_name: product.product_name,
@@ -143,7 +154,6 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
                       {v.variant_name}
                       {outOfStock && <span className="ml-2 text-[13px] font-semibold text-red-600">（已售完）</span>}
                     </span>
-                    {v.sku_code && <span className="block text-[13px] text-gray-600 mt-0.5">SKU: {v.sku_code}</span>}
                   </div>
                   <div className="text-right flex-shrink-0 ml-4">
                     <div className={`font-bold text-base ${isSelected ? 'text-green-700' : 'text-gray-700'}`}>
@@ -185,7 +195,7 @@ export default function VariantPicker({ product, onClose, onAdded }: Props) {
             disabled={!selected || selected.stock_qty <= 0}
             className="w-full btn-primary text-xl py-4 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {!selected ? '請選擇規格' : selected.stock_qty <= 0 ? '已售完' : `加入購物車`}
+            {!selected ? '請先點選上面的規格' : selected.stock_qty <= 0 ? '已售完' : confirmLabel}
           </button>
         </div>
       </div>
