@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { supabaseStorefront as db } from '@/lib/supabase'
 import { buildSalesMap } from '@/lib/salesUtils'
+import { nameSegments } from '@/lib/wordBreak'
 import HomeClient from '@/components/front/HomeClient'
 import { pickOpenEvent, type HomeEventRow } from '@/lib/homeEvent'
 import { canDisplay, type HomeBanner } from '@/lib/homeBanner'
@@ -55,6 +56,8 @@ async function getInitialData() {
 
   // 銷量高的排前面
   const sorted = withSales.sort((a: any, b: any) => b.sales_count - a.sales_count)
+  // 首頁第一屏的熱銷商品卡很窄：品名先斷好詞，換行才不會斷在詞中間（見 lib/wordBreak.ts）
+  for (const p of sorted.slice(0, 12)) p.name_segments = nameSegments(String(p.product_name || '').replace(/^【小莊代購】\s*/, ''))
 
   return {
     initialProducts: sorted,

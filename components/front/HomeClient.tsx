@@ -22,7 +22,7 @@ interface Product {
   id: number; product_name: string; slug: string; short_intro: string | null
   cover_image_url: string | null; product_variants: Variant[]
   product_category_relations: { health_categories: HealthCategory }[]
-  sales_count?: number; home_section?: string | null
+  sales_count?: number; home_section?: string | null; name_segments?: string[]
 }
 
 interface Props {
@@ -197,7 +197,7 @@ export default function HomeClient({ initialProducts, initialTotal, categories, 
   return (
     <div className="min-h-screen bg-canvas">
 
-      <HomeHero products={initialProducts} onShop={() => isDefaultView ? scrollToId(hotProducts.length ? 'sec-hot' : 'home-product-search') : scrollToProducts()} />
+      <HomeHero products={initialProducts} groupBuy={groupBuy} onAddToCart={handleAddToCart as any} onShop={() => isDefaultView ? scrollToId(hotProducts.length ? 'sec-hot' : 'home-product-search') : scrollToProducts()} />
 
       <div className="max-w-5xl mx-auto px-4">
 
