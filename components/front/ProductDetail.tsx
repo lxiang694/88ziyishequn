@@ -152,7 +152,7 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 pt-4 pb-6 md:py-6">
+    <div className="max-w-5xl mx-auto px-4 pt-4 pb-0 md:py-6">
       {/* Breadcrumb —— 手機上表頭已有「‹」返回鍵、點 Logo 回首頁，不再多佔一行 */}
       <nav className="hidden md:flex items-center gap-2 text-sm text-gray-500 mb-5">
         <Link href="/" className="hover:text-green-700 transition-colors">首頁</Link>
@@ -403,8 +403,7 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
         theme="green"
       />
 
-      {/* 底部固定購買列的墊片：FrontShell 已經墊了導覽列的 60px，這裡補上購買列多出來的高度 */}
-      <div className="md:hidden h-12" aria-hidden />
+      {/* 底部固定購買列的墊片在 FrontShell（頁尾下面），這裡不再墊，否則頁尾上方會空一大段 */}
 
       {sheet && (
         <VariantPicker

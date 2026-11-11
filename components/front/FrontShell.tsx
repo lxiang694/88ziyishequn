@@ -1,5 +1,6 @@
 'use client'
 import type { ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { CartProvider } from './CartContext'
 import { UserAuthProvider } from './UserAuthContext'
 import ClientErrorBoundary from './ClientErrorBoundary'
@@ -13,6 +14,7 @@ import { Toaster } from 'react-hot-toast'
 import { SHOP_CATEGORIES } from '@/lib/shopCategories'
 
 export default function FrontShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname() || ''
   return (
     <ClientErrorBoundary>
     <UserAuthProvider>
@@ -79,8 +81,11 @@ export default function FrontShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </footer>
-      {/* 底部導覽列高度的墊片，避免內容被固定列遮住（手機，含瀏海機安全區） */}
-      <div className="md:hidden" aria-hidden style={{ height: 'calc(60px + env(safe-area-inset-bottom))' }} />
+      {/* 底部固定列高度的墊片，避免頁尾被固定列遮住（手機，含瀏海機安全區）。
+          商品頁沒有導覽列，換成比較高的購買列（已選規格一行＋按鈕），墊高一點。
+          墊片要放在頁尾「下面」—— 以前商品頁把多出來的高度墊在頁尾上面，
+          頁尾「商品分類」上方就空出一大段。 */}
+      <div className="md:hidden" aria-hidden style={{ height: `calc(${pathname.startsWith('/products/') ? 108 : 60}px + env(safe-area-inset-bottom))` }} />
       <LineFloatButton />
       <MobileBottomNav />
       <Toaster
