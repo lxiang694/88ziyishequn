@@ -94,7 +94,7 @@ export default function GroupBuyClient({ data }: { data: PublicCampaign }) {
   ]
 
   return (
-    <div className={`mx-auto max-w-3xl px-4 pb-8 pt-14 md:pt-6 ${isHongtang ? styles.page : ''}`}>
+    <div className={`mx-auto max-w-3xl px-4 pb-8 pt-5 md:pt-6 ${isHongtang ? styles.page : ''}`}>
       {/* ── 檔期標題與倒數 ───────────────────────────── */}
       <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
         {campaign.cover_image_url && (

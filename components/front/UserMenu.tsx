@@ -32,7 +32,7 @@ export default function UserMenu() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
           <span className="hidden sm:inline">會員</span>
-          <svg className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
+          <svg className={`hidden sm:block w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
           </svg>
@@ -96,7 +96,7 @@ export default function UserMenu() {
           {initial}
         </span>
         <span className="hidden sm:inline text-green-800 font-bold text-sm max-w-[80px] truncate">{displayName}</span>
-        <svg className={`w-4 h-4 text-green-700 transition-transform ${open ? 'rotate-180' : ''}`}
+        <svg className={`hidden sm:block w-4 h-4 text-green-700 transition-transform ${open ? 'rotate-180' : ''}`}
           fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>

@@ -6,7 +6,6 @@ import ClientErrorBoundary from './ClientErrorBoundary'
 import SiteHeader from './SiteHeader'
 import LineFloatButton from './LineFloatButton'
 import MobileBottomNav from './MobileBottomNav'
-import BackHomeNav from './BackHomeNav'
 import ReferralCapture from './referral/ReferralCapture'
 import { Toaster } from 'react-hot-toast'
 // 直接用程式裡的那份清單，不打 API —— 頁尾在每一頁都會渲染，
@@ -20,7 +19,6 @@ export default function FrontShell({ children }: { children: ReactNode }) {
     <CartProvider>
       <SiteHeader />
       <ReferralCapture />
-      <BackHomeNav />
       {/* pt-16 / sm:pt-20 compensates for the fixed header height (h-16 / sm:h-20) */}
       <main className="min-h-screen pt-16 sm:pt-20">{children}</main>
       {/* 頁尾的客人以中高齡為主：每個入口都是一塊夠大的按鈕（至少 64px 高），

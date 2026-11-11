@@ -229,7 +229,7 @@ export default function CheckoutPage() {
   })), shipGroups)
 
   return (
-    <div className="max-w-5xl mx-auto px-4 pt-14 md:pt-8 pb-28 md:pb-10">
+    <div className="max-w-5xl mx-auto px-4 pt-5 md:pt-8 pb-28 md:pb-10">
       <h1 className="text-2xl font-bold text-gray-900">確認訂單</h1>
       <CheckoutSteps />
 

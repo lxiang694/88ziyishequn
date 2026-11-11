@@ -31,7 +31,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-14 sm:pt-6 pb-8">
+    <div className="max-w-2xl mx-auto px-4 pt-5 sm:pt-6 pb-8">
       <h1 className="text-2xl font-bold text-gray-800 mb-5">
         購物車
         <span className="ml-2 text-base font-normal text-gray-600">（{items.reduce((s, i) => s + i.quantity, 0)} 件）</span>
@@ -130,9 +130,10 @@ export default function CartPage() {
             <p className="text-[13px] text-green-600 mt-0.5">送達 7-11</p>
           </div>
           <div>
-            <div className="text-xl mb-0.5">💬</div>
-            <p className="text-[13px] font-bold text-green-800">LINE 通知</p>
-            <p className="text-[13px] text-green-600 mt-0.5">到店即時提醒</p>
+            {/* 到店是 7-11 傳簡訊通知，我們不另外發 LINE */}
+            <div className="text-xl mb-0.5">📩</div>
+            <p className="text-[13px] font-bold text-green-800">簡訊通知</p>
+            <p className="text-[13px] text-green-600 mt-0.5">到店 7-11 會傳</p>
           </div>
         </div>
       </div>

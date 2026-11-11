@@ -37,7 +37,7 @@ export default function InvitePage() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <div className="mx-auto max-w-2xl space-y-4 px-4 pb-8 pt-16 sm:py-10">
+      <div className="mx-auto max-w-2xl space-y-4 px-4 pb-8 pt-5 sm:py-10">
         <nav className="flex items-center gap-2 text-sm text-gray-500">
           <Link href="/account" className="hover:text-green-700">會員中心</Link><span>›</span><span className="text-gray-700">邀請親友</span>
         </nav>

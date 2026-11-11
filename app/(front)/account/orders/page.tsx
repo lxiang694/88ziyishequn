@@ -41,7 +41,7 @@ export default function MemberOrdersPage() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <div className="mx-auto max-w-3xl px-4 pb-6 pt-16 sm:py-10">
+      <div className="mx-auto max-w-3xl px-4 pb-6 pt-5 sm:py-10">
         <nav className="mb-4 flex items-center gap-2 text-sm text-gray-500">
           <Link href="/account" className="hover:text-green-700">會員中心</Link><span>›</span><span className="text-gray-700">我的訂單</span>
         </nav>

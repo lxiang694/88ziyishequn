@@ -159,7 +159,7 @@ function OrderQueryContent() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pb-8 pt-16 md:pt-8">
+    <div className="max-w-2xl mx-auto px-4 pb-8 pt-5 md:pt-8">
       <h1 className="text-2xl font-bold text-gray-800 mb-1">訂單查詢</h1>
       <p className="text-gray-500 mb-6">
         不用註冊會員，輸入下單時填寫的手機號碼，就可以查到您所有的訂單

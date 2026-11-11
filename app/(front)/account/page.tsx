@@ -58,7 +58,7 @@ export default function AccountDashboard() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <div className="mx-auto max-w-3xl space-y-4 px-4 pb-6 pt-16 sm:py-10">
+      <div className="mx-auto max-w-3xl space-y-4 px-4 pb-6 pt-5 sm:py-10">
 
         {/* ── 招呼＋訂單狀態列（台灣購物 App 常見的「待出貨／待收貨／待評價」） ── */}
         <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
