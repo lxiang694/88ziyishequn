@@ -12,13 +12,14 @@
  * 路由（每個分類有自己的網址，可以收藏、可以分享），搜尋才打 API。
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCart } from './CartContext'
 import VariantPicker from './VariantPicker'
 import ProductRow from './ProductRow'
-import GroupBuyBanner from './groupBuy/GroupBuyBanner'
+import GroupBuyStrip from './groupBuy/GroupBuyStrip'
+import { sortShopProducts, SHOP_SORTS, type ShopSort } from '@/lib/shopSort'
 import type { CampaignTeaser } from '@/lib/groupBuy/repo'
 import type { CardProduct } from './ProductCard'
 
@@ -69,6 +70,9 @@ export default function ShopBrowser({
   const [loading, setLoading] = useState(false)
   const [pickerProduct, setPickerProduct] = useState<CardProduct | null>(null)
   const [visibleCount, setVisibleCount] = useState(REVEAL_BATCH * 2)
+  // 排序：新品上市預設照上架時間，其他預設熱銷
+  const defaultSort: ShopSort = activeSlug === 'new' ? 'new' : 'hot'
+  const [sort, setSort] = useState<ShopSort>(defaultSort)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const railRef = useRef<HTMLElement>(null)
   // 分類欄下面還有沒有看不到的分類：有的話底部顯示「更多分類 ▼」
@@ -88,7 +92,8 @@ export default function ShopBrowser({
     setProducts(initialProducts)
     setSearch('')
     setVisibleCount(REVEAL_BATCH * 2)
-  }, [initialProducts])
+    setSort(activeSlug === 'new' ? 'new' : 'hot')
+  }, [initialProducts, activeSlug])
 
   // 把目前分類捲進可視範圍 —— 分類多的時候，從頁尾點進來的那一個
   // 可能在欄位下方看不到，使用者會以為自己沒選到
@@ -153,7 +158,8 @@ export default function ShopBrowser({
 
   const clearSearch = () => { setSearch(''); setProducts(initialProducts); setVisibleCount(REVEAL_BATCH * 2) }
   const searching = search.trim().length > 0
-  const visible = products.slice(0, visibleCount)
+  const sorted = useMemo(() => sortShopProducts(products, sort), [products, sort])
+  const visible = sorted.slice(0, visibleCount)
 
   const railItem = (active: boolean) =>
     `block border-l-4 px-2 py-4 text-center text-sm leading-snug transition-colors ${
@@ -184,11 +190,8 @@ export default function ShopBrowser({
         </div>
       </div>
 
-      {groupBuy && (
-        <div className="mx-auto max-w-5xl px-4 pb-4">
-          <GroupBuyBanner campaign={groupBuy} />
-        </div>
-      )}
+      {/* 團購：大橫幅換成細長條（開團中才出現），第一屏留給商品 */}
+      <GroupBuyStrip campaign={groupBuy} />
 
       <div className="mx-auto flex max-w-5xl">
         {/* ── 左側分類欄 ─────────────────────────────────── */}
@@ -207,6 +210,12 @@ export default function ShopBrowser({
               {cat.name}
             </Link>
           ))}
+          {/* 手機的 LINE 客服入口：浮鈕在這幾頁會蓋住商品的購物車按鈕，改放在分類欄最下面。
+              下方多留 mb-14：頁面還沒往下捲時，團購細長條把分類欄往下推，底部會被導覽列蓋住一截 */}
+          <a href="https://line.me/ti/p/yJdrshwviU" target="_blank" rel="noopener noreferrer"
+            className="mx-2 mb-14 mt-3 flex flex-col items-center gap-0.5 rounded-xl bg-[#00B900] px-1 py-2 text-[13px] font-bold text-white md:hidden">
+            <span aria-hidden className="text-lg leading-none">💬</span>LINE 客服
+          </a>
           {/* 還有分類在下面：淡出＋提示，點一下往下捲 */}
           {railMore && (
             <button type="button" onClick={() => railRef.current?.scrollBy({ top: 240, behavior: 'smooth' })}
@@ -225,8 +234,22 @@ export default function ShopBrowser({
                 {loading ? '搜尋中…' : `共 ${products.length} 件`}
               </span>
             </h1>
+            {/* 分類說明只在電腦版顯示（仍在 HTML 裡給搜尋引擎）；手機把位置留給商品 */}
             {!searching && subheading && (
-              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{subheading}</p>
+              <p className="mt-1 hidden text-[13px] leading-relaxed text-gray-500 sm:block">{subheading}</p>
+            )}
+            {/* 排序：台灣購物網站的標配，價格由低到高最常用 */}
+            {products.length > 1 && (
+              <div role="radiogroup" aria-label="排序" className="mt-2 flex gap-1.5">
+                {SHOP_SORTS.map(o => (
+                  <button key={o.key} type="button" role="radio" aria-checked={sort === o.key}
+                    onClick={() => { setSort(o.key); setVisibleCount(REVEAL_BATCH * 2) }}
+                    className={`min-h-[36px] flex-1 rounded-full border px-2 text-[14px] font-semibold transition-colors sm:flex-none sm:px-4 ${
+                      sort === o.key ? 'border-green-700 bg-green-700 text-white' : 'border-gray-300 bg-white text-gray-700'}`}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             )}
             {searching && (
               <button onClick={clearSearch} className="mt-1 text-sm font-semibold text-green-700 underline">

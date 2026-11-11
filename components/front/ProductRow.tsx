@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { formatPrice } from '@/lib/utils'
 import { lowestActivePrice, isInStock, buyableVariants } from '@/lib/productPricing'
 import type { CardProduct } from './ProductCard'
+import { strikePrice } from '@/lib/shopSort'
 
 interface Props {
   product: CardProduct
@@ -35,7 +36,11 @@ function listedDate(iso?: string): string {
 export default function ProductRow({ product, onAddToCart, showListedDate }: Props) {
   const minPrice = lowestActivePrice(product)
   const inStock = isInStock(product)
-  const isMulti = buyableVariants(product).length > 1
+  const buyable = buyableVariants(product)
+  const isMulti = buyable.length > 1
+  // 規格都同價就不寫「起」
+  const priceVaries = new Set(buyable.map((v: any) => v.sale_price)).size > 1
+  const strike = strikePrice(product)
 
   return (
     <article className="flex gap-3 rounded-2xl border border-line bg-white p-3 transition-shadow hover:shadow-md">
@@ -72,34 +77,35 @@ export default function ProductRow({ product, onAddToCart, showListedDate }: Pro
           </p>
         )}
 
-        <div className="mt-auto flex items-end justify-between gap-2 pt-2">
-          <div className="min-w-0">
-            {minPrice !== null ? (
-              <>
-                {isMulti && <div className="text-xs leading-none text-gray-500">起</div>}
-                <div className="t-price">{formatPrice(minPrice)}</div>
-              </>
-            ) : (
-              <div className="text-sm text-gray-400">暫無價格</div>
-            )}
-            {(product.sales_count || 0) >= 5 && (
-              <p className="mt-0.5 text-xs font-semibold text-orange-700">
-                🔥 已有 {product.sales_count} 人購買
-              </p>
-            )}
+        {/*
+          價格一行、銷量＋按鈕一行，照台灣購物網站的習慣：
+          「NT$360 起」（起放後面）、有原價就劃線、銷量寫「已售 151」。
+          按鈕用文字（＋購物車／選規格），中高齡客人一看就知道能按 ——
+          以前只有一個圓形購物車圖示，又剛好在 LINE 浮鈕底下。
+        */}
+        <div className="mt-auto pt-2">
+          {minPrice !== null ? (
+            <p className="flex flex-wrap items-baseline gap-x-1.5">
+              <span className="t-price">{formatPrice(minPrice)}</span>
+              {priceVaries && <span className="text-[13px] text-gray-500">起</span>}
+              {strike !== null && <s className="text-[13px] text-gray-400">{formatPrice(strike)}</s>}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400">暫無價格</p>
+          )}
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <span className="min-w-0 truncate text-[13px] font-semibold text-orange-700">
+              {(product.sales_count || 0) >= 5 ? `已售 ${product.sales_count}` : ''}
+            </span>
+            <button
+              onClick={() => onAddToCart(product)}
+              disabled={!inStock}
+              aria-label={!inStock ? '已售完' : isMulti ? `選擇 ${product.product_name} 的規格` : `將 ${product.product_name} 加入購物車`}
+              className="min-h-[40px] flex-shrink-0 rounded-xl bg-green-700 px-3.5 text-[14px] font-bold text-white transition-colors hover:bg-green-800 disabled:bg-gray-200 disabled:text-gray-500"
+            >
+              {!inStock ? '已售完' : isMulti ? '選規格' : '＋購物車'}
+            </button>
           </div>
-
-          <button
-            onClick={() => onAddToCart(product)}
-            disabled={!inStock}
-            // 售完時仍然顯示按鈕但停用，位置不會因為有沒有貨而跳動
-            aria-label={!inStock ? '已售完' : isMulti ? `選擇 ${product.product_name} 的規格` : `將 ${product.product_name} 加入購物車`}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-green-700 text-white transition-colors hover:bg-green-800 disabled:bg-gray-200 disabled:text-gray-400"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </button>
         </div>
       </div>
     </article>
