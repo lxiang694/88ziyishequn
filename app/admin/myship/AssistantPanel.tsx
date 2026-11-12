@@ -56,6 +56,20 @@ export default function AssistantPanel({ selected, market, disabled, onChange }:
     catch (e) { setError(e instanceof Error ? e.message : '助手處理中斷'); await refresh().catch(() => {}) }
     finally { setBusy(false); await onChangeRef.current().catch(() => {}) }
   }
+  // 上一批在網站上根本沒建立成功（建立那一步就失敗了）：助手會卡在「需要核對」。
+  // 這種批次沒有任何檔案送到賣貨便，按「讀回上一批結果」就會結束，這裡講清楚
+  const stuckBatch = status?.job && !['complete', 'paused'].includes(status.job.phase) ? status.job.batch_id : ''
+  const [missingBatch, setMissingBatch] = useState('')
+  useEffect(() => {
+    if (!stuckBatch || !/^[a-f0-9-]{36}$/i.test(stuckBatch)) { setMissingBatch(''); return }
+    let gone = false
+    fetch(`/api/admin/myship/batches/${stuckBatch}/status`, { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (!gone) setMissingBatch(d?.missing ? stuckBatch : '') })
+      .catch(() => {})
+    return () => { gone = true }
+  }, [stuckBatch])
+  const batchMissing = !!stuckBatch && missingBatch === stuckBatch
   const version = status?.version.split('.').map(Number) || [0, 0, 0]
   const canPause = version[0] > 0 || version[1] > 2 || (version[1] === 2 && version[2] >= 4)
   // 0.2.6 之前的助手把驗收狀態存成單一個全域布林值，收到 marketplace_id
@@ -69,12 +83,14 @@ export default function AssistantPanel({ selected, market, disabled, onChange }:
   return <section className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-5" aria-label="瀏覽器自動轉單助手">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">比特瀏覽器自動轉單助手</h2><p className="mt-1 text-sm text-slate-600">{status ? `助手 ${status.version} 已連接。${pilot ? '可傳送所選訂單並核對結果。' : perMarketPilot ? '這個賣場首次請選 1 筆驗收，成功後即可批次處理。' : '請更新助手至 0.2.8；舊版無法分辨不同賣場的驗收狀態，目前一律先走單筆驗收。'}` : '首次安裝助手，並在同一個瀏覽器環境登入健康優選及賣貨便。'}</p>{status && !supportsSplit && <p className="mt-1 text-sm font-medium text-amber-800">這個版本不支援跨賣場拆單的訂單。遇到拆單訂單會被拒絕（不會送出錯誤資料），請更新至 0.2.8，或改用下方「建立並下載匯入檔」。</p>}</div><a href="/downloads/myship-assistant-0.2.8.zip" className="text-sm font-medium underline">下載助手 0.2.8 及安裝說明</a></div>
     {status?.job && <p role="status" className="text-sm">{status.job.message}</p>}
-    {status?.job && !['complete', 'paused'].includes(status.job.phase) && <p className="text-sm text-amber-800">上一批尚待核對，請讀回結果；若要先處理其他訂單，請按「保留此批，繼續其他訂單」。</p>}
+    {batchMissing
+      ? <p className="rounded-lg bg-amber-50 p-3 text-sm font-medium text-amber-900">上一批在建立時就失敗了，網站上沒有這一批，賣貨便也沒有收到任何訂單。請按「讀回上一批結果」清除，就能繼續轉單。</p>
+      : status?.job && !['complete', 'paused'].includes(status.job.phase) && <p className="text-sm text-amber-800">上一批尚待核對，請讀回結果；若要先處理其他訂單，請按「保留此批，繼續其他訂單」。</p>}
     {(connectionError || error) && <p role="alert" className="text-sm text-red-700">{connectionError || error}</p>}
     <div className="flex flex-wrap gap-2">
       <button className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40" disabled={!status || busy || disabled || !selected.length || (!pilot && selected.length !== 1) || (!!status.job && !['complete', 'paused'].includes(status.job.phase))} onClick={() => run('start')}>{busy ? '助手處理中…' : '自動轉到賣貨便'}</button>
       {status?.job && status.job.phase !== 'complete' && <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-40" disabled={busy || disabled} onClick={() => run('recover')}>讀回上一批結果</button>}
-      {status?.job?.phase === 'attention' && (canPause ? <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-40" disabled={busy || disabled} onClick={() => run('pause')}>保留此批，繼續其他訂單</button> : <p className="text-sm text-amber-800">更新助手至0.2.5後，可保留異常批次並繼續其他訂單。</p>)}
+      {status?.job?.phase === 'attention' && !batchMissing && (canPause ? <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:opacity-40" disabled={busy || disabled} onClick={() => run('pause')}>保留此批，繼續其他訂單</button> : <p className="text-sm text-amber-800">更新助手至0.2.5後，可保留異常批次並繼續其他訂單。</p>)}
       {!status && <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm" onClick={() => refresh().then(() => setError('')).catch(e => setError(e.message))}>檢查助手連線</button>}
     </div>
   </section>
