@@ -23,7 +23,7 @@ export default function MobileBottomNav() {
   const items = [
     { href: '/', label: '首頁', active: isHome, icon: ICONS.home },
     // 直接進賣場。/shop 一進去左邊就是完整分類欄，再疊一層彈出選單只是多一次點擊
-    { href: '/shop', label: '商品分類', active: isShop, icon: ICONS.shop },
+    { href: '/shop', label: '商品分類', short: '分類', active: isShop, icon: ICONS.shop },
     { href: '/cart', label: '購物車', active: isCart, icon: ICONS.cart, badge: totalItems },
     { href: '/account', label: '會員', active: isAccount, icon: ICONS.account },
   ]
@@ -57,7 +57,10 @@ export default function MobileBottomNav() {
                   </span>
                 )}
               </span>
-              <span className={`text-[12px] leading-none ${it.active ? 'font-bold' : 'font-semibold'}`}>{it.label}</span>
+              {/* 字體調大時「商品分類」會擠成兩行、超出導覽列，換成短的「分類」 */}
+              <span className={`whitespace-nowrap text-[12px] leading-none ${it.active ? 'font-bold' : 'font-semibold'}`}>
+                {it.short ? <><span className="big:hidden">{it.label}</span><span className="hidden big:inline">{it.short}</span></> : it.label}
+              </span>
             </Link>
           </li>
         ))}

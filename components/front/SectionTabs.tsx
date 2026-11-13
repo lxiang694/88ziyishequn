@@ -33,12 +33,12 @@ export default function SectionTabs({ items }: { items: TabItem[] }) {
 
   return (
     <nav aria-label="商品資訊" className="sticky top-16 z-20 -mx-4 mb-4 border-b border-gray-200 bg-white sm:top-20 md:mx-0 md:rounded-t-2xl">
-      <div className="flex">
+      <div className="flex overflow-x-auto">
         {items.map(item => {
           const on = active === item.id
           return (
             <button key={item.id} type="button" onClick={() => go(item.id)} aria-current={on ? 'true' : undefined}
-              className={`relative flex-1 py-3.5 text-[15px] font-bold transition-colors ${on ? 'text-green-700' : 'text-gray-500 hover:text-gray-800'}`}>
+              className={`relative flex-1 whitespace-nowrap px-3 py-3.5 text-[15px] font-bold transition-colors ${on ? 'text-green-700' : 'text-gray-500 hover:text-gray-800'}`}>
               {item.label}
               {item.badge && <span className="ml-1 text-[13px] font-semibold">{item.badge}</span>}
               {on && <span className="absolute inset-x-6 bottom-0 h-[3px] rounded-full bg-green-600" aria-hidden />}

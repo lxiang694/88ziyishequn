@@ -38,9 +38,9 @@ export default function SiteHeader() {
         )}
 
         {/* Logo：點了回首頁 */}
-        <Link href="/" className="flex items-center gap-2 sm:gap-3 no-underline flex-shrink-0" aria-label="健康優選首頁">
+        <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3 no-underline" aria-label="健康優選首頁">
           <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"
-            className="w-8 h-8 sm:w-11 sm:h-11">
+            className="w-8 h-8 flex-shrink-0 sm:w-11 sm:h-11">
             <defs>
               <linearGradient id="logoGrad" x1="0" y1="0" x2="48" y2="48">
                 <stop offset="0" stopColor="#15803d"/>
@@ -65,8 +65,10 @@ export default function SiteHeader() {
             {/* Small accent dot for premium feel */}
             <circle cx="36" cy="34" r="2.5" fill="#fbbf24"/>
           </svg>
-          <span className="leading-tight">
-            <span className="block text-base sm:text-xl font-bold tracking-wide text-[#214e39]">健康優選</span>
+          {/* 字體調大、或螢幕窄於 380px（舊款小手機）時藏起品牌字，只留綠色圖示：
+              留給會員、購物車按鈕，不再被蓋住或被截成「健康…」 */}
+          <span className="min-w-0 leading-tight big:hidden max-xs:hidden">
+            <span className="block truncate text-base sm:text-xl font-bold tracking-wide text-[#214e39]">健康優選</span>
             <span className="hidden sm:block mt-1 text-[11px] tracking-widest text-[#62745e]">88 社群精選</span>
           </span>
         </Link>
@@ -83,7 +85,7 @@ export default function SiteHeader() {
             <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <span>購物車</span>
+            <span className="whitespace-nowrap">購物車</span>
             {totalItems > 0 && (
               <span className="ml-1 bg-red-500 text-white text-[13px] rounded-full min-w-[22px] h-[22px] flex items-center justify-center font-bold px-1 shadow">
                 {totalItems > 9 ? '9+' : totalItems}

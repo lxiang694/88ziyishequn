@@ -36,5 +36,9 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // big:xxx —— 手機系統字體調大時才套用（偵測見 app/layout.tsx 的 BIG_TEXT_PROBE）。
+    // 40～70 歲的客人常把字調到 1.5～2 倍，版面要換成能容納大字的排法。
+    require('tailwindcss/plugin')(({ addVariant }) => { addVariant('big', 'html[data-big-text] &') }),
+  ],
 }

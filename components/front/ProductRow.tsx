@@ -43,12 +43,12 @@ export default function ProductRow({ product, onAddToCart, showListedDate }: Pro
   const strike = strikePrice(product)
 
   return (
-    <article className="flex gap-3 rounded-2xl border border-line bg-white p-3 transition-shadow hover:shadow-md">
+    <article className="flex gap-3 rounded-2xl border border-line bg-white p-3 transition-shadow hover:shadow-md big:flex-col">
       <Link href={`/products/${product.slug}`}
-        className="relative block h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-paper sm:h-28 sm:w-28">
+        className="relative block h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-paper sm:h-28 sm:w-28 big:h-36 big:w-full">
         {product.cover_image_url ? (
           <Image src={product.cover_image_url} alt={product.product_name} fill
-            className="object-cover" sizes="112px" />
+            className="object-cover big:object-contain" sizes="(max-width: 640px) 50vw, 112px" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-3xl text-gray-200">💊</div>
         )}
@@ -93,7 +93,7 @@ export default function ProductRow({ product, onAddToCart, showListedDate }: Pro
           ) : (
             <p className="text-sm text-gray-400">暫無價格</p>
           )}
-          <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[13px] font-semibold text-orange-700">
               {(product.sales_count || 0) >= 5 ? `已售 ${product.sales_count}` : ''}
             </span>

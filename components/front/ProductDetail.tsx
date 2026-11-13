@@ -425,11 +425,11 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
       <div className="md:hidden fixed inset-x-0 bottom-0 z-40 bottom-skirt border-t border-gray-200 bg-white px-3 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
         style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
         {selectedVariant ? (
-          <div className="mb-1.5 flex items-center justify-between gap-2 text-[13px]">
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[13px]">
             <span className="min-w-0 truncate text-gray-600">
               已選：<b className="text-gray-800">{selectedVariant.variant_name}</b>{qty > 1 && <> × {qty}</>}
             </span>
-            <span className="flex flex-shrink-0 items-center gap-2">
+            <span className="flex flex-shrink-0 items-center gap-2 whitespace-nowrap">
               <b className="text-base text-green-700">{formatPrice(selectedVariant.sale_price * qty)}</b>
               {multiVariant && (
                 <button type="button" className="font-bold text-green-700 underline underline-offset-2" onClick={() => setSheet('choose')}>
@@ -439,27 +439,29 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
             </span>
           </div>
         ) : multiVariant && (
-          // 還沒選規格：講清楚，點了直接跳出規格面板
+          // 還沒選規格：講清楚，點了直接跳出規格面板。
+          // 左右兩塊各自不換行、整塊放不下時右邊（價格＋選規格）掉到第二行 ——
+          // 以前右邊不肯縮，字體調大的手機上左邊被擠成一個字一行（客人截圖）。
           <button type="button" onClick={() => setSheet('choose')}
-            className="mb-1.5 flex w-full items-center justify-between gap-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-left text-[13px]">
-            <span className="font-bold text-amber-900">⚠️ 尚未選擇規格（共 {activeVariants.length} 種）</span>
-            <span className="flex flex-shrink-0 items-center gap-1.5"><b className="text-green-700">{priceRange}</b><span className="font-bold text-green-700 underline underline-offset-2">選規格</span></span>
+            className="mb-1.5 flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-0.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-left text-[13px]">
+            <span className="whitespace-nowrap font-bold text-amber-900">⚠️ 尚未選擇規格<span className="big:hidden">（共 {activeVariants.length} 種）</span></span>
+            <span className="flex flex-wrap items-center gap-x-1.5"><b className="whitespace-nowrap text-green-700">{priceRange}</b><span className="whitespace-nowrap font-bold text-green-700 underline underline-offset-2">選規格</span></span>
           </button>
         )}
         <div className="flex items-stretch gap-2">
           <Link href="/cart" aria-label="購物車"
-            className="relative flex w-12 flex-shrink-0 flex-col items-center justify-center rounded-xl border border-gray-200 text-gray-600">
+            className="relative flex w-12 flex-shrink-0 flex-col items-center justify-center rounded-xl border border-gray-200 text-gray-600 big:hidden">
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             {totalItems > 0 && (
               <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[12px] font-bold text-white">{totalItems > 9 ? '9+' : totalItems}</span>
             )}
           </Link>
           <button onClick={handleAddToCart} disabled={!canBuy}
-            className="min-h-[48px] flex-1 rounded-xl border-2 border-green-700 text-[15px] font-bold text-green-700 active:bg-green-50 disabled:opacity-40">
+            className="min-h-[48px] flex-1 rounded-xl border-2 border-green-700 px-1 text-[15px] font-bold leading-tight text-green-700 active:bg-green-50 disabled:opacity-40">
             {canBuy ? '加入購物車' : '已售完'}
           </button>
           <button onClick={handleBuyNow} disabled={!canBuy}
-            className="min-h-[48px] flex-1 rounded-xl bg-green-700 text-[15px] font-bold text-white active:bg-green-800 disabled:opacity-40">
+            className="min-h-[48px] flex-1 rounded-xl bg-green-700 px-1 text-[15px] font-bold leading-tight text-white active:bg-green-800 disabled:opacity-40">
             {canBuy ? '立即購買' : '已售完'}
           </button>
         </div>

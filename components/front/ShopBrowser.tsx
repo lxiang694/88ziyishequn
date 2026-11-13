@@ -234,7 +234,7 @@ export default function ShopBrowser({
           {railMore && (
             <button type="button" onClick={() => railRef.current?.scrollBy({ top: 240, behavior: 'smooth' })}
               className="sticky bottom-0 block w-full bg-gradient-to-t from-sage via-sage to-sage/0 pb-2 pt-7 text-center text-[13px] font-bold text-green-800">
-              更多分類 ▼
+              <span className="big:hidden">更多分類 ▼</span><span className="hidden whitespace-nowrap big:inline">更多 ▼</span>
             </button>
           )}
         </nav>
@@ -254,11 +254,11 @@ export default function ShopBrowser({
             )}
             {/* 排序：台灣購物網站的標配，價格由低到高最常用 */}
             {products.length > 1 && (
-              <div role="radiogroup" aria-label="排序" className="mt-2 flex gap-1.5">
+              <div role="radiogroup" aria-label="排序" className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
                 {SHOP_SORTS.map(o => (
                   <button key={o.key} type="button" role="radio" aria-checked={sort === o.key}
                     onClick={() => { setSort(o.key); setVisibleCount(REVEAL_BATCH * 2); window.scrollTo(0, 0) }}
-                    className={`min-h-[36px] flex-1 rounded-full border px-2 text-[14px] font-semibold transition-colors sm:flex-none sm:px-4 ${
+                    className={`min-h-[36px] flex-1 whitespace-nowrap rounded-full border px-2.5 text-[14px] font-semibold transition-colors sm:flex-none sm:px-4 ${
                       sort === o.key ? 'border-green-700 bg-green-700 text-white' : 'border-gray-300 bg-white text-gray-700'}`}>
                     {o.label}
                   </button>
