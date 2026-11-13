@@ -54,10 +54,33 @@ function block(b: ProductBlock, key: number): React.ReactNode {
   switch (b.type) {
     // 商品欄位裡的「標題」是小節名（例如「每日建議量」），
     // 用稍大的粗體就夠，不需要文章那種階層。
+    // 小節標題（「產品特色」「使用方式」）：左邊一條短色線，跟內文分得出層次
     case 'h2':
     case 'h3':
     case 'h4':
-      return <p key={k} className="mt-6 first:mt-0 text-[1.05em] font-bold">{inline(b.text, k)}</p>
+      return (
+        <p key={k} className="mt-7 first:mt-0 flex items-center gap-2 text-[1.08em] font-bold">
+          <span className="h-[1.05em] w-1 flex-shrink-0 rounded-full bg-green-600" aria-hidden />
+          {inline(b.text, k)}
+        </p>
+      )
+
+    // 特色卡（「01｜螺旋紋玻璃濾杯」＋底下的說明）：編號圓角標籤＋粗體小標，
+    // 說明包在同一張淡底卡片裡、段落間距縮小 —— 一個重點一張卡，掃讀很快
+    case 'feature':
+      return (
+        <div key={k} className="mt-3 first:mt-0 rounded-2xl bg-black/[0.035] px-4 py-3.5">
+          <p className="flex items-start gap-2.5 font-bold leading-snug">
+            <span className="mt-[0.1em] flex-shrink-0 rounded-md bg-green-700 px-1.5 py-0.5 text-[0.78em] font-bold tabular-nums text-white">{b.num}</span>
+            <span className="min-w-0">{inline(b.title, k)}</span>
+          </p>
+          {b.body.length > 0 && (
+            <div className="mt-2 text-[0.96em] leading-relaxed opacity-90 [&>*]:mt-2 [&>*:first-child]:mt-0">
+              {b.body.map((x, i) => block(x, key * 100 + i + 1))}
+            </div>
+          )}
+        </div>
+      )
 
     // 開頭的一句話（「這款牙刷我自己用了快一年，今天終於上架了！」）：放大、底色框起來，先抓住目光。
     // 底色用半透明黑，灰色卡片、琥珀色卡片都協調

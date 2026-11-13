@@ -7,6 +7,7 @@ import { HOME_SECTIONS, HOME_SECTION_KEYS } from '@/lib/homeSections'
 import { suggestShopCategories } from '@/lib/shopCategories'
 import { compressImage } from '@/lib/imageCompress'
 import { stockLevel, LOW_STOCK } from '@/lib/adminStock'
+import ProductTextField from './ProductTextField'
 
 interface Props { initialData?: any; productId?: number; onSuccess: () => void }
 
@@ -178,14 +179,15 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
   // 儲存列上的提醒：還沒選分類、有規格庫存不足 —— 不用往回捲就知道
   const lowVariants = variants.filter(v => v.is_active && stockLevel(parseInt(v.stock_qty) || 0) !== 'ok')
   const missingShopCat = !shopCatsNeedMigration && shopCats.length > 0 && selectedShopCats.length === 0
+  // 文案欄位：多行的用 ProductTextField（貼上自動整理＋前台排版預覽），單行的用一般輸入框
   const textField = (key: keyof typeof form, label: string, opts: { rows?: number; placeholder?: string; hint?: string } = {}) => (
-    <div>
-      <label className="form-label">{label}</label>
-      {opts.rows
-        ? <textarea className="form-input" rows={opts.rows} placeholder={opts.placeholder} value={form[key] as string} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
-        : <input className="form-input" placeholder={opts.placeholder} value={form[key] as string} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />}
-      {opts.hint && <p className="mt-1 text-[13px] text-gray-500">{opts.hint}</p>}
-    </div>
+    opts.rows
+      ? <ProductTextField label={label} minRows={opts.rows} placeholder={opts.placeholder} value={form[key] as string} onChange={v => setForm(f => ({ ...f, [key]: v }))} />
+      : <div>
+          <label className="form-label">{label}</label>
+          <input className="form-input" placeholder={opts.placeholder} value={form[key] as string} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+          {opts.hint && <p className="mt-1 text-[13px] text-gray-500">{opts.hint}</p>}
+        </div>
   )
 
   return (
@@ -291,14 +293,10 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
           </Section>
 
           {/* ④ 商品介紹 */}
-          <Section n={4} title="商品介紹" hint="留空的欄位前台不顯示。直接貼上文案就好，前台會自動排版">
-            <div>
-              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                <label className="form-label mb-0">適合誰</label>
-                <AiButton loading={aiLoading === 'suitable_people'} disabled={aiLoading !== null || !form.product_name} onClick={() => handleAIGenerate('suitable_people')} />
-              </div>
-              <textarea className="form-input" rows={4} value={form.suitable_people} onChange={e => setForm(f => ({ ...f, suitable_people: e.target.value }))} />
-            </div>
+          <Section n={4} title="商品介紹" hint="直接把 LINE、臉書寫好的文案貼上就好：標題、編號重點、條列會自動排好，按「👀 看前台排版」就能確認。留空的欄位前台不顯示">
+            <ProductTextField label="適合誰／商品介紹" minRows={5} value={form.suitable_people}
+              onChange={v => setForm(f => ({ ...f, suitable_people: v }))}
+              action={<AiButton loading={aiLoading === 'suitable_people'} disabled={aiLoading !== null || !form.product_name} onClick={() => handleAIGenerate('suitable_people')} />} />
             {textField('usage_method', '使用方法', { rows: 3 })}
             {textField('ingredients', '成分說明', { rows: 3 })}
             {textField('precautions', '注意事項', { rows: 3 })}

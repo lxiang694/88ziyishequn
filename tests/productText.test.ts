@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { parseArticle } from '../lib/articleBlocks.ts'
-import { polishProductBlocks, splitLongParagraph } from '../lib/productText.ts'
+import { polishProductBlocks, splitLongParagraph, cleanPastedText } from '../lib/productText.ts'
 
 const types = (text: string) => polishProductBlocks(parseArticle(text)).map(b => b.type)
 
@@ -40,4 +40,43 @@ test('保守：規格行、只有一行、最後一行問句都不動', () => {
   assert.deepEqual(types('你也有這種困擾嗎？'), ['p'])                // 後面沒內容，不當標題
   assert.deepEqual(types('保存方式：常溫保存，避免日照。\n\n開封後請盡快食用。'), ['p', 'p']) // 有句號，不是標題
   assert.deepEqual(types('只有一句話！'), ['p'])                     // 只有一段不做導言
+})
+
+test('截圖的咖啡壺文案：「產品特色」變小標、「01｜…」變特色卡（說明包在卡裡）', () => {
+  const copy = [
+    '產品特色',
+    '01｜螺旋紋玻璃濾杯',
+    '濾杯採用立體螺旋紋路設計，搭配合適的濾紙與注水方式，幫助水流通過咖啡粉。',
+    '透明玻璃也方便觀察沖泡狀況。',
+    '02｜高硼矽玻璃材質',
+    '濾杯與分享壺採用高硼矽玻璃，適合日常冷熱飲沖泡使用。',
+    '03｜胡桃木托架',
+    '玻璃搭配胡桃木，整體看起來簡單、自然。',
+  ].join('\n\n')
+  const blocks = polishProductBlocks(parseArticle(copy)) as any[]
+  assert.deepEqual(blocks.map(b => b.type), ['h3', 'feature', 'feature', 'feature'])
+  assert.equal(blocks[0].text, '產品特色')
+  assert.deepEqual([blocks[1].num, blocks[1].title, blocks[1].body.length], ['01', '螺旋紋玻璃濾杯', 2])
+  assert.equal(blocks[3].body[0].text, '玻璃搭配胡桃木，整體看起來簡單、自然。')
+})
+
+test('連續三行以上的短句變條列；一兩行不動；最後一行短句不當標題', () => {
+  assert.deepEqual(types('長時間使用電腦的人\n\n肩頸容易緊繃的人\n\n每天開車的人'), ['ul'])
+  assert.deepEqual(types('好用推薦\n\n每天早晚都可以用，很方便。'), ['h3', 'p'])
+  assert.deepEqual(types('前面一段完整的句子。\n\n常溫保存'), ['p', 'p'])
+  // 特色卡遇到下一個小標就結束
+  const b = polishProductBlocks(parseArticle('01｜第一點\n\n說明一。\n\n使用方式\n\n每天一次，飯後食用。')) as any[]
+  assert.deepEqual(b.map(x => x.type), ['feature', 'h3', 'p'])
+})
+
+test('貼上清理：只清看不見的東西，文字一個不改', () => {
+  const pasted = '　產品特色​  \r\n\r\n\r\n\r\n01｜螺旋紋玻璃濾杯\t\n濾杯採用  立體設計。  '
+  assert.equal(cleanPastedText(pasted), '產品特色\n\n01｜螺旋紋玻璃濾杯\n濾杯採用 立體設計。')
+})
+
+test('「適合誰」後面接一串短句：適合誰是標題、後面是條列，而且會結束前一張特色卡', () => {
+  const b = polishProductBlocks(parseArticle('03｜胡桃木托架\n\n玻璃搭配胡桃木。\n\n適合誰\n\n喜歡手沖咖啡的人\n\n想在家慢慢喝一杯的人\n\n送禮給愛喝咖啡的朋友')) as any[]
+  assert.deepEqual(b.map(x => x.type), ['feature', 'h3', 'ul'])
+  assert.equal(b[1].text, '適合誰')
+  assert.equal(b[2].items.length, 3)
 })
