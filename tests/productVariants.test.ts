@@ -49,3 +49,28 @@ test('其他錯誤要回報，不能假裝成功', async () => {
   assert.match((await saveVariants(fakeDb({ deleteError: '42501' }).db, 7, keep)).error!, /刪除規格「單盒」失敗/)
   assert.match((await saveVariants(fakeDb({ ordered: [], failInsert: true }).db, 7, [...keep, { variant_name: '兩盒組', sale_price: 580 }])).error!, /兩盒組/)
 })
+
+test('規格圖片：資料庫有欄位才寫，只收 http(s) 網址', async () => {
+  const rows: any[] = []
+  const db = {
+    from: () => {
+      let op = 'select', row: any = null
+      const q: any = {
+        select: () => q, eq: () => q, delete: () => { op = 'delete'; return q },
+        update: (r: any) => { op = 'update'; row = r; return q }, insert: (r: any) => { op = 'insert'; row = r; return q },
+        then: (resolve: any) => { if (op === 'select') return resolve({ data: [], error: null }); if (row) rows.push(row); return resolve({ error: null }) },
+      }
+      return q
+    },
+  }
+  const input = [
+    { variant_name: '紅色', sale_price: 100, image_url: 'https://x.supabase.co/a.webp' },
+    { variant_name: '藍色', sale_price: 100, image_url: 'javascript:alert(1)' },
+    { variant_name: '綠色', sale_price: 100 },
+  ]
+  await saveVariants(db, 7, input, { withImages: true })
+  assert.deepEqual(rows.map(r => r.image_url), ['https://x.supabase.co/a.webp', null, null])
+  rows.length = 0
+  await saveVariants(db, 7, input)            // 還沒執行 SQL：不寫這個欄位
+  assert.ok(rows.every(r => !('image_url' in r)))
+})

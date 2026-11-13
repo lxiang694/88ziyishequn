@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { supabaseStorefront as db } from '@/lib/supabase'
 import { buildSalesMap } from '@/lib/salesUtils'
+import { variantColumns } from '@/lib/variantImages'
 import { nameSegments } from '@/lib/wordBreak'
 import { pickTrending, TRENDING_DAYS, type TrendRow } from '@/lib/homeTrending'
 import HomeClient from '@/components/front/HomeClient'
@@ -37,12 +38,13 @@ async function recentOrderRows(): Promise<TrendRow[]> {
 }
 
 async function getInitialData() {
+  const vcols = await variantColumns(db)
   const [productsRes, categoriesRes, salesMap, eventsRes, bannerRes, groupBuy, recentRows] = await Promise.all([
     db
       .from('products')
       .select(`*,
-        product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, is_active),
-        product_category_relations(health_categories(id, name, slug))`, { count: 'exact' })
+        product_variants(${vcols}),
+        product_category_relations(health_categories(id, name, slug))` as any, { count: 'exact' })
       .eq('is_published', true)
       .limit(200),
     db

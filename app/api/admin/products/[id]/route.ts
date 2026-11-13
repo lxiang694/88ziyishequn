@@ -6,7 +6,8 @@ import { HOME_SECTION_KEYS } from '@/lib/homeSections'
 import { normalizeCategoryIds } from '@/lib/shopCategories'
 import { saveShopCategories, shopCategoriesByProduct } from '@/lib/shopCategoryRepo'
 import { refreshStorefront } from '@/lib/storefrontCache'
-import { saveVariants } from '@/lib/productVariants'
+import { saveVariants, cleanImageUrl } from '@/lib/productVariants'
+import { variantImagesReady, VARIANT_IMAGES_SQL_HINT } from '@/lib/variantImages'
 
 function requireProductPerm(req: NextRequest) {
   const result = requireAdmin(req)
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (auth instanceof NextResponse) return auth
   const { data, error } = await supabaseAdmin
     .from('products')
-    .select(`*, product_variants(id,variant_name,sale_price,original_price,stock_qty,sku_code,sort_order,is_active), product_images(id,image_url,sort_order), product_category_relations(health_categories(id,name,slug))`)
+    .select(`*, product_variants(*), product_images(id,image_url,sort_order), product_category_relations(health_categories(id,name,slug))`)
     .eq('id', params.id).single()
   if (error) return NextResponse.json({ success: false, error: '商品不存在' }, { status: 404 })
 
@@ -93,8 +94,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     // 規格：沒賣過的刪除，被訂單連著的改下架（原因見 lib/productVariants.ts）
     let retired: string[] = []
+    // 規格圖片：資料庫還沒有欄位時先不存圖，其他照常（見 lib/variantImages.ts）
+    const withImages = await variantImagesReady()
+    const imagesSkipped = !withImages && Array.isArray(variants) && variants.some((v: any) => cleanImageUrl(v?.image_url))
     if (variants !== undefined) {
-      const saved = await saveVariants(supabaseAdmin, productId, variants)
+      const saved = await saveVariants(supabaseAdmin, productId, variants, { withImages })
       retired = saved.retired
       if (saved.error) {
         refreshStorefront()
@@ -121,7 +125,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       success: true,
       message: '商品更新成功',
       retired,
-      ...(retired.length ? { notice: `「${retired.join('、')}」已經有人訂過，不能刪除（舊訂單要對得到），已改成下架：前台不會再顯示。` } : {}),
+      ...(retired.length || imagesSkipped ? { notice: [
+        retired.length ? `「${retired.join('、')}」已經有人訂過，不能刪除（舊訂單要對得到），已改成下架：前台不會再顯示。` : '',
+        imagesSkipped ? VARIANT_IMAGES_SQL_HINT : '',
+      ].filter(Boolean).join('\n') } : {}),
     })
   } catch (err) {
     console.error('Update product error:', err)

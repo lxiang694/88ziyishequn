@@ -21,9 +21,20 @@ export interface VariantInput {
   stock_qty?: unknown
   sku_code?: string | null
   is_active?: boolean
+  /** 規格圖片（不同顏色、尺寸）；空字串或 null 代表沒有 */
+  image_url?: string | null
 }
 
-export async function saveVariants(db: Db, productId: number, variants: VariantInput[]): Promise<{ retired: string[]; error?: string }> {
+/** 規格圖片只收 http(s) 網址，其他一律當沒有（資料庫也有同樣的檢查） */
+export function cleanImageUrl(v: unknown): string | null {
+  return typeof v === 'string' && /^https?:\/\//.test(v.trim()) ? v.trim() : null
+}
+
+/**
+ * withImages：資料庫已經有 image_url 欄位（已執行 migrations/variant_images.sql）。
+ * 還沒執行時不寫這個欄位，其他照常儲存 —— 不能因為少一個欄位整個商品存不了。
+ */
+export async function saveVariants(db: Db, productId: number, variants: VariantInput[], opts: { withImages?: boolean } = {}): Promise<{ retired: string[]; error?: string }> {
   const { data: existing, error: readErr } = await db.from('product_variants').select('id, variant_name').eq('product_id', productId)
   if (readErr) return { retired: [], error: '讀取原本的規格失敗' }
   const keep = new Set(variants.filter(v => v.id).map(v => Number(v.id)))
@@ -50,6 +61,7 @@ export async function saveVariants(db: Db, productId: number, variants: VariantI
       sku_code: v.sku_code || null,
       sort_order: i,
       is_active: v.is_active !== false,
+      ...(opts.withImages ? { image_url: cleanImageUrl(v.image_url) } : {}),
     }
     const { error } = v.id
       ? await db.from('product_variants').update(row).eq('id', v.id)

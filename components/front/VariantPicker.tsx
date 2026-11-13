@@ -12,6 +12,8 @@ interface Variant {
   stock_qty: number
   sku_code: string | null
   is_active: boolean
+  /** 規格圖片（不同顏色、尺寸）；沒上傳就沒有，照舊顯示商品主圖 */
+  image_url?: string | null
 }
 
 interface Props {
@@ -40,6 +42,8 @@ export default function VariantPicker({ product, onClose, onAdded, preselect = t
   const { addItem } = useCart()
   const [selected, setSelected] = useState<Variant | null>(null)
   const [qty, setQty] = useState(1)
+  // 點上面的圖片放大看（規格圖片才看得清楚顏色、細節）
+  const [zoom, setZoom] = useState<string | null>(null)
 
   useEffect(() => {
     if (product) {
@@ -63,6 +67,9 @@ export default function VariantPicker({ product, onClose, onAdded, preselect = t
   if (!product) return null
 
   const activeVariants = product.product_variants.filter(v => v.is_active)
+  // 有任何規格上傳了圖片：上面的圖放大一點，選了哪個規格就換成那張
+  const hasVariantImages = activeVariants.some(v => v.image_url)
+  const headerImage = selected?.image_url || product.cover_image_url
 
   const handleAdd = () => {
     if (!selected) return
@@ -71,7 +78,8 @@ export default function VariantPicker({ product, onClose, onAdded, preselect = t
       product_id: product.id,
       product_name: product.product_name,
       product_slug: product.product_slug,
-      cover_image_url: product.cover_image_url,
+      // 規格有自己的圖片時，購物車顯示那張（分得出買的是哪個顏色）
+      cover_image_url: selected.image_url || product.cover_image_url,
       variant_id: selected.id,
       variant_name: selected.variant_name,
       sku_code: selected.sku_code,
@@ -103,13 +111,16 @@ export default function VariantPicker({ product, onClose, onAdded, preselect = t
 
         {/* Header */}
         <div className="flex items-start gap-4 px-5 pt-4 pb-4 border-b border-gray-100">
-          <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 relative flex-shrink-0">
-            {product.cover_image_url ? (
-              <Image src={product.cover_image_url} alt={product.product_name} fill className="object-cover" sizes="80px" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-3xl">💊</div>
-            )}
-          </div>
+          {headerImage ? (
+            <button type="button" onClick={() => setZoom(headerImage)} aria-label="放大看圖片"
+              className={`relative flex-shrink-0 overflow-hidden rounded-xl bg-gray-100 ${hasVariantImages ? 'h-28 w-28' : 'h-20 w-20'}`}>
+              <Image key={headerImage} src={headerImage} alt={selected?.image_url ? `${product.product_name} ${selected.variant_name}` : product.product_name}
+                fill className={hasVariantImages ? 'object-contain' : 'object-cover'} sizes="112px" />
+              {hasVariantImages && <span className="absolute bottom-1 right-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] font-bold text-white">🔍 放大</span>}
+            </button>
+          ) : (
+            <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 text-3xl">💊</div>
+          )}
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 text-base leading-snug">{product.product_name}</h3>
             {product.short_intro && (
@@ -149,7 +160,13 @@ export default function VariantPicker({ product, onClose, onAdded, preselect = t
                       ? 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
                       : 'border-gray-200 hover:border-green-400 hover:bg-green-50/50'}`}
                 >
-                  <div>
+                  <div className="flex min-w-0 items-center gap-3">
+                    {/* 有上傳圖片的規格才放縮圖，沒上傳的不放 */}
+                    {v.image_url && (
+                      <span className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                        <Image src={v.image_url} alt="" fill className={`object-cover ${outOfStock ? 'opacity-40' : ''}`} sizes="48px" />
+                      </span>
+                    )}
                     <span className={`font-semibold text-base ${isSelected ? 'text-green-800' : outOfStock ? 'text-gray-500' : 'text-gray-800'}`}>
                       {v.variant_name}
                       {outOfStock && <span className="ml-2 text-[13px] font-semibold text-red-600">（已售完）</span>}
@@ -214,6 +231,16 @@ export default function VariantPicker({ product, onClose, onAdded, preselect = t
           }
         }
       `}</style>
+      {/* 放大看圖：點任何地方關閉 */}
+      {zoom && (
+        <button type="button" onClick={() => setZoom(null)} aria-label="關閉放大圖片"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4">
+          <span className="relative h-full max-h-[80vh] w-full max-w-lg">
+            <Image src={zoom} alt={product.product_name} fill className="object-contain" sizes="100vw" />
+          </span>
+          <span className="absolute right-4 top-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-2xl text-gray-800">✕</span>
+        </button>
+      )}
     </div>
   )
 }

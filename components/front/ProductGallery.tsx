@@ -8,7 +8,12 @@ import Image from 'next/image'
  * 下方小圓點＋右上「2 / 5」告訴客人還有幾張；縮圖點了會滑到那一張；
  * 桌機滑鼠沒辦法滑，另外放左右箭頭。
  */
-export default function ProductGallery({ images, alt }: { images: string[]; alt: string }) {
+export default function ProductGallery({ images, alt, focus = null }: {
+  images: string[]
+  alt: string
+  /** 客人選了有圖片的規格：主圖滑到那一張（規格圖片已含在 images 裡） */
+  focus?: string | null
+}) {
   const list = Array.from(new Set(images.filter(Boolean)))
   const track = useRef<HTMLDivElement>(null)
   const [index, setIndex] = useState(0)
@@ -32,6 +37,14 @@ export default function ProductGallery({ images, alt }: { images: string[]; alt:
     const n = (i + list.length) % list.length
     el.scrollTo({ left: n * el.clientWidth, behavior: 'smooth' })
   }
+
+  // 選了有圖片的規格 → 滑到那張規格圖
+  useEffect(() => {
+    if (!focus) return
+    const i = list.indexOf(focus)
+    if (i >= 0) go(i)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus])
 
   if (list.length === 0) {
     return <div className="mb-3 flex aspect-square items-center justify-center rounded-2xl bg-white text-7xl text-gray-200 shadow-sm">💊</div>

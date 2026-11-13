@@ -1,6 +1,7 @@
 // 只給前台頁面用，所以走會快取 60 秒的用戶端（見 lib/supabase.ts）
 import { supabaseStorefront as supabaseAdmin } from '@/lib/supabase'
 import { buildSalesMap } from '@/lib/salesUtils'
+import { variantColumns } from '@/lib/variantImages'
 import { SHOP_CATEGORIES } from '@/lib/shopCategories'
 import { shopCategoriesByProduct, type ShopCategoryRow } from '@/lib/shopCategoryRepo'
 
@@ -67,10 +68,11 @@ export async function fetchShopProducts(slug: string, limit = 200) {
     productIds = ids
   }
 
+  const vcols = await variantColumns(supabaseAdmin)
   let query = supabaseAdmin
     .from('products')
     .select(`id, product_name, slug, short_intro, cover_image_url, created_at,
-      product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, is_active)`)
+      product_variants(${vcols})` as any)
     .eq('is_published', true)
     .limit(newest ? NEW_ARRIVALS_LIMIT : limit)
   if (newest) query = query.order('created_at', { ascending: false }).order('id', { ascending: false })

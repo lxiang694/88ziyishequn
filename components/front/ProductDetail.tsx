@@ -34,6 +34,8 @@ interface Variant {
   sku_code: string | null
   sort_order: number
   is_active: boolean
+  /** 規格圖片（不同顏色、尺寸）；沒上傳就是 null，前台照舊顯示商品主圖 */
+  image_url?: string | null
 }
 
 interface ProductImage {
@@ -112,9 +114,11 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
   const priceRange = minPrice === maxPrice ? formatPrice(minPrice) : `${formatPrice(minPrice)}～${formatPrice(maxPrice)}`
   const anyInStock = activeVariants.some(v => v.stock_qty > 0)
 
+  // 規格圖片接在相簿後面：客人可以直接滑著看各種顏色、尺寸；選了規格就滑到那一張
   const allImages = [
     ...(product.cover_image_url ? [product.cover_image_url] : []),
     ...(product.product_images?.map(i => i.image_url) || []),
+    ...activeVariants.map(v => v.image_url).filter((u): u is string => !!u),
   ]
   const cats = product.product_category_relations?.map(r => r.health_categories).filter(Boolean) || []
   const inStock = (selectedVariant?.stock_qty ?? 0) > 0
@@ -123,7 +127,8 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
 
   const addVariant = (v: Variant, n: number) => addItem({
     product_id: product.id, product_name: product.product_name,
-    product_slug: product.slug, cover_image_url: product.cover_image_url,
+    // 規格有自己的圖片時，購物車顯示那張（客人才分得出買的是哪個顏色）
+    product_slug: product.slug, cover_image_url: v.image_url || product.cover_image_url,
     variant_id: v.id, variant_name: v.variant_name,
     sku_code: v.sku_code, unit_price: v.sale_price,
     quantity: n, stock_qty: v.stock_qty,
@@ -164,7 +169,7 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
         {/* Images —— 正方形。商品圖幾乎都是正方形的宣傳圖，容器改成 4:3 時左右會多出
             兩條白邊，看起來很空。購買按鈕已經固定在畫面底部，不必再壓縮圖片高度。
             object-contain：少數非正方形的圖完整顯示，不裁掉圖上的文字。 */}
-        <ProductGallery images={allImages} alt={product.product_name} />
+        <ProductGallery images={allImages} alt={product.product_name} focus={selectedVariant?.image_url || null} />
 
         {/* Product info —— 先給買東西需要的：名稱、價格、規格、數量、按鈕；
             介紹與分類標籤放在按鈕後面 */}
@@ -244,10 +249,15 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
                   return (
                     <button key={v.id} onClick={() => { if (!oos) { setSelectedVariant(v); setQty(1) } }}
                       disabled={oos}
-                      className={`px-4 py-2.5 rounded-xl border-2 font-semibold text-sm transition-all
+                      className={`inline-flex items-center px-4 py-2.5 rounded-xl border-2 font-semibold text-sm transition-all ${v.image_url ? 'pl-1.5' : ''}
                         ${sel ? 'border-green-600 bg-green-50 text-green-800 shadow-sm'
                           : oos ? 'border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed'
                           : 'border-gray-200 text-gray-700 hover:border-green-400 hover:bg-green-50/50'}`}>
+                      {v.image_url && (
+                        <span className="relative mr-2 h-9 w-9 flex-shrink-0 overflow-hidden rounded-lg bg-white">
+                          <Image src={v.image_url} alt="" fill className={`object-cover ${oos ? 'opacity-40' : ''}`} sizes="36px" />
+                        </span>
+                      )}
                       {v.variant_name}
                       {/* 多種規格時每顆按鈕直接寫價格，比較時不用一個一個點 */}
                       {multiVariant && !oos && <span className={`ml-1.5 font-bold ${sel ? 'text-green-700' : 'text-gray-500'}`}>{formatPrice(v.sale_price)}</span>}

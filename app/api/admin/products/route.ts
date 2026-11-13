@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cleanImageUrl } from '@/lib/productVariants'
+import { variantImagesReady, VARIANT_IMAGES_SQL_HINT } from '@/lib/variantImages'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
 import { generateSlug, normalizeSlug } from '@/lib/utils'
@@ -93,11 +95,16 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.from('product_category_relations').insert(category_ids.map((cid: number) => ({ product_id: product.id, category_id: cid })))
     }
     await saveShopCategories(product.id, normalizeCategoryIds(shop_category_ids))
+    let imagesSkipped = false
     if (variants?.length > 0) {
+      // 規格圖片：資料庫還沒有欄位時先不存圖，其他照常（見 lib/variantImages.ts）
+      const withImages = await variantImagesReady()
+      imagesSkipped = !withImages && variants.some((v: any) => cleanImageUrl(v?.image_url))
       await supabaseAdmin.from('product_variants').insert(variants.map((v: any, i: number) => ({
         product_id: product.id, variant_name: v.variant_name, sale_price: parseFloat(v.sale_price),
         original_price: v.original_price ? parseFloat(v.original_price) : null,
         stock_qty: parseInt(v.stock_qty) || 0, sku_code: v.sku_code || null, sort_order: i, is_active: v.is_active !== false,
+        ...(withImages ? { image_url: cleanImageUrl(v.image_url) } : {}),
       })))
     }
     if (gallery_images?.length > 0) {
@@ -106,7 +113,7 @@ export async function POST(req: NextRequest) {
       })))
     }
     refreshStorefront()
-    return NextResponse.json({ success: true, data: product })
+    return NextResponse.json({ success: true, data: product, ...(imagesSkipped ? { notice: VARIANT_IMAGES_SQL_HINT } : {}) })
   } catch {
     return NextResponse.json({ success: false, error: '新增商品失敗' }, { status: 500 })
   }

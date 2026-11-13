@@ -9,7 +9,7 @@ import { compressImage } from '@/lib/imageCompress'
 
 interface Props { initialData?: any; productId?: number; onSuccess: () => void }
 
-interface Variant { id?: number; variant_name: string; sale_price: string; original_price: string; stock_qty: string; sku_code: string; sort_order: number; is_active: boolean }
+interface Variant { id?: number; variant_name: string; sale_price: string; original_price: string; stock_qty: string; sku_code: string; sort_order: number; is_active: boolean; image_url?: string | null }
 interface GalleryImg { image_url: string; sort_order: number }
 
 const emptyVariant = (): Variant => ({ variant_name: '', sale_price: '', original_price: '', stock_qty: '0', sku_code: '', sort_order: 0, is_active: true })
@@ -64,7 +64,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
         setVariants(initialData.product_variants.sort((a: any, b: any) => a.sort_order - b.sort_order).map((v: any) => ({
           id: v.id, variant_name: v.variant_name, sale_price: String(v.sale_price),
           original_price: String(v.original_price || ''), stock_qty: String(v.stock_qty),
-          sku_code: v.sku_code || '', sort_order: v.sort_order, is_active: v.is_active,
+          sku_code: v.sku_code || '', sort_order: v.sort_order, is_active: v.is_active, image_url: v.image_url || null,
         })))
       }
       if (initialData.product_images?.length > 0) {
@@ -99,6 +99,20 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
     }
     setUploading(false)
     toast.success('圖片上傳完成')
+  }
+
+  // 規格圖片（不同顏色、尺寸）：一個規格一張，客人在前台點這個規格就會看到
+  const [variantUploading, setVariantUploading] = useState<number | null>(null)
+  const handleVariantImage = async (i: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setVariantUploading(i)
+    try {
+      const url = await uploadImage(file)
+      if (url) { setVariants(vs => vs.map((v, j) => j === i ? { ...v, image_url: url } : v)); toast.success('規格圖片上傳完成') }
+      else toast.error('圖片上傳失敗，請再試一次')
+    } finally { setVariantUploading(null) }
   }
 
   const handleAIGenerate = async (type: 'short_intro' | 'suitable_people' | 'both') => {
@@ -385,6 +399,27 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
                   {!v.is_active && <span className="ml-2 rounded bg-gray-200 px-1.5 py-0.5 text-[12px] font-bold text-gray-600">已下架・前台不顯示</span>}
                 </span>
                 {variants.length > 1 && <button onClick={() => removeVariant(i)} className="text-red-500 text-sm font-semibold hover:underline">刪除</button>}
+              </div>
+              {/* 規格圖片：選填。沒上傳的規格，前台照舊顯示商品主圖 */}
+              <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-2.5">
+                <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  {v.image_url
+                    ? <Image src={v.image_url} alt={v.variant_name || `規格 ${i + 1}`} fill className="object-contain" sizes="64px" />
+                    : <span className="flex h-full items-center justify-center text-[12px] text-gray-400">無圖片</span>}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-semibold text-gray-700">規格圖片 <span className="font-normal text-gray-500">（選填，例如不同顏色、尺寸）</span></p>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    <label className={`cursor-pointer rounded-lg border border-green-600 bg-white px-3 py-1.5 text-[13px] font-bold text-green-700 hover:bg-green-50 ${variantUploading !== null ? 'pointer-events-none opacity-50' : ''}`}>
+                      {variantUploading === i ? '上傳中…' : v.image_url ? '更換圖片' : '上傳圖片'}
+                      <input type="file" accept="image/*" className="hidden" onChange={e => handleVariantImage(i, e)} disabled={variantUploading !== null} />
+                    </label>
+                    {v.image_url && (
+                      <button type="button" onClick={() => setVariants(vs => vs.map((x, j) => j === i ? { ...x, image_url: null } : x))}
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-100">移除</button>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="form-label text-[13px]">規格名稱 *</label><input className="form-input py-2" placeholder="例：30顆/盒" value={v.variant_name} onChange={e => updateVariant(i, 'variant_name', e.target.value)} /></div>

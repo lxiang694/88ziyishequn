@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { variantColumns } from '@/lib/variantImages'
 import { supabaseAdmin } from '@/lib/supabase'
 import { buildSalesMap } from '@/lib/salesUtils'
 
@@ -65,12 +66,13 @@ export async function GET(req: NextRequest) {
   }
 
   // 商品查詢與銷量查詢平行執行
+  const vcols = await variantColumns(supabaseAdmin)
   let productQuery = supabaseAdmin
     .from('products')
     .select(`*,
-      product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, is_active),
+      product_variants(${vcols}),
       product_category_relations(health_categories(id, name, slug))
-    `, { count: 'exact' })
+    ` as any, { count: 'exact' })
     .eq('is_published', true)
     .limit(limit)
 

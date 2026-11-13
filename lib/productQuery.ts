@@ -1,6 +1,7 @@
 // 只給前台頁面用，所以走會快取 60 秒的用戶端（見 lib/supabase.ts）
 import { supabaseStorefront as supabaseAdmin } from '@/lib/supabase'
 import { rankProductArticles } from '@/lib/productArticleMatcher'
+import { variantColumns } from '@/lib/variantImages'
 import { buildSalesMap, getSalesCountForProduct } from '@/lib/salesUtils'
 import { shopCategoriesByProduct } from '@/lib/shopCategoryRepo'
 import { rankRecommendations, countCoBought, REC_COUNT } from '@/lib/productRecommend'
@@ -20,16 +21,17 @@ import { rankRecommendations, countCoBought, REC_COUNT } from '@/lib/productReco
  * 元件的互動（選規格、加購物車）完全不受影響。
  */
 export async function fetchPublishedProduct(slug: string) {
-  const { data, error } = await supabaseAdmin
+  const vcols = await variantColumns(supabaseAdmin)
+  const { data, error }: { data: any; error: any } = await supabaseAdmin
     .from('products')
     .select(`
       *,
-      product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, sort_order, is_active),
+      product_variants(${vcols}),
       product_images(id, image_url, sort_order),
       product_category_relations(
         health_categories(id, name, slug)
       )
-    `)
+    ` as any)
     .eq('slug', slug)
     .eq('is_published', true)
     .maybeSingle()
@@ -77,12 +79,13 @@ export async function fetchRelatedArticles(product: any, topN = 3) {
 export async function fetchRecommendedProducts(product: any, n = REC_COUNT) {
   if (!product?.id) return []
   try {
+    const vcols = await variantColumns(supabaseAdmin)
     const [candRes, coBought, salesMap] = await Promise.all([
       supabaseAdmin
         .from('products')
         .select(`id, product_name, slug, cover_image_url,
-          product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, sort_order, is_active),
-          product_category_relations(health_categories(id))`)
+          product_variants(${vcols}),
+          product_category_relations(health_categories(id))` as any)
         .eq('is_published', true)
         .limit(300),
       fetchCoBought(product.id),

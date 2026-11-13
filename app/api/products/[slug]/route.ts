@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSalesCountForProduct } from '@/lib/salesUtils'
+import { variantColumns } from '@/lib/variantImages'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
-  const { data, error } = await supabaseAdmin
+  const vcols = await variantColumns(supabaseAdmin)
+  const { data, error }: { data: any; error: any } = await supabaseAdmin
     .from('products')
     .select(`
       *,
-      product_variants(id, variant_name, sale_price, original_price, stock_qty, sku_code, sort_order, is_active),
+      product_variants(${vcols}),
       product_images(id, image_url, sort_order),
       product_category_relations(
         health_categories(id, name, slug)
       )
-    `)
+    ` as any)
     .eq('slug', params.slug)
     .eq('is_published', true)
     .single()
