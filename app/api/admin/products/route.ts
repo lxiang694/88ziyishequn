@@ -8,6 +8,7 @@ import { HOME_SECTION_KEYS } from '@/lib/homeSections'
 import { normalizeCategoryIds } from '@/lib/shopCategories'
 import { saveShopCategories, shopCategoriesByProduct } from '@/lib/shopCategoryRepo'
 import { refreshStorefront } from '@/lib/storefrontCache'
+import { needsRestock } from '@/lib/adminStock'
 
 export async function GET(req: NextRequest) {
   const auth = requireAdmin(req)
@@ -21,6 +22,8 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search') || ''
   const category = searchParams.get('category') || ''
   const published = searchParams.get('published') || ''
+  // stock=low：只看有規格庫存不足（少於 5 件，含售完）的商品
+  const stockFilter = searchParams.get('stock') || ''
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '15')
   const offset = (page - 1) * limit
@@ -38,16 +41,34 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // 封存的商品（已有訂單、按過刪除）平常不顯示，選「已封存」才看得到。
+  // products_archive.sql 還沒執行時沒有 archived_at 欄位，不加這個條件。
+  const { error: archiveProbe } = await supabaseAdmin.from('products').select('archived_at').limit(0)
+
+  // 頁面上方的摘要（全部／上架中／未上架／庫存不足）＋「只看庫存不足」要用的商品編號。
+  // 只讀狀態與規格庫存，商品數百件的量級一次讀完沒問題。
+  let summaryQuery = supabaseAdmin.from('products').select('id, is_published, product_variants(stock_qty, is_active)').limit(2000)
+  if (!archiveProbe) summaryQuery = summaryQuery.is('archived_at', null)
+  const { data: allRows } = await summaryQuery
+  const lowIds = (allRows || []).filter((p: any) => needsRestock(p.product_variants)).map((p: any) => p.id as number)
+  const summary = {
+    all: allRows?.length || 0,
+    published: (allRows || []).filter((p: any) => p.is_published).length,
+    unpublished: (allRows || []).filter((p: any) => !p.is_published).length,
+    lowStock: lowIds.length,
+  }
+  if (stockFilter === 'low') {
+    productIdFilter = productIdFilter === null ? lowIds : productIdFilter.filter(id => lowIds.includes(id))
+    if (productIdFilter.length === 0) return NextResponse.json({ success: true, data: [], total: 0, page, limit, summary })
+  }
+
   let query = supabaseAdmin
     .from('products')
-    .select(`*, product_variants(id,variant_name,sale_price,original_price,stock_qty,sku_code,sort_order,is_active), product_images(id,image_url,sort_order), product_category_relations(health_categories(id,name,slug))`, { count: 'exact' })
+    .select(`*, product_variants(*), product_images(id,image_url,sort_order), product_category_relations(health_categories(id,name,slug))`, { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
   if (search) query = query.ilike('product_name', `%${search}%`)
-  // 封存的商品（已有訂單、按過刪除）平常不顯示，選「已封存」才看得到。
-  // products_archive.sql 還沒執行時沒有 archived_at 欄位，不加這個條件。
-  const { error: archiveProbe } = await supabaseAdmin.from('products').select('archived_at').limit(0)
   if (!archiveProbe) query = published === 'archived' ? query.not('archived_at', 'is', null) : query.is('archived_at', null)
   if (published === 'true') query = query.eq('is_published', true)
   if (published === 'false') query = query.eq('is_published', false)
@@ -60,7 +81,7 @@ export async function GET(req: NextRequest) {
   const shopByProduct = await shopCategoriesByProduct((data || []).map((p: any) => p.id))
   const rows = (data || []).map((p: any) => ({ ...p, shop_categories: shopByProduct.get(p.id) || [] }))
 
-  return NextResponse.json({ success: true, data: rows, total: count || 0, page, limit })
+  return NextResponse.json({ success: true, data: rows, total: count || 0, page, limit, summary })
 }
 
 export async function POST(req: NextRequest) {

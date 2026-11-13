@@ -6,6 +6,7 @@ import { TIMING_OPTIONS } from '@/lib/productMeta'
 import { HOME_SECTIONS, HOME_SECTION_KEYS } from '@/lib/homeSections'
 import { suggestShopCategories } from '@/lib/shopCategories'
 import { compressImage } from '@/lib/imageCompress'
+import { stockLevel, LOW_STOCK } from '@/lib/adminStock'
 
 interface Props { initialData?: any; productId?: number; onSuccess: () => void }
 
@@ -174,300 +175,296 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
     .map(sg => shopCats.find(c => c.slug === sg.slug))
     .filter((c): c is any => !!c && !selectedShopCats.includes(c.id))
 
+  // 儲存列上的提醒：還沒選分類、有規格庫存不足 —— 不用往回捲就知道
+  const lowVariants = variants.filter(v => v.is_active && stockLevel(parseInt(v.stock_qty) || 0) !== 'ok')
+  const missingShopCat = !shopCatsNeedMigration && shopCats.length > 0 && selectedShopCats.length === 0
+  const textField = (key: keyof typeof form, label: string, opts: { rows?: number; placeholder?: string; hint?: string } = {}) => (
+    <div>
+      <label className="form-label">{label}</label>
+      {opts.rows
+        ? <textarea className="form-input" rows={opts.rows} placeholder={opts.placeholder} value={form[key] as string} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+        : <input className="form-input" placeholder={opts.placeholder} value={form[key] as string} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />}
+      {opts.hint && <p className="mt-1 text-[13px] text-gray-500">{opts.hint}</p>}
+    </div>
+  )
+
   return (
-    <div className="max-w-3xl space-y-6">
-      {/* Basic info */}
-      <div className="card p-5">
-        <h2 className="font-bold text-gray-800 text-lg mb-4">基本資料</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="form-label">商品名稱 *</label>
-            <input className="form-input" value={form.product_name} onChange={e => setForm(f => ({ ...f, product_name: e.target.value }))} />
-          </div>
+    <div className="max-w-6xl pb-28">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        {/* ═══════ 左欄：商品內容 ═══════ */}
+        <div className="min-w-0 space-y-5">
 
-          <div>
-            <label className="form-label">網址識別碼</label>
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-gray-500 text-sm font-mono">/products/</span>
-              <input
-                className="form-input flex-1 min-w-[200px] font-mono"
-                placeholder="留空會自動產生"
-                value={form.slug}
-                onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
-              />
+          {/* ① 基本資料 */}
+          <Section n={1} title="基本資料">
+            <div>
+              <label className="form-label">商品名稱 <span className="text-red-500">*</span></label>
+              <input className="form-input text-lg font-semibold" placeholder="例：6合一綜合維生素" value={form.product_name} onChange={e => setForm(f => ({ ...f, product_name: e.target.value }))} />
             </div>
-            <p className="text-[13px] text-gray-500 mt-1 leading-relaxed">
-              只能用小寫英文、數字與連字號，例：<code className="bg-gray-100 px-1 rounded">wild-camellia-oil</code>。
-              留空的話系統會自動產生（中文名稱＋時間戳）。
-              {initialData?.slug && (
-                <span className="block text-amber-700 mt-1">
-                  ⚠️ 已上架的商品改這裡，舊網址就會失效（已分享出去的連結會連不到）。
-                </span>
-              )}
-            </p>
-          </div>
-
-          {/* AI generate buttons */}
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
-            <p className="text-sm font-semibold text-purple-700 mb-2">✨ AI 自動生成文案</p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { type: 'short_intro' as const, label: '生成一句話簡介' },
-                { type: 'suitable_people' as const, label: '生成適合人群' },
-                { type: 'both' as const, label: '兩者都生成' },
-              ].map(btn => (
-                <button key={btn.type} onClick={() => handleAIGenerate(btn.type)} disabled={aiLoading !== null || !form.product_name} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50">
-                  {aiLoading === btn.type ? '生成中...' : btn.label}
-                </button>
-              ))}
+            <div>
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                <label className="form-label mb-0">一句話簡介</label>
+                <AiButton loading={aiLoading === 'short_intro'} disabled={aiLoading !== null || !form.product_name} onClick={() => handleAIGenerate('short_intro')} />
+              </div>
+              <input className="form-input" placeholder="30 字以內，會顯示在商品名稱下面" value={form.short_intro} onChange={e => setForm(f => ({ ...f, short_intro: e.target.value }))} />
             </div>
-          </div>
+          </Section>
 
-          <div>
-            <label className="form-label">一句話簡介</label>
-            <input className="form-input" placeholder="30字以內簡短說明" value={form.short_intro} onChange={e => setForm(f => ({ ...f, short_intro: e.target.value }))} />
-          </div>
-          <div>
-            <label className="form-label">適合人群</label>
-            <textarea className="form-input" rows={3} value={form.suitable_people} onChange={e => setForm(f => ({ ...f, suitable_people: e.target.value }))} />
-          </div>
-          <div>
-            <label className="form-label">使用方法</label>
-            <textarea className="form-input" rows={3} value={form.usage_method} onChange={e => setForm(f => ({ ...f, usage_method: e.target.value }))} />
-          </div>
-          <div>
-            <label className="form-label">成分說明</label>
-            <textarea className="form-input" rows={3} value={form.ingredients} onChange={e => setForm(f => ({ ...f, ingredients: e.target.value }))} />
-          </div>
-          <div>
-            <label className="form-label">注意事項</label>
-            <textarea className="form-input" rows={3} value={form.precautions} onChange={e => setForm(f => ({ ...f, precautions: e.target.value }))} />
-          </div>
-          <div>
-            <label className="form-label">保存方式</label>
-            <input className="form-input" value={form.storage_method} onChange={e => setForm(f => ({ ...f, storage_method: e.target.value }))} />
-          </div>
-        </div>
-      </div>
-
-      {/* 情境化資訊（誰／何時／怎麼搭／來源） */}
-      <div className="card p-5">
-        <h2 className="font-bold text-gray-800 text-lg mb-1">情境化保健資訊</h2>
-        <p className="text-gray-600 text-sm mb-4">誰適合（上面「適合人群」）、何時吃、怎麼搭、什麼來源——留空的欄位前台不顯示。</p>
-        <div className="space-y-4">
-          <div>
-            <label className="form-label">⏰ 建議服用時間（可複選）</label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {TIMING_OPTIONS.map(o => {
-                const selected = form.intake_timing.split(',').map(s => s.trim()).filter(Boolean)
-                const on = selected.includes(o.value)
-                return (
-                  <button key={o.value} type="button"
-                    onClick={() => {
-                      const next = on ? selected.filter(v => v !== o.value) : [...selected, o.value]
-                      setForm(f => ({ ...f, intake_timing: next.join(',') }))
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-sm font-bold border-2 transition-colors ${on ? 'border-green-600 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600 hover:border-green-300'}`}>
-                    {o.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          <div>
-            <label className="form-label">🔗 搭配建議</label>
-            <textarea className="form-input" rows={2} placeholder="例：協同——搭配維生素D3、隨油脂吸收更好；避免同時——與鈣、鐵錯開" value={form.pairing_tips} onChange={e => setForm(f => ({ ...f, pairing_tips: e.target.value }))} />
-          </div>
-          <div>
-            <label className="form-label">🌿 成分來源 / 劑型 / 挑選重點</label>
-            <textarea className="form-input" rows={2} placeholder="例：游離型葉黃素、深海魚萃取、USP 認證、素食膠囊" value={form.source_notes} onChange={e => setForm(f => ({ ...f, source_notes: e.target.value }))} />
-          </div>
-        </div>
-      </div>
-
-      {/* Images */}
-      <div className="card p-5">
-        <h2 className="font-bold text-gray-800 text-lg mb-4">商品圖片</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="form-label">主圖</label>
-            <div className="flex gap-4 items-start">
-              <label className="flex-shrink-0 w-28 h-28 rounded-xl border-2 border-dashed border-gray-300 hover:border-green-500 cursor-pointer flex items-center justify-center bg-gray-50 transition-colors overflow-hidden relative">
-                {form.cover_image_url ? (
-                  <Image src={form.cover_image_url} alt="主圖" fill className="object-cover" sizes="112px" />
-                ) : (
-                  <div className="text-center text-gray-600"><div className="text-2xl mb-1">📷</div><div className="text-[13px]">上傳主圖</div></div>
-                )}
-                <input type="file" className="hidden" accept="image/*" onChange={handleCoverUpload} disabled={uploading} />
-              </label>
-              {form.cover_image_url && (
-                <button onClick={() => setForm(f => ({ ...f, cover_image_url: '' }))} className="text-red-500 text-sm font-semibold hover:underline">移除主圖</button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="form-label">相簿圖片</label>
-            <div className="flex flex-wrap gap-3">
+          {/* ② 圖片 */}
+          <Section n={2} title="商品圖片" hint="第一張是主圖（列表、分享都用這張）；相簿可以放多張，客人在商品頁左右滑">
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="space-y-1.5">
+                <label className="relative flex h-32 w-32 cursor-pointer items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-green-500">
+                  {form.cover_image_url
+                    ? <Image src={form.cover_image_url} alt="主圖" fill className="object-cover" sizes="128px" />
+                    : <span className="text-center text-gray-500"><span className="block text-2xl">📷</span><span className="text-[13px]">上傳主圖</span></span>}
+                  <span className="absolute left-1.5 top-1.5 rounded bg-green-700 px-1.5 py-0.5 text-[11px] font-bold text-white">主圖</span>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleCoverUpload} disabled={uploading} />
+                </label>
+                {form.cover_image_url && <button type="button" onClick={() => setForm(f => ({ ...f, cover_image_url: '' }))} className="text-[13px] text-red-500 hover:underline">移除主圖</button>}
+              </div>
               {gallery.map((img, i) => (
-                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden group">
-                  <Image src={img.image_url} alt="" fill className="object-cover" sizes="80px" />
-                  <button onClick={() => setGallery(g => g.filter((_, idx) => idx !== i))} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xl">✕</button>
+                <div key={i} className="group relative h-24 w-24 overflow-hidden rounded-xl border border-gray-200">
+                  <Image src={img.image_url} alt="" fill className="object-cover" sizes="96px" />
+                  <button type="button" onClick={() => setGallery(g => g.filter((_, idx) => idx !== i))} aria-label="移除這張"
+                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-sm font-bold text-white">✕</button>
                 </div>
               ))}
-              <label className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 hover:border-green-500 cursor-pointer flex items-center justify-center bg-gray-50 transition-colors">
-                <div className="text-center text-gray-600"><div className="text-xl">+</div></div>
+              <label className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 text-center text-gray-500 transition-colors hover:border-green-500">
+                <span><span className="block text-2xl leading-none">＋</span><span className="text-[12px]">加相簿圖片</span></span>
                 <input type="file" className="hidden" accept="image/*" multiple onChange={handleGalleryUpload} disabled={uploading} />
               </label>
             </div>
-            {uploading && <p className="text-sm text-purple-600 mt-2">上傳中...</p>}
+            {uploading && <p className="text-sm font-semibold text-green-700">圖片上傳中…</p>}
+          </Section>
+
+          {/* ③ 規格・價格・庫存 */}
+          <Section n={3} title="規格・價格・庫存"
+            hint={`每一種包裝、顏色、尺寸各一個規格。庫存少於 ${LOW_STOCK} 件會標橘色提醒補貨。`}
+            action={<button type="button" onClick={addVariant} className="rounded-lg border border-green-600 px-3 py-1.5 text-sm font-bold text-green-700 hover:bg-green-50">＋ 新增規格</button>}>
+            <div className="space-y-3">
+              {variants.map((v, i) => {
+                const lvl = stockLevel(parseInt(v.stock_qty) || 0)
+                return (
+                  <div key={i} className={`rounded-xl border-2 p-3 ${!v.is_active ? 'border-dashed border-gray-300 bg-gray-50' : lvl === 'out' ? 'border-red-200' : lvl === 'low' ? 'border-amber-200' : 'border-gray-100'}`}>
+                    <div className="flex gap-3">
+                      {/* 規格圖片（選填）：客人點這個規格就會看到 */}
+                      <label className={`relative flex h-20 w-20 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 bg-gray-50 text-center hover:border-green-500 ${variantUploading !== null ? 'pointer-events-none opacity-60' : ''}`}
+                        title="規格圖片（選填，例如不同顏色、尺寸）">
+                        {v.image_url
+                          ? <Image src={v.image_url} alt={v.variant_name || `規格 ${i + 1}`} fill className="object-contain" sizes="80px" />
+                          : <span className="px-1 text-[11px] leading-tight text-gray-500">{variantUploading === i ? '上傳中…' : <>📷<br />規格圖<br />（選填）</>}</span>}
+                        <input type="file" accept="image/*" className="hidden" onChange={e => handleVariantImage(i, e)} disabled={variantUploading !== null} />
+                      </label>
+                      <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]">
+                        <Field label="規格名稱 *" className="col-span-2 sm:col-span-1">
+                          <input className="form-input py-2" placeholder="例：1瓶（90顆）、紅色" value={v.variant_name} onChange={e => updateVariant(i, 'variant_name', e.target.value)} />
+                        </Field>
+                        <Field label="售價 *">
+                          <input type="number" inputMode="numeric" className="form-input py-2" placeholder="0" value={v.sale_price} onChange={e => updateVariant(i, 'sale_price', e.target.value)} />
+                        </Field>
+                        <Field label="原價（劃線）">
+                          <input type="number" inputMode="numeric" className="form-input py-2" placeholder="選填" value={v.original_price} onChange={e => updateVariant(i, 'original_price', e.target.value)} />
+                        </Field>
+                        <Field label={<span className="flex items-center gap-1">庫存{v.is_active && lvl !== 'ok' && <span className={`rounded px-1 text-[11px] font-bold ${lvl === 'out' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>{lvl === 'out' ? '售完' : '不足'}</span>}</span>}>
+                          <input type="number" inputMode="numeric" min="0" className={`form-input py-2 ${v.is_active && lvl === 'out' ? 'border-red-300 bg-red-50' : v.is_active && lvl === 'low' ? 'border-amber-300 bg-amber-50' : ''}`} value={v.stock_qty} onChange={e => updateVariant(i, 'stock_qty', e.target.value)} />
+                        </Field>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-100 pt-2 text-sm">
+                      <label className="flex items-center gap-1.5 text-gray-500">SKU
+                        <input className="form-input h-8 w-28 py-1 text-sm" placeholder="可留空" value={v.sku_code} onChange={e => updateVariant(i, 'sku_code', e.target.value)} />
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-1.5 font-medium text-gray-700">
+                        <input type="checkbox" checked={v.is_active} onChange={e => updateVariant(i, 'is_active', e.target.checked)} className="h-5 w-5 accent-green-600" />
+                        前台販售
+                      </label>
+                      {!v.is_active && <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[12px] font-bold text-gray-600">已下架・前台不顯示</span>}
+                      <span className="ml-auto flex items-center gap-3">
+                        {v.image_url && <button type="button" onClick={() => setVariants(vs => vs.map((x, j) => j === i ? { ...x, image_url: null } : x))} className="text-[13px] text-gray-500 hover:underline">移除規格圖</button>}
+                        {variants.length > 1 && <button type="button" onClick={() => removeVariant(i)} className="text-[13px] font-semibold text-red-500 hover:underline">刪除規格</button>}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Section>
+
+          {/* ④ 商品介紹 */}
+          <Section n={4} title="商品介紹" hint="留空的欄位前台不顯示。直接貼上文案就好，前台會自動排版">
+            <div>
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                <label className="form-label mb-0">適合誰</label>
+                <AiButton loading={aiLoading === 'suitable_people'} disabled={aiLoading !== null || !form.product_name} onClick={() => handleAIGenerate('suitable_people')} />
+              </div>
+              <textarea className="form-input" rows={4} value={form.suitable_people} onChange={e => setForm(f => ({ ...f, suitable_people: e.target.value }))} />
+            </div>
+            {textField('usage_method', '使用方法', { rows: 3 })}
+            {textField('ingredients', '成分說明', { rows: 3 })}
+            {textField('precautions', '注意事項', { rows: 3 })}
+            {textField('storage_method', '保存方式', { placeholder: '例：置於陰涼乾燥處' })}
+          </Section>
+
+          {/* ⑤ 進階（平常不用動，收起來） */}
+          <details className="card group p-5">
+            <summary className="flex cursor-pointer list-none items-center justify-between font-bold text-gray-800">
+              <span>⚙️ 進階資訊（選填）<span className="ml-2 text-sm font-normal text-gray-500">服用時間、搭配建議、來源、網址</span></span>
+              <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+            </summary>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="form-label">⏰ 建議服用時間（可複選）</label>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {TIMING_OPTIONS.map(o => {
+                    const selected = form.intake_timing.split(',').map(s => s.trim()).filter(Boolean)
+                    const on = selected.includes(o.value)
+                    return (
+                      <button key={o.value} type="button"
+                        onClick={() => { const next = on ? selected.filter(x => x !== o.value) : [...selected, o.value]; setForm(f => ({ ...f, intake_timing: next.join(',') })) }}
+                        className={`rounded-xl border-2 px-3 py-1.5 text-sm font-bold transition-colors ${on ? 'border-green-600 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600 hover:border-green-300'}`}>
+                        {o.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              {textField('pairing_tips', '🔗 搭配建議', { rows: 2, placeholder: '例：搭配維生素D3、隨油脂吸收更好；與鈣、鐵錯開' })}
+              {textField('source_notes', '🌿 成分來源 / 劑型 / 挑選重點', { rows: 2, placeholder: '例：游離型葉黃素、深海魚萃取、素食膠囊' })}
+              <div>
+                <label className="form-label">網址識別碼</label>
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="font-mono text-sm text-gray-500">/products/</span>
+                  <input className="form-input min-w-[200px] flex-1 font-mono" placeholder="留空會自動產生" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} />
+                </div>
+                <p className="mt-1 text-[13px] leading-relaxed text-gray-500">
+                  只能用小寫英文、數字與連字號，例：<code className="rounded bg-gray-100 px-1">wild-camellia-oil</code>。
+                  {initialData?.slug && <span className="mt-1 block text-amber-700">⚠️ 已上架的商品改這裡，舊網址就會失效（已分享出去的連結會連不到）。</span>}
+                </p>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        {/* ═══════ 右欄：設定 ═══════ */}
+        <div className="space-y-5">
+          <div className="card p-5">
+            <h2 className="mb-3 font-bold text-gray-800">前台顯示</h2>
+            <button type="button" role="switch" aria-checked={form.is_published} onClick={() => setForm(f => ({ ...f, is_published: !f.is_published }))}
+              className={`flex w-full items-center justify-between rounded-xl border-2 px-4 py-3 text-left transition-colors ${form.is_published ? 'border-green-600 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+              <span>
+                <span className={`block font-bold ${form.is_published ? 'text-green-800' : 'text-gray-700'}`}>{form.is_published ? '上架中' : '未上架'}</span>
+                <span className="text-[13px] text-gray-500">{form.is_published ? '客人看得到、可以買' : '儲存後客人看不到'}</span>
+              </span>
+              <span className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors ${form.is_published ? 'bg-green-600' : 'bg-gray-300'}`}>
+                <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${form.is_published ? 'left-[22px]' : 'left-0.5'}`} />
+              </span>
+            </button>
+          </div>
+
+          <div className={`card p-5 ${missingShopCat ? 'ring-2 ring-red-200' : ''}`}>
+            <h2 className="font-bold text-gray-800">商品分類 <span className="text-sm font-normal text-red-500">必選・可多選</span></h2>
+            <p className="mb-3 mt-0.5 text-[13px] text-gray-500">客人在賣場照這個分類找商品</p>
+            {shopCatsNeedMigration ? (
+              <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                商品分類資料表尚未建立：請先在 Supabase 執行 <code className="rounded bg-amber-100 px-1">migrations/shop_categories_schema.sql</code>。在那之前商品仍可正常儲存。
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {shopCats.map(cat => <Chip key={cat.id} on={selectedShopCats.includes(cat.id)} onClick={() => toggleShopCat(cat.id)}>{cat.emoji} {cat.name}</Chip>)}
+                </div>
+                {shopSuggestions.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[13px]">
+                    <span className="text-gray-500">建議：</span>
+                    {shopSuggestions.map(cat => (
+                      <button key={cat.id} type="button" onClick={() => toggleShopCat(cat.id)} className="rounded-full border border-dashed border-green-400 px-2.5 py-1 font-medium text-green-700 hover:bg-green-50">＋ {cat.emoji} {cat.name}</button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="card p-5">
+            <h2 className="font-bold text-gray-800">健康方向 <span className="text-sm font-normal text-gray-500">可多選</span></h2>
+            <p className="mb-3 mt-0.5 text-[13px] text-gray-500">決定哪些健康知識文章、自測結果會推薦這件商品</p>
+            <div className="flex flex-wrap gap-2">
+              {categories.map(cat => <Chip key={cat.id} on={selectedCats.includes(cat.id)} onClick={() => toggleCat(cat.id)}>{cat.name}</Chip>)}
+            </div>
+          </div>
+
+          <div className="card p-5">
+            <h2 className="mb-3 font-bold text-gray-800">首頁分區</h2>
+            <div className="space-y-2">
+              {HOME_SECTIONS.map(o => (
+                <button key={o.key} type="button" onClick={() => setForm(f => ({ ...f, home_section: o.key }))}
+                  className={`flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold transition-colors ${form.home_section === o.key ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-200 text-gray-700 hover:border-green-300'}`}>
+                  <span className={`h-4 w-4 flex-shrink-0 rounded-full border-2 ${form.home_section === o.key ? 'border-green-600 bg-green-600 ring-2 ring-inset ring-white' : 'border-gray-300'}`} />
+                  {o.emoji} {o.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 商品分類 —— 客人逛賣場的動線，必選 */}
-      <div className="card p-5">
-        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-bold text-gray-800 text-lg">商品分類（必選，可多選）</h2>
-          {selectedShopCats.length === 0 && shopCats.length > 0 && (
-            <span className="text-sm font-semibold text-red-600">尚未選擇</span>
-          )}
-        </div>
-        <p className="mb-4 text-sm text-gray-500">
-          客人在賣場首頁與頁尾是照這個分類找商品的。沒有選的話，這件商品只會出現在「全部商品」裡。
-        </p>
-
-        {shopCatsNeedMigration ? (
-          <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-            商品分類資料表尚未建立。請先在 Supabase SQL Editor 執行
-            <code className="mx-1 rounded bg-amber-100 px-1">migrations/shop_categories_schema.sql</code>
-            ，這個區塊就會出現。在那之前商品仍可正常儲存。
-          </p>
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-2">
-              {shopCats.map(cat => (
-                <button key={cat.id} type="button" onClick={() => toggleShopCat(cat.id)}
-                  className={`px-4 py-2 rounded-full font-medium text-sm transition-colors border-2 ${selectedShopCats.includes(cat.id) ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-200 text-gray-600 hover:border-green-300'}`}>
-                  {cat.emoji} {cat.name}
-                </button>
-              ))}
-            </div>
-            {shopSuggestions.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-gray-500">看商品名稱，可能是：</span>
-                {shopSuggestions.map(cat => (
-                  <button key={cat.id} type="button" onClick={() => toggleShopCat(cat.id)}
-                    className="rounded-full border border-dashed border-green-400 px-3 py-1 font-medium text-green-700 hover:bg-green-50">
-                    ＋ {cat.emoji} {cat.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Categories */}
-      <div className="card p-5">
-        <h2 className="font-bold text-gray-800 text-lg mb-1">健康方向分類（可多選）</h2>
-        <p className="mb-4 text-sm text-gray-500">
-          給健康知識文章與自測結果用的，決定這件商品會被哪些文章推薦。跟上面的商品分類是兩回事。
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {categories.map(cat => (
-            <button key={cat.id} onClick={() => toggleCat(cat.id)} className={`px-4 py-2 rounded-full font-medium text-sm transition-colors border-2 ${selectedCats.includes(cat.id) ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-200 text-gray-600 hover:border-green-300'}`}>
-              {cat.name}
+      {/* ═══════ 底部固定儲存列：捲到哪裡都按得到 ═══════
+          後台主區塊是 overflow-auto，sticky 不會黏住，所以用 fixed；
+          電腦版左邊讓出側邊欄的寬度（w-60） */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur lg:left-60">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+            <span className={`rounded-full px-2.5 py-1 font-bold ${form.is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>{form.is_published ? '● 上架中' : '○ 未上架'}</span>
+            {missingShopCat && <span className="font-semibold text-red-600">⚠️ 還沒選商品分類</span>}
+            {lowVariants.length > 0 && <span className="font-semibold text-amber-700">⚠️ {lowVariants.length} 個規格庫存不足</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <a href="/admin/products" className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">取消</a>
+            <button onClick={handleSave} disabled={saving} className="btn-primary px-8 py-2.5 text-base">
+              {saving ? '儲存中…' : productId ? '儲存修改' : '新增商品'}
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Variants */}
-      <div className="card p-5">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-bold text-gray-800 text-lg">規格管理</h2>
-          <button onClick={addVariant} className="text-green-700 font-semibold text-sm hover:underline">＋ 新增規格</button>
-        </div>
-        <div className="space-y-4">
-          {variants.map((v, i) => (
-            <div key={i} className={`border-2 rounded-xl p-4 space-y-3 ${v.is_active ? 'border-gray-100' : 'border-dashed border-gray-300 bg-gray-50'}`}>
-              <div className="flex justify-between items-center">
-                <span className="font-semibold text-gray-700 text-sm">
-                  規格 {i + 1}
-                  {/* 有訂單的規格刪不掉、會改成下架；標清楚，才不會以為沒刪成功 */}
-                  {!v.is_active && <span className="ml-2 rounded bg-gray-200 px-1.5 py-0.5 text-[12px] font-bold text-gray-600">已下架・前台不顯示</span>}
-                </span>
-                {variants.length > 1 && <button onClick={() => removeVariant(i)} className="text-red-500 text-sm font-semibold hover:underline">刪除</button>}
-              </div>
-              {/* 規格圖片：選填。沒上傳的規格，前台照舊顯示商品主圖 */}
-              <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-2.5">
-                <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white">
-                  {v.image_url
-                    ? <Image src={v.image_url} alt={v.variant_name || `規格 ${i + 1}`} fill className="object-contain" sizes="64px" />
-                    : <span className="flex h-full items-center justify-center text-[12px] text-gray-400">無圖片</span>}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-gray-700">規格圖片 <span className="font-normal text-gray-500">（選填，例如不同顏色、尺寸）</span></p>
-                  <div className="mt-1.5 flex flex-wrap gap-2">
-                    <label className={`cursor-pointer rounded-lg border border-green-600 bg-white px-3 py-1.5 text-[13px] font-bold text-green-700 hover:bg-green-50 ${variantUploading !== null ? 'pointer-events-none opacity-50' : ''}`}>
-                      {variantUploading === i ? '上傳中…' : v.image_url ? '更換圖片' : '上傳圖片'}
-                      <input type="file" accept="image/*" className="hidden" onChange={e => handleVariantImage(i, e)} disabled={variantUploading !== null} />
-                    </label>
-                    {v.image_url && (
-                      <button type="button" onClick={() => setVariants(vs => vs.map((x, j) => j === i ? { ...x, image_url: null } : x))}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-100">移除</button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="form-label text-[13px]">規格名稱 *</label><input className="form-input py-2" placeholder="例：30顆/盒" value={v.variant_name} onChange={e => updateVariant(i, 'variant_name', e.target.value)} /></div>
-                <div><label className="form-label text-[13px]">SKU 編碼</label><input className="form-input py-2" placeholder="可留空" value={v.sku_code} onChange={e => updateVariant(i, 'sku_code', e.target.value)} /></div>
-                <div><label className="form-label text-[13px]">售價 * (NT$)</label><input type="number" className="form-input py-2" placeholder="0" value={v.sale_price} onChange={e => updateVariant(i, 'sale_price', e.target.value)} /></div>
-                <div><label className="form-label text-[13px]">原價 (NT$)</label><input type="number" className="form-input py-2" placeholder="選填" value={v.original_price} onChange={e => updateVariant(i, 'original_price', e.target.value)} /></div>
-                <div><label className="form-label text-[13px]">庫存數量</label><input type="number" className="form-input py-2" min="0" value={v.stock_qty} onChange={e => updateVariant(i, 'stock_qty', e.target.value)} /></div>
-                <div className="flex items-end">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={v.is_active} onChange={e => updateVariant(i, 'is_active', e.target.checked)} className="w-5 h-5 accent-green-600" />
-                    <span className="text-sm font-medium text-gray-700">啟用此規格</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 首頁分區 */}
-      <div className="card p-5">
-        <label className="form-label">首頁分區</label>
-        <p className="text-gray-600 text-sm mb-3">決定此商品在首頁顯示於哪一區</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {HOME_SECTIONS.map(o => (
-            <button key={o.key} type="button" onClick={() => setForm(f => ({ ...f, home_section: o.key }))}
-              className={`text-left px-4 py-3 rounded-xl border-2 transition-colors ${form.home_section === o.key ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-green-300'}`}>
-              <span className="font-bold text-gray-800">{o.emoji} {o.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Publish + Save */}
-      <div className="card p-5">
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-6 h-6 accent-green-600" />
-            <div>
-              <span className="font-bold text-gray-800 text-lg">立即上架</span>
-              <p className="text-gray-500 text-sm">勾選後商品將在前台顯示</p>
-            </div>
-          </label>
-          <button onClick={handleSave} disabled={saving} className="btn-primary py-3 px-8 text-lg">
-            {saving ? '儲存中...' : (productId ? '儲存修改' : '新增商品')}
-          </button>
+          </div>
         </div>
       </div>
     </div>
+  )
+}
+
+function Section({ n, title, hint, action, children }: { n: number; title: string; hint?: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="card p-5">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-gray-800">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-700 text-[13px] text-white">{n}</span>{title}
+          </h2>
+          {hint && <p className="mt-1 text-[13px] text-gray-500">{hint}</p>}
+        </div>
+        {action}
+      </div>
+      <div className="space-y-4">{children}</div>
+    </section>
+  )
+}
+
+function Field({ label, className = '', children }: { label: React.ReactNode; className?: string; children: React.ReactNode }) {
+  return <div className={className}><label className="mb-1 block text-[13px] font-semibold text-gray-600">{label}</label>{children}</div>
+}
+
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`rounded-full border-2 px-3 py-1.5 text-sm font-medium transition-colors ${on ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-200 text-gray-600 hover:border-green-300'}`}>
+      {on && '✓ '}{children}
+    </button>
+  )
+}
+
+function AiButton({ loading, disabled, onClick }: { loading: boolean; disabled: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled}
+      className="rounded-lg bg-purple-50 px-2.5 py-1 text-[13px] font-bold text-purple-700 hover:bg-purple-100 disabled:opacity-40">
+      {loading ? '生成中…' : '✨ AI 幫我寫'}
+    </button>
   )
 }
