@@ -76,3 +76,14 @@ test('以前把整篇文案放在「適合誰」的商品：不再多包一層�
   const text = legacyToDescription({ suitable_people: '產品特色\n01｜螺旋紋玻璃濾杯\n說明。' })
   assert.equal(text.startsWith('產品特色'), true)
 })
+
+test('「標籤：說明」一行一項（紫蘇籽油的適合誰）→ 拆成標籤與說明；一般句子的清單也認得', async () => {
+  const { labeledItems, lineItems } = await import('../lib/productSections.ts')
+  const who = '不常吃魚、怕魚腥味的人：可從植物來源補充 Omega-3 ALA。\n\n素食／植物性飲食者：紫蘇籽油是很好的植物性 Omega-3 來源。\n\n35歲以上開始重視用油品質的人：適合用來調整日常脂肪酸攝取。'
+  const items = labeledItems(who)!
+  assert.equal(items.length, 3)
+  assert.deepEqual(items[0], { label: '不常吃魚、怕魚腥味的人', desc: '可從植物來源補充 Omega-3 ALA。' })
+  assert.equal(labeledItems('材質：艾絨\n很好用的一句話。'), null)          // 有一行不是這種寫法就不拆
+  assert.deepEqual(lineItems('適合不常吃魚的人。\n適合吃素的朋友。'), ['適合不常吃魚的人', '適合吃素的朋友'])
+  assert.equal(lineItems('這是一段很長很長的說明文字，超過四十個字的時候就不應該被當成清單裡面的一個項目，因為那其實是一整個段落。\n短句'), null)
+})

@@ -157,6 +157,9 @@ export function specRows(body: string): { label: string; value: string }[] | nul
 
 /** 特色區裡「01｜標題」的標題（給「先看重點」用） */
 export function featureTitles(sections: Section[]): string[] {
+  // 特色區寫成「標籤：說明」一行一項時，標籤就是特色的小標
+  const labeled = sections.filter(s => s.kind === 'features').flatMap(s => labeledItems(s.body)?.map(x => x.label) || [])
+  if (labeled.length) return labeled
   return sections
     .filter(s => s.kind === 'features' || s.kind === 'intro' || s.kind === 'other')
     .flatMap(s => s.body.split('\n'))
@@ -169,4 +172,31 @@ export function featureTitles(sections: Section[]): string[] {
 export const KIND_LABEL: Record<SectionKind, string> = {
   intro: '開場', summary: '重點', features: '特色', who: '適合誰', usage: '怎麼用',
   pairing: '怎麼搭', spec: '規格', caution: '注意事項', storage: '保存', source: '來源', other: '其他',
+}
+
+/**
+ * 「標籤：說明」一行一項的寫法（客人截圖的紫蘇籽油「適合誰」就是這樣寫的）：
+ *   不常吃魚、怕魚腥味的人：可從植物來源補充 Omega-3 ALA。
+ *   素食／植物性飲食者：紫蘇籽油是很好的植物性 Omega-3 來源。
+ * 每一行都是這種寫法、至少兩行才算；標籤 2～24 字。前面的條列符號、編號會先拿掉。
+ * 前台把標籤加粗、說明換行淡一點，一眼就能掃過每一項。
+ */
+export function labeledItems(body: string): { label: string; desc: string }[] | null {
+  const lines = body.split('\n')
+    .map(l => l.trim().replace(/^(?:[•‧·・\-*◆●○■□★☆✅✔☑✓▪➤►▶]|\d{1,2}[.、．)）])\s*/, ''))
+    .filter(Boolean)
+  if (lines.length < 2) return null
+  const items = lines.map(l => l.match(/^([^：:。！？]{2,24})[：:]\s*(.+)$/))
+  if (items.some(m => !m)) return null
+  return items.map(m => ({ label: m![1].trim(), desc: m![2].trim() }))
+}
+
+/** 每一行都是一句話（40 字內）的清單：「適合誰」這類區塊直接排成清單 */
+export function lineItems(body: string, max = 40): string[] | null {
+  const lines = body.split('\n')
+    .map(l => l.trim().replace(/^(?:[•‧·・\-*◆●○■□★☆✅✔☑✓▪➤►▶]|\d{1,2}[.、．)）])\s*/, ''))
+    .filter(Boolean)
+  if (lines.length < 2) return null
+  const items = lines.map(l => l.replace(/[。]$/, ''))
+  return items.every(l => Array.from(l).length <= max && !/[。！？!?]/.test(l)) ? items : null
 }
