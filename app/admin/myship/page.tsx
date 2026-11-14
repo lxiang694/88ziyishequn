@@ -159,12 +159,13 @@ export default function MyshipPage() {
     ? shopReady.filter(o => selected.includes(o.order_id)).reduce((s, o) => s + o.total_amount, 0)
     : gbAvailable.filter(o => selectedGb.includes(o.id)).reduce((s, o) => s + o.total_amount, 0)
   // 商品明細超過 200 字：把這張訂單的品名改短
-  const saveItemNames = (orderNo: string, changes: { id: number; name: string }[]) =>
+  const saveItemNames = (orderNo: string, changes: { id: number; name: string; variant: string }[]) =>
     run(async () => {
-      for (const c of changes) await post('item-name', { item_id: c.id, name: c.name })
+      for (const c of changes) await post('item-name', { item_id: c.id, name: c.name, variant: c.variant })
       await load()
-      setMessage(`已更新 ${orderNo} 的 ${changes.length} 個品名`)
+      setMessage(`已更新 ${orderNo} 的 ${changes.length} 樣商品名稱`)
     })
+  const goodsTooLong = (o: Row, selectable: boolean) => !selectable && o.errors.some(e => e.includes('商品明細')) && o.items.every(i => i.id)
   const switchMarket = (id: string) => { setMarket(id); setSelected([]); setSelectedGb([]) }
   const kindOf = (m: Marketplace) => (m as Marketplace & { ship_kind?: string | null }).ship_kind
 
@@ -181,9 +182,8 @@ export default function MyshipPage() {
           <p className="text-slate-600">{o.customer_name}</p>
           {o.parts > 1 && <p className="mt-1 inline-block rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">拆單 {o.part}/{o.parts}{others.length > 0 && `・另一包在 ${others.join('、')}`}</p>}
         </div>
-        {!selectable && o.errors.some(e => e.includes('商品明細')) && o.items.every(i => i.id)
-          // 商品明細超過 200 字：品名直接變成輸入框，改短就能存
-          ? <GoodsNameEditor key={o.items.map(i => i.id + i.name).join()} items={o.items} busy={busy} onSave={changes => saveItemNames(o.order_no, changes)} />
+        {goodsTooLong(o, selectable)
+          ? <p className="text-sm font-semibold text-red-700">{o.items.length} 樣商品・商品明細太長，請在下面修改</p>
           : <div className="text-sm leading-relaxed text-slate-700">{o.items.map((i, n) => <p key={n}>{i.sku && <span className="text-slate-400">{i.sku} </span>}{i.name}<span className="text-slate-500"> · {i.variant}</span></p>)}</div>}
         <p className="text-sm text-slate-600">🏪 {o.store_name}</p>
         <div className="md:text-right"><p className="font-semibold tabular-nums text-slate-900">{money(o.total_amount)}</p>{o.parts > 1 && <p className="text-xs text-slate-500">原訂單 {money(o.order_total)}</p>}</div>
@@ -191,6 +191,12 @@ export default function MyshipPage() {
     </>
     if (!selectable) return <li key={`${o.order_id}:${o.marketplace_id}`} className="p-4">
       {body}
+      {/* 商品明細超過 200 字：整行寬的編輯區（手機上輸入框才不會被擠扁） */}
+      {goodsTooLong(o, selectable) && (
+        <div className="mt-3">
+          <GoodsNameEditor key={o.items.map(i => i.id + i.name + i.variant).join()} items={o.items} busy={busy} onSave={changes => saveItemNames(o.order_no, changes)} />
+        </div>
+      )}
       <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm">{errorList(o.errors, o.store_fix, o.store_name, () => fixName('shop', o.order_id, o.customer_name))}</div>
     </li>
     return <li key={`${o.order_id}:${o.marketplace_id}`}>

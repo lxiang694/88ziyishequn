@@ -101,6 +101,31 @@ export const goodsText = (items: Pick<TransferItem, 'sku_snapshot' | 'product_na
   items.map(i => `${i.sku_snapshot ? i.sku_snapshot + ' ' : ''}${i.product_name_snapshot}（${i.variant_name_snapshot}）×${i.quantity}`).join('；')
 /** 去掉品名最後面的括號說明：「布拉迪益生菌(需發冷鏈 請洽詢LINE購買)」→「布拉迪益生菌」；整個都是括號就不動 */
 export const stripNote = (name: string) => name.replace(/\s*[（(][^（）()]*[)）]\s*$/, '').trim() || name
+/**
+ * 一鍵精簡：去掉括號裡的「說明文字」，保留有數字的括號（那是數量、容量，不能丟）。
+ *   「30-40磅（推荐女生用）【2个】」→「30-40磅【2个】」
+ *   「布拉迪益生菌(需發冷鏈 請洽詢LINE購買)」→「布拉迪益生菌」
+ *   「一盒（4支）」「6L容量（3-4人用）」「1袋（500g）」→ 不動
+ * 整個都是括號說明時不動，避免變成空白。
+ */
+export const trimNotes = (text: string) =>
+  text.replace(/\s*[（(]([^（）()]*)[)）]/g, (m, inner: string) => /\d/.test(inner) ? m : '').replace(/\s{2,}/g, ' ').trim() || text
+/**
+ * 一鍵精簡一樣商品：品名、規格都去掉括號說明；規格開頭重複品名的也拿掉
+ *   品名「青蒿牙膏」＋規格「青蒿牙膏1盒」→ 規格「1盒」
+ *   品名「飄逸杯」＋規格「飄逸杯（520ml）」→ 規格「（520ml）」
+ * 拿掉後規格變空白就不拿（規格不能空）。
+ */
+export function simplifyItem(name: string, variant: string): { name: string; variant: string } {
+  const n = trimNotes(name).trim()
+  let v = trimNotes(variant).trim()
+  if (n && v.startsWith(n)) {
+    const rest = v.slice(n.length).trim()
+    if (rest) v = rest
+  }
+  return { name: n || name, variant: v || variant }
+}
+
 /** 跟驗證用同一種算法（一個字算一個，不分中英文） */
 export const goodsLength = (items: Parameters<typeof goodsText>[0]) => textLength(goodsText(items))
 
