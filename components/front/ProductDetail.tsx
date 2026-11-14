@@ -22,6 +22,7 @@ import Collapsible from './Collapsible'
 import ProductDescription from './ProductDescription'
 import { legacyToDescription, splitSections } from '@/lib/productSections'
 import { variantDeals } from '@/lib/variantDeals'
+import { splitIntroLead, hyphenTokens } from '@/lib/introLead'
 import { Stars } from './StarRating'
 
 const NO_REVIEWS: InitialReviews = { ready: false, summary: EMPTY_SUMMARY, reviews: [], hasMore: false }
@@ -129,6 +130,7 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
     ...activeVariants.map(v => v.image_url).filter((u): u is string => !!u),
   ]
   const cats = product.product_category_relations?.map(r => r.health_categories).filter(Boolean) || []
+  const introLead = splitIntroLead(product.short_intro)
   const inStock = (selectedVariant?.stock_qty ?? 0) > 0
   // 還沒選規格時，只要有任何一種有貨，按鈕就能按（按了會先跳出規格面板）
   const canBuy = selectedVariant ? inStock : anyInStock
@@ -351,19 +353,32 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
             </button>
           </div>
 
-          {product.short_intro && (
-            <p className="mt-1 rounded-r-2xl border-l-4 border-green-600 bg-green-50/60 px-4 py-3 text-[16px] leading-[1.85] text-gray-800 md:mt-5">
-              {product.short_intro}
-            </p>
-          )}
-          {cats.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {cats.map((cat: any) => (
-                <span key={cat.id} className="text-[13px] bg-green-50 text-green-700 px-2.5 py-0.5 rounded-full font-semibold border border-green-100">
-                  {cat.name}
-                </span>
-              ))}
-            </div>
+          {/*
+            一句話簡介：白卡，第一句粗體（一眼看懂是什麼）、後面補充淡一點；
+            健康分類標籤收在同一張卡底下，整塊是一個「認識這個商品」的區塊，不再是一大段同色的字
+          */}
+          {(introLead.lead || cats.length > 0) && (
+            <section className="mt-1 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-green-100 md:mt-5" aria-label="商品簡介">
+              {introLead.lead && (
+                <>
+                  <p className="mb-2 flex items-center gap-1.5 text-[13px] font-bold text-green-700">
+                    <span className="h-3.5 w-1 rounded-full bg-green-600" aria-hidden />一句話認識它
+                  </p>
+                  <p className="text-[17px] font-bold leading-[1.7] text-gray-900"><NoBreak text={introLead.lead} /></p>
+                  {introLead.rest && <p className="mt-2 text-[15px] leading-[1.8] text-gray-600"><NoBreak text={introLead.rest} /></p>}
+                </>
+              )}
+              {cats.length > 0 && (
+                <div className={`flex flex-wrap items-center gap-1.5 ${introLead.lead ? 'mt-3 border-t border-gray-100 pt-3' : ''}`}>
+                  <span className="mr-0.5 text-[13px] text-gray-500">適合關注</span>
+                  {cats.map((cat: any) => (
+                    <span key={cat.id} className="rounded-full bg-green-50 px-2.5 py-1 text-[13px] font-bold text-green-800">
+                      {cat.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </section>
           )}
         </div>
       </div>
@@ -501,4 +516,9 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
       </div>
     </div>
   )
+}
+
+/** 「Omega-3」這種有連字號的詞不要斷在「-」後面 */
+function NoBreak({ text }: { text: string }) {
+  return <>{hyphenTokens(text).map(([t, keep], i) => keep ? <span key={i} className="whitespace-nowrap">{t}</span> : t)}</>
 }
