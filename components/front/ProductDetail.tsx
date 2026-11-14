@@ -21,6 +21,7 @@ import SectionTabs, { type TabItem } from './SectionTabs'
 import Collapsible from './Collapsible'
 import ProductDescription from './ProductDescription'
 import { legacyToDescription, splitSections } from '@/lib/productSections'
+import { variantDeals } from '@/lib/variantDeals'
 import { Stars } from './StarRating'
 
 const NO_REVIEWS: InitialReviews = { ready: false, summary: EMPTY_SUMMARY, reviews: [], hasMore: false }
@@ -75,7 +76,7 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
   initialReviews?: InitialReviews
 }) {
   const router = useRouter()
-  const { addItem, totalItems } = useCart()
+  const { addItem } = useCart()
   const [reviewFormOpen, setReviewFormOpen] = useState(false)
   const reviewCount = initialReviews.summary.count
 
@@ -117,6 +118,9 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
   const maxPrice = prices.length ? Math.max(...prices) : 0
   const priceRange = minPrice === maxPrice ? formatPrice(minPrice) : `${formatPrice(minPrice)}～${formatPrice(maxPrice)}`
   const anyInStock = activeVariants.some(v => v.stock_qty > 0)
+  // 規格卡：2～4 種用兩欄大卡，超過 4 種用小按鈕；每瓶多少、省多少（lib/variantDeals.ts）
+  const useCards = activeVariants.length >= 2 && activeVariants.length <= 4
+  const deals = variantDeals(activeVariants)
 
   // 規格圖片接在相簿後面：客人可以直接滑著看各種顏色、尺寸；選了規格就滑到那一張
   const allImages = [
@@ -246,6 +250,48 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
                 選擇規格
                 {!selectedVariant && multiVariant && <span className="ml-2 rounded-md bg-amber-100 px-2 py-0.5 text-[13px] font-bold text-amber-900">👇 請先點選一種</span>}
               </p>
+              {/*
+                規格選擇。2～4 種：兩欄大卡（名稱、價格、每瓶多少、省多少），選中的綠框＋✓，
+                一眼看出選了哪個、買多划算。超過 4 種（顏色、尺寸多的）卡片會太長，
+                改用原本的小按鈕。只有 1 種時不用選，直接顯示那一種。
+              */}
+              {useCards ? (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {activeVariants.map(v => {
+                    const oos = v.stock_qty <= 0
+                    const sel = selectedVariant?.id === v.id
+                    const deal = deals.get(v.id)
+                    return (
+                      <button key={v.id} type="button" onClick={() => { if (!oos) { setSelectedVariant(v); setQty(1) } }} disabled={oos}
+                        aria-pressed={sel}
+                        className={`relative flex min-w-0 flex-col rounded-2xl border-2 p-3 text-left transition-colors ${
+                          sel ? 'border-green-600 bg-green-50 shadow-sm'
+                            : oos ? 'cursor-not-allowed border-gray-100 bg-gray-50 opacity-60'
+                            : 'border-gray-200 bg-white hover:border-green-400'}`}>
+                        {deal && deal.save > 0 && !oos && (
+                          // 大字體時字變寬，角標會壓到規格名 → 改成放在規格名上方
+                          <span className="absolute -top-2.5 right-2 rounded-full bg-red-500 px-2 py-0.5 text-[12px] font-bold text-white shadow-sm big:static big:mb-1.5 big:self-start">省 {formatPrice(deal.save)}</span>
+                        )}
+                        <span className="flex items-center gap-2">
+                          {v.image_url && (
+                            <span className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-white">
+                              <Image src={v.image_url} alt="" fill className="object-cover" sizes="40px" />
+                            </span>
+                          )}
+                          <span className={`min-w-0 text-[15px] font-bold leading-snug ${sel ? 'text-green-800' : 'text-gray-800'}`}>
+                            {sel && <span className="mr-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-600 align-[-2px] text-[10px] text-white">✓</span>}
+                            {v.variant_name}
+                          </span>
+                        </span>
+                        <span className={`mt-1.5 text-[20px] font-bold tabular-nums ${sel ? 'text-green-700' : 'text-gray-900'}`}>{formatPrice(v.sale_price)}</span>
+                        {oos
+                          ? <span className="text-[13px] font-bold text-red-500">已售完</span>
+                          : deal && <span className={`text-[13px] ${sel ? 'text-green-700' : 'text-gray-500'}`}>每{deal.unit} {formatPrice(deal.perUnit)}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
               <div className="flex flex-wrap gap-2">
                 {product.product_variants.filter(v => v.is_active).map(v => {
                   const oos = v.stock_qty <= 0
@@ -270,6 +316,7 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
                   )
                 })}
               </div>
+              )}
               {selectedVariant && (
                 <p className="text-[13px] text-gray-600 mt-2 flex items-center gap-1">
                   <span className={`w-2 h-2 rounded-full ${inStock ? 'bg-green-500' : 'bg-red-400'}`} />
@@ -280,7 +327,7 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
           )}
 
           {selectedVariant && inStock && (
-            <div className="flex items-center gap-4 mb-6">
+            <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-white px-3 py-2 md:bg-transparent md:px-0">
               <span className="text-sm font-bold text-gray-700">數量</span>
               <div className="flex items-center gap-3">
                 <button onClick={() => setQty(q => Math.max(1, q - 1))}
@@ -289,6 +336,7 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
                 <button onClick={() => setQty(q => Math.min(selectedVariant?.stock_qty || 1, q + 1))}
                   className="w-11 h-11 rounded-xl border-2 border-gray-200 hover:border-green-500 font-bold text-xl flex items-center justify-center transition-colors">+</button>
               </div>
+              <span className="ml-auto text-[14px] text-gray-500">小計 <b className="text-[17px] tabular-nums text-green-700">{formatPrice(selectedVariant.sale_price * qty)}</b></span>
             </div>
           )}
 
@@ -407,53 +455,48 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
       )}
 
       {/*
-        手機底部固定購買列。商品頁打開時，購買按鈕原本要往下捲過圖片、介紹、
-        規格才看得到；改成一直固定在畫面底部，任何位置都能直接買。
-        這一頁的底部導覽列（MobileBottomNav）會讓位給它。
-        上面一行寫出目前選的規格與價格，避免客人沒注意就買到預設規格。
+        手機底部固定購買列：一排（約 70px，以前兩層約 150px），把畫面留給商品內容。
+          • 左邊：已選的規格×數量＋總價；點了可以換規格
+          • 已選好（或只有一種規格）：加入購物車／立即購買
+          • 多種規格還沒選：只有一顆「選擇規格」—— 不會沒看規格就買下去
+        小購物車鈕拿掉了：頁首就有購物車。字體調大的手機放不下一排時，按鈕自動換到第二行。
       */}
-      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 bottom-skirt border-t border-gray-200 bg-white px-3 pt-2 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
-        style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
-        {selectedVariant ? (
-          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[13px]">
-            <span className="min-w-0 truncate text-gray-600">
-              已選：<b className="text-gray-800">{selectedVariant.variant_name}</b>{qty > 1 && <> × {qty}</>}
-            </span>
-            <span className="flex flex-shrink-0 items-center gap-2 whitespace-nowrap">
-              <b className="text-base text-green-700">{formatPrice(selectedVariant.sale_price * qty)}</b>
-              {multiVariant && (
-                <button type="button" className="font-bold text-green-700 underline underline-offset-2" onClick={() => setSheet('choose')}>
-                  更換規格
-                </button>
-              )}
-            </span>
-          </div>
-        ) : multiVariant && (
-          // 還沒選規格：講清楚，點了直接跳出規格面板。
-          // 左右兩塊各自不換行、整塊放不下時右邊（價格＋選規格）掉到第二行 ——
-          // 以前右邊不肯縮，字體調大的手機上左邊被擠成一個字一行（客人截圖）。
-          <button type="button" onClick={() => setSheet('choose')}
-            className="mb-1.5 flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-0.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-left text-[13px]">
-            <span className="whitespace-nowrap font-bold text-amber-900">⚠️ 尚未選擇規格<span className="big:hidden">（共 {activeVariants.length} 種）</span></span>
-            <span className="flex flex-wrap items-center gap-x-1.5"><b className="whitespace-nowrap text-green-700">{priceRange}</b><span className="whitespace-nowrap font-bold text-green-700 underline underline-offset-2">選規格</span></span>
-          </button>
-        )}
-        <div className="flex items-stretch gap-2">
-          <Link href="/cart" aria-label="購物車"
-            className="relative flex w-12 flex-shrink-0 flex-col items-center justify-center rounded-xl border border-gray-200 text-gray-600 big:hidden">
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-            {totalItems > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[12px] font-bold text-white">{totalItems > 9 ? '9+' : totalItems}</span>
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 bottom-skirt border-t border-gray-200 bg-white px-3 pt-2.5 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
+        style={{ paddingBottom: 'calc(0.6rem + env(safe-area-inset-bottom))' }}>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => multiVariant && setSheet('choose')} disabled={!multiVariant}
+            className="min-w-0 flex-1 text-left leading-tight">
+            {selectedVariant ? (
+              <>
+                <span className="block truncate text-[12px] text-gray-500">
+                  已選 {selectedVariant.variant_name}{qty > 1 ? ` ×${qty}` : ''}{multiVariant && <span className="ml-1 font-bold text-green-700">更換 ▾</span>}
+                </span>
+                <span className="block whitespace-nowrap text-[19px] font-bold tabular-nums text-green-700">{formatPrice(selectedVariant.sale_price * qty)}</span>
+              </>
+            ) : (
+              <>
+                <span className="block text-[12px] font-bold text-amber-700">⚠️ 尚未選規格</span>
+                <span className="block whitespace-nowrap text-[16px] font-bold tabular-nums text-green-700">{priceRange}</span>
+              </>
             )}
-          </Link>
-          <button onClick={handleAddToCart} disabled={!canBuy}
-            className="min-h-[48px] flex-1 rounded-xl border-2 border-green-700 px-1 text-[15px] font-bold leading-tight text-green-700 active:bg-green-50 disabled:opacity-40">
-            {canBuy ? '加入購物車' : '已售完'}
           </button>
-          <button onClick={handleBuyNow} disabled={!canBuy}
-            className="min-h-[48px] flex-1 rounded-xl bg-green-700 px-1 text-[15px] font-bold leading-tight text-white active:bg-green-800 disabled:opacity-40">
-            {canBuy ? '立即購買' : '已售完'}
-          </button>
+          {selectedVariant || !multiVariant ? (
+            <span className="flex gap-2 big:w-full">
+              <button onClick={handleAddToCart} disabled={!canBuy}
+                className="min-h-[48px] whitespace-nowrap rounded-xl border-2 border-green-700 px-3 text-[15px] font-bold text-green-700 active:bg-green-50 disabled:opacity-40 big:flex-1">
+                {canBuy ? '加入購物車' : '已售完'}
+              </button>
+              <button onClick={handleBuyNow} disabled={!canBuy}
+                className="min-h-[48px] whitespace-nowrap rounded-xl bg-green-700 px-4 text-[15px] font-bold text-white active:bg-green-800 disabled:opacity-40 big:flex-1">
+                {canBuy ? '立即購買' : '已售完'}
+              </button>
+            </span>
+          ) : (
+            <button onClick={() => setSheet('choose')} disabled={!anyInStock}
+              className="min-h-[48px] whitespace-nowrap rounded-xl bg-green-700 px-6 text-[16px] font-bold text-white active:bg-green-800 disabled:opacity-40 big:w-full">
+              {anyInStock ? '選擇規格' : '已售完'}
+            </button>
+          )}
         </div>
       </div>
     </div>
