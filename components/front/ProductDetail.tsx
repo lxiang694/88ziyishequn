@@ -103,6 +103,20 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
     setTimeout(() => { goReviews(); setReviewFormOpen(true) }, 300)
   }, [])
 
+  /*
+    進到商品頁時主圖頂端被表頭擋住的問題：表頭是固定在上方的，Next.js 換頁時只要
+    「新頁面的頂端還在畫面裡」就不會捲回最上面 —— 從一個稍微往下捲了一點（0～130px）的頁面
+    點進來，新頁面就停在那個位置，主圖上緣剛好藏在表頭後面。
+    只修正這個「捲了一點點」的情況；捲得更深的（例如按返回鍵回到剛才看到一半的位置）不動。
+  */
+  useEffect(() => {
+    if (window.location.hash) return
+    const fix = () => { if (window.scrollY > 0 && window.scrollY < 130) window.scrollTo({ top: 0 }) }
+    fix()
+    const t = setTimeout(fix, 120)   // Next 的換頁捲動在下一個畫格才執行，再確認一次
+    return () => clearTimeout(t)
+  }, [product.id])
+
   // 有兩種以上規格時不先幫客人選：以前預設第一個，客人往下看完介紹直接按底部的「立即購買」，
   // 常常買到不是自己要的規格。沒選就按購買 → 跳出規格面板，一定要點選過才會加入。
   const activeVariants = product.product_variants?.filter(v => v.is_active) || []
