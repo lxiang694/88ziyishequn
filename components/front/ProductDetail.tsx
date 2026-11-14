@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { useCart } from './CartContext'
 import { formatPrice } from '@/lib/utils'
 import { timingLabels } from '@/lib/productMeta'
-import { renderProductText } from '@/lib/productBlocks'
 import ProductGallery from './ProductGallery'
 import VariantPicker from './VariantPicker'
 import toast from 'react-hot-toast'
@@ -20,6 +19,8 @@ import { EMPTY_SUMMARY } from '@/lib/reviews'
 import ProductReviews, { type InitialReviews } from './ProductReviews'
 import SectionTabs, { type TabItem } from './SectionTabs'
 import Collapsible from './Collapsible'
+import ProductDescription from './ProductDescription'
+import { legacyToDescription, splitSections } from '@/lib/productSections'
 import { Stars } from './StarRating'
 
 const NO_REVIEWS: InitialReviews = { ready: false, summary: EMPTY_SUMMARY, reviews: [], hasMore: false }
@@ -78,8 +79,11 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
   const [reviewFormOpen, setReviewFormOpen] = useState(false)
   const reviewCount = initialReviews.summary.count
 
-  const hasIntro = !!(product.suitable_people || timingLabels(product.intake_timing).length > 0 || product.usage_method || product.pairing_tips || product.source_notes)
-  const hasSpec = !!(product.ingredients || product.precautions || product.storage_method)
+  // 商品介紹：後台整篇貼上的 description；舊商品沒有就用原本分開的欄位組成一篇
+  const descText = (product as any).description || legacyToDescription(product as any)
+  const descSections = splitSections(descText)
+  const hasIntro = descSections.length > 0 || timingLabels(product.intake_timing).length > 0
+  const hasSpec = descSections.some(x => x.kind === 'spec')
   const tabs: TabItem[] = [
     ...(hasIntro ? [{ id: 'intro', label: '商品介紹' }] : []),
     ...(hasSpec ? [{ id: 'spec', label: '成分規格' }] : []),
@@ -325,37 +329,13 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
       <div className="mx-auto max-w-3xl">
         <SectionTabs items={tabs} />
         <div className="space-y-4">
+          {/* 商品介紹：整篇依小標分區，每區各自的樣式（components/front/ProductDescription.tsx）。
+              長的先收起來一部分，按「展開完整介紹」看全部 */}
           {hasIntro && (
-            <section id="intro" className="scroll-mt-32 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm" aria-labelledby="intro-heading">
-              <h2 id="intro-heading" className="mb-4 text-[19px] font-bold text-gray-900">商品介紹</h2>
-              <Collapsible maxHeight={420} moreLabel="展開完整介紹">
-                <div className="divide-y divide-gray-100 text-[16px] leading-[1.85] text-gray-700">
-                  {product.suitable_people && <SubBlock icon="👥" title="適合誰">{renderProductText(product.suitable_people)}</SubBlock>}
-                  {timingLabels(product.intake_timing).length > 0 && (
-                    <SubBlock icon="⏰" title="建議服用時間">
-                      <div className="flex flex-wrap gap-2">
-                        {timingLabels(product.intake_timing).map((l, i) => (
-                          <span key={i} className="rounded-full bg-green-50 px-3 py-1.5 text-[14px] font-bold text-green-800">{l}</span>
-                        ))}
-                      </div>
-                    </SubBlock>
-                  )}
-                  {product.usage_method && <SubBlock icon="📋" title="使用方法">{renderProductText(product.usage_method)}</SubBlock>}
-                  {product.pairing_tips && <SubBlock icon="🔗" title="怎麼搭">{renderProductText(product.pairing_tips)}</SubBlock>}
-                  {product.source_notes && <SubBlock icon="🌿" title="來源 / 挑選">{renderProductText(product.source_notes)}</SubBlock>}
-                </div>
+            <section id="intro" className="scroll-mt-32" aria-label="商品介紹">
+              <Collapsible maxHeight={1000} moreLabel="展開完整介紹" fade="from-canvas">
+                <ProductDescription text={descText} shortIntro={product.short_intro} timings={timingLabels(product.intake_timing)} />
               </Collapsible>
-            </section>
-          )}
-
-          {hasSpec && (
-            <section id="spec" className="scroll-mt-32 rounded-2xl border border-gray-100 bg-white px-5 pb-2 pt-5 shadow-sm" aria-labelledby="spec-heading">
-              <h2 id="spec-heading" className="mb-2 text-[19px] font-bold text-gray-900">成分與注意事項</h2>
-              <div className="divide-y divide-gray-100">
-                {product.ingredients && <Fold icon="🧪" title="成分說明" defaultOpen>{renderProductText(product.ingredients)}</Fold>}
-                {product.precautions && <Fold icon="⚠️" title="注意事項" tone="amber" defaultOpen={!product.ingredients}>{renderProductText(product.precautions)}</Fold>}
-                {product.storage_method && <Fold icon="📦" title="保存方式">{renderProductText(product.storage_method)}</Fold>}
-              </div>
             </section>
           )}
 
@@ -476,36 +456,6 @@ export default function ProductDetail({ product, relatedArticles = [], recommend
           </button>
         </div>
       </div>
-    </div>
-  )
-}
-
-/** 成分／注意事項／保存方式的摺疊列：點標題展開或收起（內容一直在 HTML 裡） */
-function Fold({ icon, title, tone, defaultOpen, children }: {
-  icon: string; title: string; tone?: 'amber'; defaultOpen?: boolean; children: React.ReactNode
-}) {
-  return (
-    <details open={defaultOpen} className="group py-1">
-      <summary className="flex min-h-[52px] cursor-pointer list-none items-center gap-2.5 text-[17px] font-bold text-gray-900 [&::-webkit-details-marker]:hidden">
-        <span aria-hidden>{icon}</span>
-        <span className="flex-1">{title}</span>
-        <span className="text-sm text-gray-400 transition-transform group-open:rotate-180" aria-hidden>▼</span>
-      </summary>
-      <div className={`mb-3 text-[16px] leading-[1.85] ${tone === 'amber' ? 'rounded-xl bg-amber-50 p-4 text-amber-900' : 'text-gray-700'}`}>
-        {children}
-      </div>
-    </details>
-  )
-}
-
-/** 情境化保健資訊裡的一小節：小標獨立一行，內容不再擠在 emoji 旁邊的窄欄 */
-function SubBlock({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
-  return (
-    <div className="py-4 first:pt-0 last:pb-0">
-      <h4 className="mb-2 flex items-center gap-2 text-[16px] font-bold text-green-800">
-        <span aria-hidden>{icon}</span>{title}
-      </h4>
-      {children}
     </div>
   )
 }

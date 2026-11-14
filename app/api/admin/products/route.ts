@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cleanImageUrl } from '@/lib/productVariants'
 import { variantImagesReady, VARIANT_IMAGES_SQL_HINT } from '@/lib/variantImages'
+import { descriptionUpdate } from '@/lib/productDescriptionSave'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/adminMiddleware'
 import { generateSlug, normalizeSlug } from '@/lib/utils'
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = await req.json()
-    const { product_name, slug: rawSlug, short_intro, suitable_people, usage_method, ingredients, precautions, storage_method, is_published, cover_image_url, home_section, intake_timing, pairing_tips, source_notes, category_ids, shop_category_ids, variants, gallery_images } = body
+    const { product_name, slug: rawSlug, short_intro, suitable_people, usage_method, ingredients, precautions, storage_method, is_published, cover_image_url, home_section, intake_timing, pairing_tips, source_notes, category_ids, shop_category_ids, variants, gallery_images, description } = body
     if (!product_name) return NextResponse.json({ success: false, error: '商品名稱為必填' }, { status: 400 })
 
     // 自訂網址識別碼；沒填或整理後是空的就退回自動產生
@@ -107,9 +108,11 @@ export async function POST(req: NextRequest) {
           { success: false, error: `網址識別碼「${custom}」已經被其他商品使用了` }, { status: 409 })
       }
     }
+    // 整篇貼上的商品介紹：拆開寫回各欄位（以整篇為準）
+    const desc = description !== undefined ? await descriptionUpdate(description) : null
     const { data: product, error: pe } = await supabaseAdmin
       .from('products')
-      .insert({ product_name, slug, short_intro: short_intro || null, suitable_people: suitable_people || null, usage_method: usage_method || null, ingredients: ingredients || null, precautions: precautions || null, storage_method: storage_method || null, is_published: !!is_published, cover_image_url: cover_image_url || null, home_section: HOME_SECTION_KEYS.includes(home_section) ? home_section : 'community', intake_timing: intake_timing || null, pairing_tips: pairing_tips || null, source_notes: source_notes || null })
+      .insert({ product_name, slug, short_intro: short_intro || null, suitable_people: suitable_people || null, usage_method: usage_method || null, ingredients: ingredients || null, precautions: precautions || null, storage_method: storage_method || null, is_published: !!is_published, cover_image_url: cover_image_url || null, home_section: HOME_SECTION_KEYS.includes(home_section) ? home_section : 'community', intake_timing: intake_timing || null, pairing_tips: pairing_tips || null, source_notes: source_notes || null, ...(desc?.fields || {}) })
       .select().single()
     if (pe) return NextResponse.json({ success: false, error: pe.message }, { status: 500 })
     if (category_ids?.length > 0) {
@@ -134,7 +137,8 @@ export async function POST(req: NextRequest) {
       })))
     }
     refreshStorefront()
-    return NextResponse.json({ success: true, data: product, ...(imagesSkipped ? { notice: VARIANT_IMAGES_SQL_HINT } : {}) })
+    const notices = [imagesSkipped ? VARIANT_IMAGES_SQL_HINT : '', desc && !desc.columnReady ? '商品介紹已依小標分到各欄位；在 Supabase 執行 migrations/product_description.sql 後，整篇排版會完整保留' : ''].filter(Boolean)
+    return NextResponse.json({ success: true, data: product, ...(notices.length ? { notice: notices.join('\n') } : {}) })
   } catch {
     return NextResponse.json({ success: false, error: '新增商品失敗' }, { status: 500 })
   }

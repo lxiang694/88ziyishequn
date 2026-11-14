@@ -2,12 +2,13 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
-import { TIMING_OPTIONS } from '@/lib/productMeta'
+import { TIMING_OPTIONS, timingLabels } from '@/lib/productMeta'
 import { HOME_SECTIONS, HOME_SECTION_KEYS } from '@/lib/homeSections'
 import { suggestShopCategories } from '@/lib/shopCategories'
 import { compressImage } from '@/lib/imageCompress'
 import { stockLevel, LOW_STOCK } from '@/lib/adminStock'
-import ProductTextField from './ProductTextField'
+import DescriptionField from './DescriptionField'
+import { legacyToDescription } from '@/lib/productSections'
 
 interface Props { initialData?: any; productId?: number; onSuccess: () => void }
 
@@ -22,6 +23,8 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
     product_name: '', slug: '', short_intro: '', suitable_people: '', usage_method: '',
     ingredients: '', precautions: '', storage_method: '', is_published: false, cover_image_url: '',
     home_section: 'community', intake_timing: '', pairing_tips: '', source_notes: '',
+    // 商品介紹整篇（一個欄位）。舊商品沒有的話，用原本分開的欄位組成一篇
+    description: '',
   })
   const [selectedCats, setSelectedCats] = useState<number[]>([])
   const [shopCats, setShopCats] = useState<any[]>([])
@@ -59,6 +62,7 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
         intake_timing: initialData.intake_timing || '',
         pairing_tips: initialData.pairing_tips || '',
         source_notes: initialData.source_notes || '',
+        description: initialData.description || legacyToDescription(initialData),
       })
       setSelectedCats(initialData.product_category_relations?.map((r: any) => r.health_categories?.id).filter(Boolean) || [])
       setSelectedShopCats(initialData.shop_categories?.map((c: any) => c.id).filter(Boolean) || [])
@@ -128,7 +132,8 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
       const d = await res.json()
       if (d.success) {
         if (d.data.short_intro) setForm(f => ({ ...f, short_intro: d.data.short_intro }))
-        if (d.data.suitable_people) setForm(f => ({ ...f, suitable_people: d.data.suitable_people }))
+        // 生成的「適合誰」加進整篇介紹（已經有適合誰一區就接在最後，讓管理員自己挑）
+        if (d.data.suitable_people) setForm(f => ({ ...f, description: `${f.description.trim()}${f.description.trim() ? '\n\n' : ''}適合誰\n${String(d.data.suitable_people).trim()}` }))
         toast.success('AI 文案生成完成，請確認後儲存')
       } else toast.error(d.error || 'AI 生成失敗')
     } catch { toast.error('AI 生成失敗') }
@@ -144,8 +149,9 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
     }
     setSaving(true)
     try {
+      const { suitable_people: _a, usage_method: _b, ingredients: _c, precautions: _d, storage_method: _e, pairing_tips: _f, source_notes: _g, ...rest } = form
       const body = {
-        ...form,
+        ...rest,
         category_ids: selectedCats,
         shop_category_ids: selectedShopCats,
         variants: variants.map((v, i) => ({ ...v, sale_price: parseFloat(v.sale_price) || 0, original_price: v.original_price ? parseFloat(v.original_price) : null, stock_qty: parseInt(v.stock_qty) || 0, sort_order: i })),
@@ -179,17 +185,6 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
   // 儲存列上的提醒：還沒選分類、有規格庫存不足 —— 不用往回捲就知道
   const lowVariants = variants.filter(v => v.is_active && stockLevel(parseInt(v.stock_qty) || 0) !== 'ok')
   const missingShopCat = !shopCatsNeedMigration && shopCats.length > 0 && selectedShopCats.length === 0
-  // 文案欄位：多行的用 ProductTextField（貼上自動整理＋前台排版預覽），單行的用一般輸入框
-  const textField = (key: keyof typeof form, label: string, opts: { rows?: number; placeholder?: string; hint?: string } = {}) => (
-    opts.rows
-      ? <ProductTextField label={label} minRows={opts.rows} placeholder={opts.placeholder} value={form[key] as string} onChange={v => setForm(f => ({ ...f, [key]: v }))} />
-      : <div>
-          <label className="form-label">{label}</label>
-          <input className="form-input" placeholder={opts.placeholder} value={form[key] as string} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
-          {opts.hint && <p className="mt-1 text-[13px] text-gray-500">{opts.hint}</p>}
-        </div>
-  )
-
   return (
     <div className="max-w-6xl pb-28">
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -293,20 +288,16 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
           </Section>
 
           {/* ④ 商品介紹 */}
-          <Section n={4} title="商品介紹" hint="直接把 LINE、臉書寫好的文案貼上就好：標題、編號重點、條列會自動排好，按「👀 看前台排版」就能確認。留空的欄位前台不顯示">
-            <ProductTextField label="適合誰／商品介紹" minRows={5} value={form.suitable_people}
-              onChange={v => setForm(f => ({ ...f, suitable_people: v }))}
+          <Section n={4} title="商品介紹" hint="整篇貼上就好：重點、特色、適合誰、使用方法、搭配建議、成分規格、注意事項、保存方式……前台會依小標題自動分區排版">
+            <DescriptionField value={form.description} onChange={v => setForm(f => ({ ...f, description: v }))}
+              shortIntro={form.short_intro} timings={timingLabels(form.intake_timing)}
               action={<AiButton loading={aiLoading === 'suitable_people'} disabled={aiLoading !== null || !form.product_name} onClick={() => handleAIGenerate('suitable_people')} />} />
-            {textField('usage_method', '使用方法', { rows: 3 })}
-            {textField('ingredients', '成分說明', { rows: 3 })}
-            {textField('precautions', '注意事項', { rows: 3 })}
-            {textField('storage_method', '保存方式', { placeholder: '例：置於陰涼乾燥處' })}
           </Section>
 
           {/* ⑤ 進階（平常不用動，收起來） */}
           <details className="card group p-5">
             <summary className="flex cursor-pointer list-none items-center justify-between font-bold text-gray-800">
-              <span>⚙️ 進階資訊（選填）<span className="ml-2 text-sm font-normal text-gray-500">服用時間、搭配建議、來源、網址</span></span>
+              <span>⚙️ 進階資訊（選填）<span className="ml-2 text-sm font-normal text-gray-500">服用時間、網址</span></span>
               <span className="text-gray-400 transition-transform group-open:rotate-180">▼</span>
             </summary>
             <div className="mt-4 space-y-4">
@@ -326,8 +317,6 @@ export default function ProductForm({ initialData, productId, onSuccess }: Props
                   })}
                 </div>
               </div>
-              {textField('pairing_tips', '🔗 搭配建議', { rows: 2, placeholder: '例：搭配維生素D3、隨油脂吸收更好；與鈣、鐵錯開' })}
-              {textField('source_notes', '🌿 成分來源 / 劑型 / 挑選重點', { rows: 2, placeholder: '例：游離型葉黃素、深海魚萃取、素食膠囊' })}
               <div>
                 <label className="form-label">網址識別碼</label>
                 <div className="flex flex-wrap items-center gap-1">

@@ -8,6 +8,7 @@ import { saveShopCategories, shopCategoriesByProduct } from '@/lib/shopCategoryR
 import { refreshStorefront } from '@/lib/storefrontCache'
 import { saveVariants, cleanImageUrl } from '@/lib/productVariants'
 import { variantImagesReady, VARIANT_IMAGES_SQL_HINT } from '@/lib/variantImages'
+import { descriptionUpdate } from '@/lib/productDescriptionSave'
 
 function requireProductPerm(req: NextRequest) {
   const result = requireAdmin(req)
@@ -40,7 +41,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { product_name, slug: rawSlug, short_intro, suitable_people, usage_method, ingredients,
             precautions, storage_method, is_published, cover_image_url, home_section,
             intake_timing, pairing_tips, source_notes,
-            category_ids, shop_category_ids, variants, gallery_images } = body
+            category_ids, shop_category_ids, variants, gallery_images, description } = body
     const productId = parseInt(params.id)
 
     // Build update object - only include defined fields
@@ -69,6 +70,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (ingredients !== undefined) updateData.ingredients = ingredients || null
     if (precautions !== undefined) updateData.precautions = precautions || null
     if (storage_method !== undefined) updateData.storage_method = storage_method || null
+    // 整篇貼上的商品介紹：拆開寫回各欄位（會覆蓋上面的單一欄位，以整篇為準）
+    let descriptionNotice = ''
+    if (description !== undefined) {
+      const d = await descriptionUpdate(description)
+      Object.assign(updateData, d.fields)
+      if (!d.columnReady) descriptionNotice = '商品介紹已依小標分到各欄位；在 Supabase 執行 migrations/product_description.sql 後，整篇排版會完整保留'
+    }
     if (is_published !== undefined) updateData.is_published = !!is_published
     if (cover_image_url !== undefined) updateData.cover_image_url = cover_image_url || null
 
@@ -125,9 +133,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       success: true,
       message: '商品更新成功',
       retired,
-      ...(retired.length || imagesSkipped ? { notice: [
+      ...(retired.length || imagesSkipped || descriptionNotice ? { notice: [
         retired.length ? `「${retired.join('、')}」已經有人訂過，不能刪除（舊訂單要對得到），已改成下架：前台不會再顯示。` : '',
         imagesSkipped ? VARIANT_IMAGES_SQL_HINT : '',
+        descriptionNotice,
       ].filter(Boolean).join('\n') } : {}),
     })
   } catch (err) {

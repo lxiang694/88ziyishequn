@@ -49,7 +49,9 @@ function labeled(text: string, k: string): React.ReactNode {
   return <><strong className="font-bold">{m[1]}</strong><span className="opacity-50">：</span>{inline(m[2], k)}</>
 }
 
-function block(b: ProductBlock, key: number): React.ReactNode {
+type RenderOpts = { list?: 'dot' | 'check' }
+
+function block(b: ProductBlock, key: number, opts: RenderOpts = {}): React.ReactNode {
   const k = `pb${key}`
   switch (b.type) {
     // 商品欄位裡的「標題」是小節名（例如「每日建議量」），
@@ -76,7 +78,7 @@ function block(b: ProductBlock, key: number): React.ReactNode {
           </p>
           {b.body.length > 0 && (
             <div className="mt-2 text-[0.96em] leading-relaxed opacity-90 [&>*]:mt-2 [&>*:first-child]:mt-0">
-              {b.body.map((x, i) => block(x, key * 100 + i + 1))}
+              {b.body.map((x, i) => block(x, key * 100 + i + 1, opts))}
             </div>
           )}
         </div>
@@ -99,7 +101,10 @@ function block(b: ProductBlock, key: number): React.ReactNode {
         <ul key={k} className="mt-3 first:mt-0 space-y-2">
           {b.items.map((item, i) => (
             <li key={`${k}-${i}`} className="flex gap-2.5">
-              <span className="mt-[0.72em] h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current opacity-45" aria-hidden />
+              {opts.list === 'check'
+                // 「適合誰」用綠色實心勾：一眼看出是「符合的情況」
+                ? <span className="mt-[0.15em] flex h-[1.3em] w-[1.3em] flex-shrink-0 items-center justify-center rounded-full bg-green-600 text-[0.72em] font-bold text-white" aria-hidden>✓</span>
+                : <span className="mt-[0.72em] h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current opacity-45" aria-hidden />}
               <span className="min-w-0">{labeled(item, `${k}-${i}`)}</span>
             </li>
           ))}
@@ -146,11 +151,11 @@ function block(b: ProductBlock, key: number): React.ReactNode {
  * 回傳 null 代表沒有內容 —— 呼叫端本來就會用 `{field && ...}` 判斷，
  * 但空白字串或只有空行的欄位也該當成沒有內容。
  */
-export function renderProductText(content: string | null | undefined): React.ReactNode {
+export function renderProductText(content: string | null | undefined, opts: RenderOpts = {}): React.ReactNode {
   // 貼上的口語長文自動整理：導言、問句小標、符號條列、長段切小段（規則見 productText.ts）
   const blocks = polishProductBlocks(parseArticle(content))
   if (blocks.length === 0) return null
-  return <>{blocks.map(block)}</>
+  return <>{blocks.map((b, i) => block(b, i, opts))}</>
 }
 
 /** 這個欄位有沒有可顯示的內容（只有空白或空行時為 false） */
