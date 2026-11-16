@@ -13,6 +13,9 @@
  * 但一定是「單獨一行、短、沒有句子標點」才算，免得把內文的一句話當成標題。
  */
 
+import { normalizeProductHeading, parseFeatureHeading } from './productFeatureHeading'
+import { parseProductText, type ProductBlock } from './productText'
+
 export type SectionKind =
   | 'intro' | 'summary' | 'features' | 'who' | 'usage' | 'pairing'
   | 'spec' | 'caution' | 'storage' | 'source' | 'other'
@@ -51,13 +54,14 @@ function cleanHeading(line: string): { text: string; decorated: boolean } {
 
 /** 一行是不是小標題；是的話回傳它屬於哪一種 */
 export function detectSectionHeading(line: string): { kind: SectionKind; title: string } | null {
-  const raw = line.trim()
+  const raw = normalizeProductHeading(line)
+  if (raw.startsWith('\\')) return null
+  if (parseFeatureHeading(raw)) return null
   if (!raw || Array.from(raw).length > 20) return null
   const { text, decorated } = cleanHeading(raw)
   const n = Array.from(text).length
   if (n < 2 || n > 10) return null
   if (/[。！？!?，,；;、：:]/.test(text)) return null       // 「材質：艾絨」是規格行，不是標題
-  if (/\d+\s*[｜|丨│]/.test(raw)) return null           // 「01｜標題」是特色卡，不是區塊標題
   const rule = KIND_RULES.find(([, re]) => re.test(text))
   if (rule) return { kind: rule[0], title: text }
   // 不認得的字，但明顯被包成標題（【】、## 、結尾冒號）→ 一般區塊
@@ -157,15 +161,22 @@ export function specRows(body: string): { label: string; value: string }[] | nul
 
 /** 特色區裡「01｜標題」的標題（給「先看重點」用） */
 export function featureTitles(sections: Section[]): string[] {
-  // 特色區寫成「標籤：說明」一行一項時，標籤就是特色的小標
-  const labeled = sections.filter(s => s.kind === 'features').flatMap(s => labeledItems(s.body)?.map(x => x.label) || [])
-  if (labeled.length) return labeled
   return sections
     .filter(s => s.kind === 'features' || s.kind === 'intro' || s.kind === 'other')
-    .flatMap(s => s.body.split('\n'))
-    .map(l => l.trim().match(/^\d{1,2}\s*[｜|丨│]\s*(.{2,24})$/))
-    .filter((m): m is RegExpMatchArray => !!m && !/[。！？!?，,]/.test(m[1]))
-    .map(m => m[1].trim())
+    .flatMap(featureBlocks)
+    .filter((b): b is Extract<ProductBlock, { type: 'feature' }> => b.type === 'feature')
+    .map(b => b.title)
+}
+
+/** 編號特色與「標籤：說明」共用同一份卡片結果，避免摘要與正文各自猜測。 */
+export function featureBlocks(section: Section): ProductBlock[] {
+  const parsed = parseProductText(section.body)
+  if (parsed.some(b => b.type === 'feature') || section.kind !== 'features') return parsed
+  const labeled = labeledItems(section.body)
+  return labeled ? labeled.map((item, i) => ({
+    type: 'feature', num: String(i + 1).padStart(2, '0'), title: item.label,
+    body: [{ type: 'p', text: item.desc }],
+  })) : parsed
 }
 
 /** 後台用：這篇認出了哪些區塊（顯示「已辨識：重點 ✓ 特色 ✓ …」） */

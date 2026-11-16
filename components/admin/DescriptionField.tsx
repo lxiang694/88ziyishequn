@@ -9,9 +9,10 @@
  *   • 「前台預覽」用前台同一個元件顯示
  *   • 空的時候可以「插入建議格式」，照著填就好
  */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { cleanPastedText } from '@/lib/productText'
-import { splitSections, KIND_LABEL, type SectionKind } from '@/lib/productSections'
+import { splitSections, featureTitles, KIND_LABEL, type SectionKind } from '@/lib/productSections'
+import { formatProductLine } from '@/lib/productFeatureHeading'
 import ProductDescription from '@/components/front/ProductDescription'
 
 const TEMPLATE = `商品重點
@@ -55,7 +56,11 @@ export default function DescriptionField({ value, onChange, shortIntro, timings,
   action?: React.ReactNode
 }) {
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
-  const kinds = new Set(splitSections(value).map(s => s.kind))
+  const [formatMessage, setFormatMessage] = useState('')
+  const editor = useRef<HTMLTextAreaElement>(null)
+  const sections = splitSections(value)
+  const kinds = new Set(sections.map(s => s.kind))
+  const titles = featureTitles(sections)
   const rows = Math.min(28, Math.max(10, value.split('\n').length + 2))
 
   const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -66,6 +71,19 @@ export default function DescriptionField({ value, onChange, shortIntro, timings,
     e.preventDefault()
     const el = e.currentTarget
     onChange(value.slice(0, el.selectionStart) + cleaned + value.slice(el.selectionEnd))
+  }
+
+  const formatLine = (feature: boolean) => {
+    const el = editor.current
+    if (!el) return
+    const result = formatProductLine(value, el.selectionStart, el.selectionEnd, feature)
+    if ('error' in result) { setFormatMessage(result.error); return }
+    onChange(result.value)
+    setFormatMessage(feature ? '已將這一行設為特色標題' : '已將這一行設為一般內文')
+    requestAnimationFrame(() => {
+      editor.current?.focus()
+      editor.current?.setSelectionRange(result.start, result.end)
+    })
   }
 
   return (
@@ -100,9 +118,17 @@ export default function DescriptionField({ value, onChange, shortIntro, timings,
       )}
 
       {tab === 'edit' ? (
-        <textarea className="form-input font-[inherit] leading-relaxed" rows={rows} value={value}
-          onChange={e => onChange(e.target.value)} onPaste={onPaste}
-          placeholder={'整篇貼上就好。小標題單獨一行，例如：\n\n商品重點\n產品特色\n01｜第一個特色\n適合誰\n使用方法\n搭配建議\n成分規格\n注意事項\n保存方式'} />
+        <div>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => formatLine(true)} className="min-h-[48px] rounded-xl border border-green-600 px-4 text-sm font-bold text-green-700">設為特色標題</button>
+            <button type="button" onClick={() => formatLine(false)} className="min-h-[48px] rounded-xl border border-gray-300 px-4 text-sm font-bold text-gray-700">設為一般內文</button>
+            <span className="text-sm text-gray-600">選取一行或把游標放在該行，再套用格式</span>
+          </div>
+          <p role="status" className="mb-2 text-sm text-green-800">{formatMessage}</p>
+          <textarea ref={editor} aria-label="商品介紹" className="form-input font-[inherit] leading-relaxed" rows={rows} value={value}
+            onChange={e => onChange(e.target.value)} onPaste={onPaste}
+            placeholder={'整篇貼上就好。小標題單獨一行，例如：\n\n商品重點\n產品特色\n01｜第一個特色\n適合誰\n使用方法\n搭配建議\n成分規格\n注意事項\n保存方式'} />
+        </div>
       ) : (
         <div className="rounded-xl border border-green-200 bg-canvas p-3">
           <p className="mb-2 text-[12px] font-bold text-green-700">客人在手機上看到的樣子</p>
@@ -110,6 +136,16 @@ export default function DescriptionField({ value, onChange, shortIntro, timings,
             {value.trim() ? <ProductDescription text={value} shortIntro={shortIntro} timings={timings} /> : <p className="py-8 text-center text-sm text-gray-500">還沒有內容</p>}
           </div>
         </div>
+      )}
+      {value.trim() && (
+        <details className="mt-3 rounded-xl border border-green-200 bg-green-50 px-4">
+          <summary className="flex min-h-[48px] cursor-pointer items-center text-sm font-bold text-green-900">已辨識 {titles.length} 張特色卡片，點開核對標題</summary>
+          {titles.length ? (
+            <ul className="mb-3 space-y-2 text-sm text-gray-800">
+              {titles.map((title, i) => <li key={i}>{String(i + 1).padStart(2, '0')} · {title}</li>)}
+            </ul>
+          ) : <p className="mb-3 text-sm text-gray-700">可以用「01｜特色標題」或上方格式按鈕指定。</p>}
+        </details>
       )}
       <p className="mt-1.5 text-[12px] leading-relaxed text-gray-500">
         小標題單獨一行（例如「適合誰」「使用方法」「注意事項」），前台會自動分區；「01｜標題」會變成特色卡；「成分：…」一行一項會排成表格。

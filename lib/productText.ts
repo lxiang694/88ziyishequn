@@ -1,4 +1,5 @@
-import type { Block } from './articleBlocks'
+import { parseArticle, type Block } from './articleBlocks'
+import { parseFeatureHeading } from './productFeatureHeading'
 
 /**
  * 商品文案的自動排版（純函式，可測試）。
@@ -43,15 +44,14 @@ export function splitLongParagraph(text: string, max = 75, target = 40): string[
   return out
 }
 
-/** 「01｜標題」「1 | 標題」「02丨標題」：編號＋直線＋短標題，沒有句子標點 */
-const FEATURE = /^(\d{1,2})\s*[｜|丨│]\s*(.{2,24})$/
-const isFeatureHeading = (t: string) => FEATURE.test(t) && !/[。！？!?，,]/.test(t)
+/** 編號＋直線＋標題：支援標點、全形編號、粗體及 Markdown 標題。 */
+const isFeatureHeading = (t: string) => parseFeatureHeading(t) !== null
 
 /** 沒有任何標點的短句（2～12 字）：可能是小節標題，或清單裡的一項 */
 const PUNCT = /[。！？!?，,、；;：:「」『』（）()…～~]/
 const isBareShort = (t: string) => {
   const n = Array.from(t).length
-  return n >= 2 && n <= 12 && !PUNCT.test(t) && !EMOJI_START.test(t) && !FEATURE.test(t)
+  return n >= 2 && n <= 12 && !PUNCT.test(t) && !EMOJI_START.test(t) && !isFeatureHeading(t)
 }
 
 /**
@@ -69,14 +69,19 @@ export function polishProductBlocks(blocks: Block[]): ProductBlock[] {
   return groupFeatures(polishBasic(blocks))
 }
 
+/** 前台卡片、摘要及後台預覽共用的商品文字解析入口。 */
+export function parseProductText(text: string | null | undefined): ProductBlock[] {
+  return polishProductBlocks(parseArticle(text, { productFeatures: true }))
+}
+
 function groupFeatures(blocks: ProductBlock[]): ProductBlock[] {
   const out: ProductBlock[] = []
   let card: Extract<ProductBlock, { type: 'feature' }> | null = null
   for (const b of blocks) {
     const text = (b.type === 'p' || b.type === 'h3' || b.type === 'h2' || b.type === 'h4') ? b.text.trim() : ''
-    const m = b.type === 'p' && isFeatureHeading(text) ? text.match(FEATURE) : null
+    const m = b.type === 'p' && b.literal ? null : parseFeatureHeading(text)
     if (m) {
-      card = { type: 'feature', num: m[1].padStart(2, '0'), title: m[2].trim(), body: [] }
+      card = { type: 'feature', num: m.num, title: m.title, body: [] }
       out.push(card)
       continue
     }
@@ -93,6 +98,7 @@ function polishBasic(blocks: Block[]): ProductBlock[] {
   for (let i = 0; i < blocks.length; i++) {
     const b = blocks[i]
     if (b.type !== 'p') { out.push(b); continue }
+    if (b.literal) { out.push(b); continue }
     const text = b.text.trim()
 
     // 5. 編號小標：先原樣留著，groupFeatures 會把它和底下的內容包成卡
