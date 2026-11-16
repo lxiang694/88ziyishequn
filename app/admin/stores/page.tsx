@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 
@@ -36,6 +36,10 @@ function StoresContent() {
   const [pageSize, setPageSize] = useState(30)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Draft | null>(null)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [allSelected, setAllSelected] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const requestId = useRef(0)
 
   // 打字停 300ms 才查
   useEffect(() => {
@@ -44,18 +48,45 @@ function StoresContent() {
   }, [q])
 
   const load = useCallback(async () => {
+    const current = ++requestId.current
     setLoading(true)
+    setRows([])
+    setTotal(0)
+    setSelected(new Set())
+    setAllSelected(false)
     const params = new URLSearchParams({ page: String(page) })
     if (term) params.set('q', term)
     if (status) params.set('status', status)
     try {
       const d = await (await fetch('/api/admin/stores?' + params)).json()
+      if (current !== requestId.current) return
       if (d.success) { setRows(d.data); setTotal(d.total); setPageSize(d.pageSize) }
       else toast.error(d.error || '讀取失敗')
-    } catch { toast.error('讀取失敗') }
-    setLoading(false)
+    } catch { if (current === requestId.current) toast.error('讀取失敗') }
+    if (current === requestId.current) setLoading(false)
   }, [page, term, status])
   useEffect(() => { load() }, [load])
+
+  const selectedCount = allSelected ? total : selected.size
+  const selectionReady = !loading && !deleting && q.trim() === term
+  const deleteSelected = async () => {
+    if (!selectionReady || !selectedCount || status !== 'inactive') return
+    const scope = allSelected ? `目前搜尋條件下全部 ${total} 間（包含其他頁）` : `勾選的 ${selected.size} 間`
+    if (!confirm(`確定永久刪除${scope}已停用門市？\n\n曾被一般或團購訂單使用的門市會自動保留。刪除後無法復原。`)) return
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/admin/stores', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmed: true, all: allSelected, ids: allSelected ? [] : [...selected], q: term }),
+      })
+      const d = await res.json()
+      if (!d.success) { toast.error(d.error || '刪除失敗'); return }
+      toast.success(`已刪除 ${d.deleted} 間${d.skipped ? `；保留 ${d.skipped} 間（訂單曾使用、已啟用或已移除）` : ''}`, { duration: 6000 })
+      if (page === 1) await load()
+      else setPage(1)
+    } catch { toast.error('無法確認刪除結果，請重新整理後查看') }
+    finally { setDeleting(false) }
+  }
 
   const quickToggle = async (s: Store) => {
     const next = !s.is_active
@@ -69,7 +100,7 @@ function StoresContent() {
   }
 
   return (
-    <div>
+    <fieldset disabled={deleting} className="min-w-0">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">門市管理</h1>
@@ -79,7 +110,7 @@ function StoresContent() {
       </div>
 
       <div className="card mb-4 space-y-3 p-4">
-        <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋店號、店名或地址，例如：276247、正隆、板橋"
+        <input type="search" value={q} onChange={e => { setQ(e.target.value); setSelected(new Set()); setAllSelected(false) }} placeholder="搜尋店號、店名或地址，例如：276247、正隆、板橋"
           className="form-input w-full" style={{ height: 46 }} />
         <div className="flex flex-wrap items-center gap-2">
           {STATUS.map(s => (
@@ -91,6 +122,25 @@ function StoresContent() {
           <span className="ml-auto text-sm text-gray-500">共 {total.toLocaleString()} 間</span>
         </div>
       </div>
+
+      {status === 'inactive' && (
+        <div className="card mb-4 space-y-3 p-4" aria-label="批次刪除已停用門市">
+          <div className="flex flex-wrap items-center gap-3">
+            <button disabled={!selectionReady || !rows.length} onClick={() => { setAllSelected(false); setSelected(new Set(rows.filter(s => !s.is_active).map(s => s.id))) }}
+              className="min-h-[48px] rounded-xl border border-gray-300 px-4 font-bold text-gray-700 disabled:opacity-40">全選本頁</button>
+            <button disabled={!selectionReady || !total} onClick={() => { setSelected(new Set()); setAllSelected(true) }}
+              className="min-h-[48px] rounded-xl border border-green-600 px-4 font-bold text-green-700 disabled:opacity-40">全選符合條件的 {total.toLocaleString()} 間（跨頁）</button>
+            <button disabled={deleting || !selectedCount} onClick={() => { setSelected(new Set()); setAllSelected(false) }}
+              className="min-h-[48px] px-3 font-bold text-gray-600 disabled:opacity-40">取消全選</button>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="text-base text-gray-700" aria-live="polite">已選 {selectedCount.toLocaleString()} 間{allSelected ? '（包含其他頁）' : ''}</span>
+            <button disabled={!selectionReady || !selectedCount} onClick={deleteSelected}
+              className="min-h-[48px] rounded-xl bg-red-700 px-5 font-bold text-white disabled:opacity-40">{deleting ? '刪除中…' : '刪除已選門市'}</button>
+          </div>
+          <p className="text-sm leading-relaxed text-gray-600">曾被訂單使用的門市會保留。跨頁全選會清理執行時符合目前搜尋條件的已停用門市。</p>
+        </div>
+      )}
 
       {loading ? (
         <p className="py-16 text-center text-gray-600">載入中...</p>
@@ -104,6 +154,18 @@ function StoresContent() {
         <ul className="card divide-y divide-gray-100">
           {rows.map(s => (
             <li key={s.id} className={`flex flex-wrap items-center gap-3 px-4 py-3 ${s.is_active ? '' : 'bg-gray-50'}`}>
+              {status === 'inactive' && !s.is_active && (
+                <label className="flex min-h-[48px] min-w-[48px] items-center justify-center">
+                  <input type="checkbox" aria-label={`選取 ${s.store_name}（${s.store_code}）`} checked={allSelected || selected.has(s.id)} disabled={!selectionReady || allSelected}
+                    onChange={e => {
+                      const next = new Set(selected)
+                      setAllSelected(false)
+                      if (e.target.checked) next.add(s.id)
+                      else next.delete(s.id)
+                      setSelected(next)
+                    }} className="h-6 w-6" />
+                </label>
+              )}
               <span className="w-[4.5rem] flex-shrink-0 font-mono text-[15px] font-bold text-gray-800">{s.store_code}</span>
               <span className="min-w-0 flex-1 basis-48">
                 <span className="flex items-center gap-2">
@@ -134,7 +196,7 @@ function StoresContent() {
       )}
 
       {editing && <StoreEditor draft={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load() }} />}
-    </div>
+    </fieldset>
   )
 }
 

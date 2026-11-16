@@ -50,3 +50,35 @@ export async function POST(req: NextRequest) {
   await writeAuditLog(req, auth.admin, 'store.create', `新增門市 ${s.store_name}（${s.store_code}）`)
   return NextResponse.json({ success: true, id: data.id })
 }
+
+/** 僅刪除已停用且未被訂單使用的門市，由資料庫原子檢查。 */
+export async function DELETE(req: NextRequest) {
+  const auth = requirePermission(req, 'orders.transfer')
+  if (auth instanceof NextResponse) return auth
+  if (req.headers.get('origin') !== new URL(req.url).origin) {
+    return NextResponse.json({ success: false, error: '請從本站後台操作' }, { status: 403 })
+  }
+  let body: any
+  try { body = await req.json() } catch {
+    return NextResponse.json({ success: false, error: '格式錯誤' }, { status: 400 })
+  }
+  const all = body?.all === true
+  const ids: unknown[] = body?.ids ?? []
+  if (body?.confirmed !== true || !Array.isArray(ids) || (all && ids.length > 0)
+    || (!all && (ids.length === 0 || ids.length > 500))
+    || ids.some(id => typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0)
+    || (all && typeof body.q !== 'string')) {
+    return NextResponse.json({ success: false, error: '請重新選取要刪除的已停用門市' }, { status: 400 })
+  }
+  const { data, error } = await supabaseAdmin.rpc('delete_inactive_stores', {
+    p_ids: [...new Set(ids)], p_all: all, p_q: all ? safeSearchTerm(body.q) : '',
+  })
+  if (error) {
+    const missing = error.code === 'PGRST202' || error.code === '42883'
+    return NextResponse.json({ success: false, error: missing
+      ? '請先執行 migrations/delete_inactive_stores.sql，再使用批次刪除'
+      : '刪除未完成，請重新整理後再試' }, { status: missing ? 503 : 500 })
+  }
+  await writeAuditLog(req, auth.admin, 'store.delete', `批次清理停用門市：刪除 ${data.deleted} 間、保留 ${data.skipped} 間`)
+  return NextResponse.json({ success: true, ...data })
+}
