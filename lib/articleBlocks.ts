@@ -10,11 +10,13 @@
  * 而且中文之間還多出空格。這裡把「怎麼斷段」變成明確、可測試的規則。
  */
 
+import { parseFeatureHeading } from './productFeatureHeading'
+
 export type Block =
   | { type: 'h2'; text: string }
   | { type: 'h3'; text: string }
   | { type: 'h4'; text: string }
-  | { type: 'p'; text: string }
+  | { type: 'p'; text: string; literal?: true }
   | { type: 'quote'; text: string }
   | { type: 'image'; src: string; alt: string }
   | { type: 'ul'; items: string[] }
@@ -90,7 +92,7 @@ function isParagraphBreak(prevLine: string, nextLine: string): boolean {
   return false
 }
 
-export function parseArticle(content: string | null | undefined): Block[] {
+export function parseArticle(content: string | null | undefined, options: { productFeatures?: boolean } = {}): Block[] {
   if (!content) return []
 
   // 統一換行；全形空白轉半形以免影響 trim
@@ -128,6 +130,20 @@ export function parseArticle(content: string | null | undefined): Block[] {
     const line = lines[i].trim()
 
     if (line === '') { flushAll(); continue }
+
+    // 商品編輯器明確指定一般內文時，以 Markdown 跳脫符號保留格式。
+    if (options.productFeatures && line.startsWith('\\')) {
+      flushAll()
+      blocks.push({ type: 'p', text: line.slice(1), literal: true })
+      continue
+    }
+
+    // 商品專用：在折行合併與 Markdown 標題處理之前，先保留編號標題的邊界。
+    if (options.productFeatures && parseFeatureHeading(line)) {
+      flushAll()
+      blocks.push({ type: 'p', text: line })
+      continue
+    }
 
     // ── 分隔線 ──
     if (/^([-*_])\1{2,}$/.test(line)) {

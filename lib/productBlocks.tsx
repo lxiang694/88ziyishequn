@@ -1,6 +1,6 @@
 import React from 'react'
 import { parseArticle } from './articleBlocks'
-import { polishProductBlocks, type ProductBlock } from './productText'
+import { parseProductText, type ProductBlock } from './productText'
 
 /**
  * 商品描述欄位的排版（適合誰 / 使用方法 / 成分說明 / 注意事項 / 怎麼搭…）。
@@ -71,13 +71,13 @@ function block(b: ProductBlock, key: number, opts: RenderOpts = {}): React.React
     // 說明包在同一張淡底卡片裡、段落間距縮小 —— 一個重點一張卡，掃讀很快
     case 'feature':
       return (
-        <div key={k} className="mt-3 first:mt-0 rounded-2xl bg-black/[0.035] px-4 py-3.5">
-          <p className="flex items-start gap-2.5 font-bold leading-snug">
+        <div key={k} className="mt-3 first:mt-0 rounded-2xl bg-green-50/70 px-4 py-4 text-gray-900">
+          <p className="flex items-start gap-2.5 text-[18px] font-bold leading-relaxed">
             <span className="mt-[0.1em] flex-shrink-0 rounded-md bg-green-700 px-1.5 py-0.5 text-[0.78em] font-bold tabular-nums text-white">{b.num}</span>
             <span className="min-w-0">{inline(b.title, k)}</span>
           </p>
           {b.body.length > 0 && (
-            <div className="mt-2 text-[0.96em] leading-relaxed opacity-90 [&>*]:mt-2 [&>*:first-child]:mt-0">
+            <div className="mt-2 text-[16px] leading-[1.9] text-gray-600 [&>*]:mt-3 [&>*:first-child]:mt-0">
               {b.body.map((x, i) => block(x, key * 100 + i + 1, opts))}
             </div>
           )}
@@ -153,7 +153,10 @@ function block(b: ProductBlock, key: number, opts: RenderOpts = {}): React.React
  */
 export function renderProductText(content: string | null | undefined, opts: RenderOpts = {}): React.ReactNode {
   // 貼上的口語長文自動整理：導言、問句小標、符號條列、長段切小段（規則見 productText.ts）
-  const blocks = polishProductBlocks(parseArticle(content))
+  return renderProductBlocks(parseProductText(content), opts)
+}
+
+export function renderProductBlocks(blocks: ProductBlock[], opts: RenderOpts = {}): React.ReactNode {
   if (blocks.length === 0) return null
   return <>{blocks.map((b, i) => block(b, i, opts))}</>
 }

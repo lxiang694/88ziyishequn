@@ -15,8 +15,8 @@
  * 用原本分開的欄位組成一篇（legacyToDescription），所以全部商品都是同一套樣式。
  * 沒有「重點」區時，若有一句話簡介＋兩張以上特色卡，自動組一塊「先看重點」。
  */
-import { renderProductText } from '@/lib/productBlocks'
-import { splitSections, specRows, featureTitles, labeledItems, lineItems, type Section, type SectionKind } from '@/lib/productSections'
+import { renderProductText, renderProductBlocks } from '@/lib/productBlocks'
+import { splitSections, specRows, featureTitles, featureBlocks, labeledItems, lineItems, type Section, type SectionKind } from '@/lib/productSections'
 
 const ICON: Partial<Record<SectionKind, string>> = {
   intro: '🌿', features: '✨', who: '👥', usage: '📋', spec: '🧪', other: '📌', source: '🌱', storage: '📦',
@@ -89,24 +89,12 @@ function SectionView({ s, timings, specId }: { s: Section; timings: string[]; sp
         </Card>
       )
     }
-    case 'features': {
-      // 「天然冷壓：保留…」一行一項 → 編號特色卡（跟「01｜標題」同樣的卡）
-      const labeled = labeledItems(s.body)
+    case 'features':
       return (
         <Card kind="features" title={title}>
-          {labeled
-            ? <div className="space-y-3">{labeled.map((it, i) => (
-                <div key={i} className="rounded-2xl bg-black/[0.035] px-4 py-3.5">
-                  <p className="flex items-start gap-2.5 font-bold leading-snug text-gray-900">
-                    <span className="mt-[0.1em] flex-shrink-0 rounded-md bg-green-700 px-1.5 py-0.5 text-[0.78em] tabular-nums text-white">{String(i + 1).padStart(2, '0')}</span>
-                    <span className="min-w-0">{it.label}</span>
-                  </p>
-                  <p className="mt-2 text-[15px] leading-relaxed text-gray-600">{it.desc}</p>
-                </div>))}</div>
-            : renderProductText(s.body)}
+          {renderProductBlocks(featureBlocks(s))}
         </Card>
       )
-    }
     case 'usage':
       return (
         <Card kind="usage" title={title}>
