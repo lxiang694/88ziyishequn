@@ -4,13 +4,12 @@ import { createHash } from 'node:crypto'
 import { unzipSync, zipSync, strFromU8, strToU8 } from 'fflate'
 import { MAX_ROWS, validateRow, type ImportRow } from './domain'
 
-// 賣貨便 2026-10 改版的 1.5 版範本（「填寫說明」B1＝1.5；姓名改為最少 2 字）。
-// 1.4 版上傳會被賣貨便擋下：「該範本檔不是最新版本」。
-// 範本來源：賣貨便訂單匯入頁「下載範例檔」，已移除填寫範例以外的資料列與存檔者名稱，其餘原樣保留。
-const TEMPLATE_FILE = 'assets/myship/order-import-v1.5.xlsm'
-const TEMPLATE_SHA256 = 'cb42db06f55aa5f9be75040651bdf89bd96186722b4148830c1cad2dc82821e5'
-// 資料列的儲存格樣式：1.5 範本裡「文字格式」的資料儲存格（numFmtId 49）
-const DATA_CELL_STYLE = '24'
+// 使用者提供的賣貨便 1.6 版空白範本（「填寫說明」B1＝1.6；姓名最少 2 字、上限 50 字）。
+// 僅移除存檔者名稱與來源個人路徑；官方欄位、填寫範例及新版 VBA 原樣保留。
+const TEMPLATE_FILE = 'assets/myship/order-import-v1.6.xlsm'
+const TEMPLATE_SHA256 = 'a352085cc4a37b9b08ab1cbebdbbfaa1481e09b33633f27dd078faf881606407'
+// 資料列使用 1.6 範本官方填寫範例的文字樣式（numFmtId 49），保留手機及店號前導零。
+const DATA_CELL_STYLE = '15'
 // 2026-09-10 實際匯入頁標示 2 MB；以十進位位元組數保守限制。
 const MAX_IMPORT_BYTES = 2_000_000
 const xmlText = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
